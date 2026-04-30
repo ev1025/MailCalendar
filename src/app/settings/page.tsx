@@ -287,6 +287,11 @@ function SettingsPageInner() {
             </CardHeader>
             {dday.enabled && (
               <CardContent className="flex flex-col gap-3">
+                {dday.source === "partner" && (
+                  <div className="rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-[11px] text-primary leading-relaxed">
+                    공유 파트너가 설정한 D-day 가 표시되고 있어요. 직접 입력해 적용하면 본인 값이 우선합니다.
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground/80">기준 날짜</label>
