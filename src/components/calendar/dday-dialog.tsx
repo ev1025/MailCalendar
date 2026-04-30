@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,13 +9,29 @@ import {
 } from "@/components/ui/dialog";
 
 /**
- * D-day 다이얼로그 — 사용자가 제공한 HTML/CSS/JS 를 iframe srcDoc 으로 그대로
- * 렌더. 외부 도메인이 아니라 데이터 URL 동급이라 X-Frame 차단 무관.
+ * D-day 다이얼로그 — 사용자가 입력한 기념일(date+time)부터 경과 시간을 1초 단위로
+ * 표시. 디자인은 srcDoc HTML/CSS/JS 그대로, date 만 동적 주입.
  *
- * 외부 apption 임베드가 X-Frame-Options 으로 막혀서, 사용자 디자인을 직접 인라인.
- * HTML 수정은 아래 IFRAME_HTML 상수만 갈아끼우면 됨.
+ * 외부 임베드(apption)는 X-Frame 차단으로 폐기. 자체 srcDoc 인라인이라 차단 무관.
  */
-const IFRAME_HTML = `<!DOCTYPE html>
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** "YYYY-MM-DD" — 비어있으면 다이얼로그가 빈 상태로 뜸 (caller 가 가드해야 함). */
+  date: string;
+  /** "HH:MM" 24h */
+  time: string;
+}
+
+/** 입력 date+time 으로 IFRAME 의 HTML 문자열 생성. */
+function buildIframeHtml(date: string, time: string): string {
+  // myDate JS 파싱용 ISO. iOS Safari 도 안전하게 파싱하는 형식.
+  const isoLike = `${date}T${time}:00`;
+  // 라벨용 한글 형식 — "YYYY. MM. DD. HH:MM"
+  const [y, m, d] = date.split("-");
+  const labelDate = `${y}. ${m}. ${d}. ${time}`;
+  return `<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
@@ -26,12 +43,10 @@ const IFRAME_HTML = `<!DOCTYPE html>
       margin: 0;
       background-color: white;
       font-family: 'Montserrat', sans-serif;
-      /* iframe 전체 영역 안에서 타이머를 가로/세로 가운데 배치. */
       display: flex;
       justify-content: center;
       align-items: center;
     }
-
     #timer {
       color: #eeeeee;
       text-transform: uppercase;
@@ -45,9 +60,6 @@ const IFRAME_HTML = `<!DOCTYPE html>
       margin-bottom: 10px;
     }
     .anniversary-label {
-      /* #timer 안의 마지막 자식으로 들어가 align-self 로 우측 정렬 — 그러면
-         자동으로 두 번째 행(분/초)의 오른쪽 끝(초 박스 우측)에 맞춰짐.
-         #timer 의 letter-spacing/text-transform 은 reset (원본 외부 배치 동작). */
       align-self: flex-end;
       margin-top: 6px;
       letter-spacing: normal;
@@ -65,7 +77,6 @@ const IFRAME_HTML = `<!DOCTYPE html>
       justify-content: center;
       gap: 10px;
     }
-
     .days, .hours, .minutes, .seconds {
       padding: 14px;
       width: 100px;
@@ -79,12 +90,10 @@ const IFRAME_HTML = `<!DOCTYPE html>
       justify-content: center;
       gap: 4px;
     }
-
     .days { background: #EF2F3C; }
     .hours { background: #eeeeee; color: #183059; }
     .minutes { background: #276FBF; }
     .seconds { background: #F0A202; }
-
     .numbers {
       font-family: 'Montserrat', sans-serif;
       color: #183059;
@@ -96,54 +105,39 @@ const IFRAME_HTML = `<!DOCTYPE html>
 <body>
   <div id="timer">
     <div class="row">
-      <div class="days">
-        <div id="days" class="numbers"></div>일
-      </div>
-      <div class="hours">
-        <div id="hours" class="numbers"></div>시간
-      </div>
+      <div class="days"><div id="days" class="numbers"></div>일</div>
+      <div class="hours"><div id="hours" class="numbers"></div>시간</div>
     </div>
     <div class="row">
-      <div class="minutes">
-        <div id="minutes" class="numbers"></div>분
-      </div>
-      <div class="seconds">
-        <div id="seconds" class="numbers"></div>초
-      </div>
+      <div class="minutes"><div id="minutes" class="numbers"></div>분</div>
+      <div class="seconds"><div id="seconds" class="numbers"></div>초</div>
     </div>
-    <div class="anniversary-label">
-      ❤ 2025. 03. 03. 07:24 ~
-    </div>
+    <div class="anniversary-label">❤ ${labelDate} ~</div>
   </div>
-
   <script>
-    const myDate = new Date('Mar 3, 2025 07:25:00');
-
-    setInterval(function () {
-      const today = new Date().getTime();
-      const diff = today - myDate;
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
+    const myDate = new Date('${isoLike}');
+    function tick() {
+      const diff = Date.now() - myDate.getTime();
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
       document.getElementById("days").innerText = days;
       document.getElementById("hours").innerText = hours;
       document.getElementById("minutes").innerText = minutes;
       document.getElementById("seconds").innerText = seconds;
-    }, 1000);
+    }
+    tick();
+    setInterval(tick, 1000);
   </script>
 </body>
 </html>`;
+}
 
-export default function DdayDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
+export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
+  // date/time 이 바뀌면 srcDoc 만 갱신 (iframe 자체는 동일 인스턴스 → 매끄러운 전환).
+  const html = useMemo(() => buildIframeHtml(date, time), [date, time]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -153,12 +147,8 @@ export default function DdayDialog({
         <DialogHeader className="sr-only">
           <DialogTitle>D-day</DialogTitle>
         </DialogHeader>
-        {/* iframe 항상 마운트 — 매번 재오픈 시 srcDoc 파싱 + Google Fonts 다시
-            로드되던 깜빡임 제거. setInterval 은 다이얼로그 닫힌 동안 백그라운드로
-            계속 돌지만 비용 미미. sandbox="allow-scripts" — same-origin 차단해
-            내부에서 부모 DOM 못 만짐. */}
         <iframe
-          srcDoc={IFRAME_HTML}
+          srcDoc={html}
           title="D-day"
           sandbox="allow-scripts"
           className="block w-full h-[380px] sm:h-[370px] border-0 bg-white"

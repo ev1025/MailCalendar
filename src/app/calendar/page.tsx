@@ -10,6 +10,7 @@ import MonthPicker from "@/components/layout/month-picker";
 import PageHeader from "@/components/layout/page-header";
 import HeaderViewMenu from "@/components/layout/header-view-menu";
 import DdayDialog from "@/components/calendar/dday-dialog";
+import { useDdaySettings } from "@/hooks/use-dday-settings";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useWeather } from "@/hooks/use-weather";
 import { useEventTags } from "@/hooks/use-event-tags";
@@ -81,8 +82,9 @@ function CalendarPageInner() {
   const [dayDetailOpen, setDayDetailOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
 
-  // D-day 다이얼로그
+  // D-day 다이얼로그 — 설정에서 토글 ON + date/time 입력 시에만 버튼 노출.
   const [ddayOpen, setDdayOpen] = useState(false);
+  const { settings: ddaySettings, isReady: ddayReady } = useDdaySettings();
 
   const {
     events,
@@ -226,17 +228,18 @@ function CalendarPageInner() {
         title={viewLabel}
         actions={
           <div className="flex items-center gap-1">
-            {/* D-day — 텍스트 pill 버튼 (아이콘보다 의미 명확). 클릭 시 다이얼로그
-                + iframe 임베드 (apption 외부 임베드는 X-Frame 차단으로 폐기). */}
-            <button
-              type="button"
-              onClick={() => setDdayOpen(true)}
-              aria-label="D-day"
-              title="D-day"
-              className="flex h-10 items-center px-3 rounded-full text-xs font-bold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            >
-              D-day
-            </button>
+            {/* D-day — 설정에서 토글 ON + 기준일 입력 시에만 노출. */}
+            {ddayReady && (
+              <button
+                type="button"
+                onClick={() => setDdayOpen(true)}
+                aria-label="D-day"
+                title="D-day"
+                className="flex h-10 items-center px-3 rounded-full text-xs font-bold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              >
+                D-day
+              </button>
+            )}
             <HeaderViewMenu
               items={[
                 {
@@ -438,7 +441,12 @@ function CalendarPageInner() {
         onConfirm={handleScopeConfirm}
       />
 
-      <DdayDialog open={ddayOpen} onOpenChange={setDdayOpen} />
+      <DdayDialog
+        open={ddayOpen}
+        onOpenChange={setDdayOpen}
+        date={ddaySettings.date}
+        time={ddaySettings.time}
+      />
     </div>
     </>
   );

@@ -7,11 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SearchInput from "@/components/ui/search-input";
-import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Heart } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PasswordChangeDialog from "@/components/layout/password-change-dialog";
+import DatePicker from "@/components/ui/date-picker";
+import TimePicker from "@/components/ui/time-picker";
 import { useAppUsers, useCurrentUser } from "@/lib/current-user";
+import { useDdaySettings } from "@/hooks/use-dday-settings";
 import { supabaseSignOut } from "@/lib/auth-supabase";
 import { toast } from "sonner";
 import {
@@ -60,6 +63,9 @@ function SettingsPageInner() {
   // 계정 — 비밀번호 변경 / 프로필 삭제 (이전엔 /profile 에 있던 것)
   const { deleteUser } = useAppUsers();
   const currentUser = useCurrentUser();
+
+  // D-day — 설정 토글 + 기준 date/time. localStorage 영속.
+  const { settings: dday, update: updateDday } = useDdaySettings();
   const [pwDialogOpen, setPwDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -235,6 +241,58 @@ function SettingsPageInner() {
                 </div>
               )}
             </CardContent>
+          </Card>
+
+          {/* D-day — 토글은 헤더 우측. ON 시에만 date/time 입력 노출.
+              입력은 캘린더 일정에 쓰는 DatePicker / TimePicker 재사용. */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Heart className="h-4 w-4" />D-day
+                </CardTitle>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={dday.enabled}
+                  onClick={() => updateDday({ enabled: !dday.enabled })}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    dday.enabled ? "bg-primary" : "bg-muted-foreground/30"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      dday.enabled ? "translate-x-4" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+            </CardHeader>
+            {dday.enabled && (
+              <CardContent className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground">기준 날짜</label>
+                    <DatePicker
+                      value={dday.date}
+                      onChange={(v) => updateDday({ date: v })}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-muted-foreground">시각</label>
+                    <TimePicker
+                      value={dday.time}
+                      onChange={(v) => updateDday({ time: v })}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  날짜·시각 모두 입력하면 캘린더 우상단에 D-day 버튼이 표시됩니다.
+                </p>
+              </CardContent>
+            )}
           </Card>
 
           {/* 계정 — 비밀번호 변경 + 프로필 삭제 (이전엔 /profile 에 있던 액션) */}
