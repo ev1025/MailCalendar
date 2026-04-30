@@ -226,7 +226,7 @@ function SettingsPageInner() {
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <MapPin className="h-3.5 w-3.5" />
+                  <Sun className="h-3.5 w-3.5" />
                 </span>
                 일기예보
               </CardTitle>
