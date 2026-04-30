@@ -229,18 +229,14 @@ function SettingsPageInner() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              {/* 현재 위치 — 라벨(dim) + 값(강조) 위계로 정리. */}
-              <div className="rounded-md bg-muted/40 px-3 py-2 flex items-center justify-between gap-3">
-                <span className="text-xs text-muted-foreground shrink-0">현재</span>
-                <span className="text-sm font-medium truncate">{currentLocation.name}</span>
-              </div>
               <SearchInput
                 value={locQuery}
                 onChange={setLocQuery}
                 placeholder="지역 변경 (예: 서울, 부산, Tokyo)"
                 size="md"
               />
-              {locQuery.trim() && (
+              {locQuery.trim() ? (
+                /* 검색 중 — 결과 드롭다운 */
                 <div className="rounded-md border max-h-60 overflow-y-auto">
                   {locSearching ? (
                     <p className="text-xs text-muted-foreground p-3">검색 중...</p>
@@ -262,6 +258,14 @@ function SettingsPageInner() {
                       </button>
                     ))
                   )}
+                </div>
+              ) : (
+                /* 검색 아닐 땐 현재 선택된 지역 카드로 표시 — 여행 폼 장소 선택 UX 와 동일 패턴. */
+                <div className="flex items-start gap-2 rounded-md border p-2.5">
+                  <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{currentLocation.name}</div>
+                  </div>
                 </div>
               )}
               <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">
