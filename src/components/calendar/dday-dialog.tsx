@@ -141,7 +141,7 @@ export default function DdayDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        className="max-w-[calc(100%-1.5rem)] sm:max-w-md p-0 gap-0 overflow-hidden bg-white"
+        className="max-w-[calc(100%-1.5rem)] sm:max-w-[400px] p-0 gap-0 overflow-hidden bg-white border-[10px] border-gray-600"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>D-day</DialogTitle>
@@ -154,7 +154,7 @@ export default function DdayDialog({
             srcDoc={IFRAME_HTML}
             title="D-day"
             sandbox="allow-scripts"
-            className="block w-full h-[420px] border-0 bg-white"
+            className="block w-full h-[380px] sm:h-[340px] border-0 bg-white"
           />
         )}
       </DialogContent>
