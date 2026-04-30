@@ -165,7 +165,9 @@ export default function DatabaseView({
   ];
 
   return (
-    <div className="flex flex-col gap-3 h-full min-h-0">
+    // 데스크탑에선 좌우 max-w 5xl + mx-auto 로 폭 제한 (여행 목록 페이지와 동일).
+    // 모바일은 w-full 그대로.
+    <div className="flex flex-col gap-3 h-full min-h-0 w-full md:max-w-5xl md:mx-auto">
       {/* 검색 + 태그 필터 */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
