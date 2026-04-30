@@ -189,7 +189,7 @@ function SettingsPageInner() {
       {tab === "general" ? (
         <div className="flex flex-col gap-4">
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader>
               <CardTitle className="text-sm">테마</CardTitle>
             </CardHeader>
             <CardContent>
@@ -215,9 +215,9 @@ function SettingsPageInner() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
-                <MapPin className="h-4 w-4" />날씨 지역
+                <MapPin className="h-4 w-4" />지역 날씨
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
@@ -262,7 +262,7 @@ function SettingsPageInner() {
           {/* D-day — 토글은 헤더 우측. ON 시에만 date/time 입력 노출.
               입력은 캘린더 일정에 쓰는 DatePicker / TimePicker 재사용. */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">D-day</CardTitle>
                 <button
@@ -321,7 +321,7 @@ function SettingsPageInner() {
 
           {/* 계정 — 비밀번호 변경 + 프로필 삭제 (이전엔 /profile 에 있던 액션) */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader>
               <CardTitle className="text-sm">계정</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-1">
@@ -365,7 +365,7 @@ function SettingsPageInner() {
         <div className="flex flex-col gap-3">
           {/* 앱 정보 */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader>
               <CardTitle className="text-sm">앱 정보</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2 text-sm">
