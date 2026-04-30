@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SearchInput from "@/components/ui/search-input";
-import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info, X } from "lucide-react";
+import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info, X, CloudSun } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PasswordChangeDialog from "@/components/layout/password-change-dialog";
@@ -226,7 +226,7 @@ function SettingsPageInner() {
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Sun className="h-3.5 w-3.5" />
+                  <CloudSun className="h-3.5 w-3.5" />
                 </span>
                 일기예보
               </CardTitle>
@@ -292,7 +292,7 @@ function SettingsPageInner() {
                   )}
                 </div>
               )}
-              <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">
+              <p className="flex items-start gap-1.5 pl-3 text-[11px] text-muted-foreground/60 leading-relaxed">
                 <Info className="h-3 w-3 mt-[2px] shrink-0" />
                 <span>일기예보 지역을 선택할 수 있어요.</span>
               </p>
@@ -347,7 +347,7 @@ function SettingsPageInner() {
                   />
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">
+                  <p className="flex items-start gap-1.5 pl-3 text-[11px] text-muted-foreground/60 leading-relaxed">
                     <Info className="h-3 w-3 mt-[2px] shrink-0" />
                     <span>달력 우상단에 D-day 버튼이 표시됩니다.</span>
                   </p>
