@@ -256,6 +256,9 @@ function SettingsPageInner() {
                   )}
                 </div>
               )}
+              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                일기예보 지역을 선택할 수 있어요.
+              </p>
             </CardContent>
           </Card>
 
