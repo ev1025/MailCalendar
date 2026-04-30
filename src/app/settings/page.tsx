@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SearchInput from "@/components/ui/search-input";
-import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Heart } from "lucide-react";
+import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PasswordChangeDialog from "@/components/layout/password-change-dialog";
@@ -248,9 +248,7 @@ function SettingsPageInner() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Heart className="h-4 w-4" />D-day
-                </CardTitle>
+                <CardTitle className="text-sm">D-day</CardTitle>
                 <button
                   type="button"
                   role="switch"
