@@ -65,7 +65,21 @@ function SettingsPageInner() {
   const currentUser = useCurrentUser();
 
   // D-day — 설정 토글 + 기준 date/time. localStorage 영속.
+  // 토글은 즉시 반영, date/time 은 draft → "적용" 버튼 클릭 시 commit.
   const { settings: dday, update: updateDday } = useDdaySettings();
+  const [draftDate, setDraftDate] = useState(dday.date);
+  const [draftTime, setDraftTime] = useState(dday.time);
+  // hook 로드 후 / 외부에서 dday 가 바뀔 때 draft 동기화.
+  useEffect(() => {
+    setDraftDate(dday.date);
+    setDraftTime(dday.time);
+  }, [dday.date, dday.time]);
+  const ddayDirty = draftDate !== dday.date || draftTime !== dday.time;
+  const ddayApplyEnabled = ddayDirty && draftDate.length > 0 && draftTime.length >= 4;
+  const applyDday = () => {
+    updateDday({ date: draftDate, time: draftTime });
+    toast.success("D-day 적용됨");
+  };
   const [pwDialogOpen, setPwDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -274,23 +288,33 @@ function SettingsPageInner() {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground/80">기준 날짜</label>
                     <DatePicker
-                      value={dday.date}
-                      onChange={(v) => updateDday({ date: v })}
+                      value={draftDate}
+                      onChange={setDraftDate}
                       className="h-9 text-xs"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-foreground/80">시각</label>
                     <TimePicker
-                      value={dday.time}
-                      onChange={(v) => updateDday({ time: v })}
+                      value={draftTime}
+                      onChange={setDraftTime}
                       className="h-9 text-xs"
                     />
                   </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                  달력 우상단에 D-day 버튼이 표시됩니다.
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                    달력 우상단에 D-day 버튼이 표시됩니다.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={applyDday}
+                    disabled={!ddayApplyEnabled}
+                    className="h-8 shrink-0"
+                  >
+                    적용
+                  </Button>
+                </div>
               </CardContent>
             )}
           </Card>
