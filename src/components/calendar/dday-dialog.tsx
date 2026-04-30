@@ -40,9 +40,13 @@ const IFRAME_HTML = `<!DOCTYPE html>
       margin-bottom: 10px;
     }
     .anniversary-label {
-      position: fixed;
-      bottom: 30px;
-      right: 13px;
+      /* #timer 안의 마지막 자식으로 들어가 align-self 로 우측 정렬 — 그러면
+         자동으로 두 번째 행(분/초)의 오른쪽 끝(초 박스 우측)에 맞춰짐.
+         #timer 의 letter-spacing/text-transform 은 reset (원본 외부 배치 동작). */
+      align-self: flex-end;
+      margin-top: 6px;
+      letter-spacing: normal;
+      text-transform: none;
       font-family: 'Noto Sans KR', sans-serif;
       font-size: 1em;
       font-weight: 500;
@@ -95,6 +99,9 @@ const IFRAME_HTML = `<!DOCTYPE html>
         <div id="seconds" class="numbers"></div>초
       </div>
     </div>
+    <div class="anniversary-label">
+      ❤ 2025. 03. 03. 07:24 ~
+    </div>
   </div>
 
   <script>
@@ -115,9 +122,6 @@ const IFRAME_HTML = `<!DOCTYPE html>
       document.getElementById("seconds").innerText = seconds;
     }, 1000);
   </script>
-  <div class="anniversary-label">
-    ❤ 2025. 03. 03. 07:24 ~
-  </div>
 </body>
 </html>`;
 
