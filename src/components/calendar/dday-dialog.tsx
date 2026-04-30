@@ -81,7 +81,7 @@ const IFRAME_HTML = `<!DOCTYPE html>
     .numbers {
       font-family: 'Montserrat', sans-serif;
       color: #183059;
-      font-size: 3em;
+      font-size: 2.7em;
       text-align: center;
     }
   </style>
