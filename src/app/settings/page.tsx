@@ -207,8 +207,10 @@ function SettingsPageInner() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <div className="rounded-md bg-muted/40 px-3 py-2.5 text-sm">
-                <span className="font-medium">{currentLocation.name}</span>
+              {/* 현재 위치 — 라벨(dim) + 값(강조) 위계로 정리. */}
+              <div className="rounded-md bg-muted/40 px-3 py-2 flex items-center justify-between gap-3">
+                <span className="text-xs text-muted-foreground shrink-0">현재</span>
+                <span className="text-sm font-medium truncate">{currentLocation.name}</span>
               </div>
               <SearchInput
                 value={locQuery}
@@ -267,18 +269,18 @@ function SettingsPageInner() {
               </div>
             </CardHeader>
             {dday.enabled && (
-              <CardContent className="flex flex-col gap-2">
+              <CardContent className="flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-muted-foreground">기준 날짜</label>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground/80">기준 날짜</label>
                     <DatePicker
                       value={dday.date}
                       onChange={(v) => updateDday({ date: v })}
                       className="h-9 text-xs"
                     />
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-muted-foreground">시각</label>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-foreground/80">시각</label>
                     <TimePicker
                       value={dday.time}
                       onChange={(v) => updateDday({ time: v })}
@@ -286,8 +288,8 @@ function SettingsPageInner() {
                     />
                   </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  날짜·시각 모두 입력하면 캘린더 우상단에 D-day 버튼이 표시됩니다.
+                <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                  달력 우상단에 D-day 버튼이 표시됩니다.
                 </p>
               </CardContent>
             )}
