@@ -67,10 +67,17 @@ const IFRAME_HTML = `<!DOCTYPE html>
     }
 
     .days, .hours, .minutes, .seconds {
-      padding: 20px;
+      padding: 14px;
       width: 100px;
+      height: 100px;
+      box-sizing: content-box;
       border-radius: 5px;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
     }
 
     .days { background: #EF2F3C; }
@@ -154,7 +161,7 @@ export default function DdayDialog({
             srcDoc={IFRAME_HTML}
             title="D-day"
             sandbox="allow-scripts"
-            className="block w-full h-[380px] sm:h-[340px] border-0 bg-white"
+            className="block w-full h-[380px] sm:h-[370px] border-0 bg-white"
           />
         )}
       </DialogContent>
