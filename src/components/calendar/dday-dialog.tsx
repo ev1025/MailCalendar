@@ -153,17 +153,16 @@ export default function DdayDialog({
         <DialogHeader className="sr-only">
           <DialogTitle>D-day</DialogTitle>
         </DialogHeader>
-        {/* 다이얼로그 열린 동안만 마운트해(open && ...) iframe 의 setInterval 도
-            닫으면 자동 정리. sandbox="allow-scripts" — fonts.googleapis 만 허용,
-            same-origin 차단해 내부에서 부모 DOM 못 만지게. */}
-        {open && (
-          <iframe
-            srcDoc={IFRAME_HTML}
-            title="D-day"
-            sandbox="allow-scripts"
-            className="block w-full h-[380px] sm:h-[370px] border-0 bg-white"
-          />
-        )}
+        {/* iframe 항상 마운트 — 매번 재오픈 시 srcDoc 파싱 + Google Fonts 다시
+            로드되던 깜빡임 제거. setInterval 은 다이얼로그 닫힌 동안 백그라운드로
+            계속 돌지만 비용 미미. sandbox="allow-scripts" — same-origin 차단해
+            내부에서 부모 DOM 못 만짐. */}
+        <iframe
+          srcDoc={IFRAME_HTML}
+          title="D-day"
+          sandbox="allow-scripts"
+          className="block w-full h-[380px] sm:h-[370px] border-0 bg-white"
+        />
       </DialogContent>
     </Dialog>
   );

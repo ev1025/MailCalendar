@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   TableProperties,
-  Hourglass,
 } from "lucide-react";
 import MonthPicker from "@/components/layout/month-picker";
 import PageHeader from "@/components/layout/page-header";
@@ -227,16 +226,16 @@ function CalendarPageInner() {
         title={viewLabel}
         actions={
           <div className="flex items-center gap-1">
-            {/* D-day — 사용자 디자인을 React 로 그대로 임베드한 다이얼로그.
-                (apption 외부 임베드는 X-Frame 차단으로 폐기) */}
+            {/* D-day — 텍스트 pill 버튼 (아이콘보다 의미 명확). 클릭 시 다이얼로그
+                + iframe 임베드 (apption 외부 임베드는 X-Frame 차단으로 폐기). */}
             <button
               type="button"
               onClick={() => setDdayOpen(true)}
               aria-label="D-day"
               title="D-day"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+              className="flex h-10 items-center px-3 rounded-full text-xs font-bold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
-              <Hourglass className="h-[20px] w-[20px]" strokeWidth={1.6} />
+              D-day
             </button>
             <HeaderViewMenu
               items={[
