@@ -355,7 +355,7 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
   return (
     // 모바일: 부모(main) 이 fixed h-dvh 내부 스크롤이므로 h-full + flex 체인 유지.
     // 데스크탑: document 스크롤이므로 h/overflow 제거, 자연 흐름.
-    <div className="flex flex-col h-full md:h-auto">
+    <div className="flex flex-col h-full md:h-auto w-full md:max-w-5xl md:mx-auto">
       {/* 상단 검색 + 새 계획 추가 — sticky. 패딩은 페이지 wrapper(px-2 py-2 md:p-6)
           가 책임지고 sticky 자체는 padding 없음 (이전엔 p-3 가 중복 적용돼 다른
           페이지보다 12~24px 더 들어갔음). 스크롤 시 가시성을 위한 backdrop 만 유지. */}
