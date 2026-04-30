@@ -35,6 +35,35 @@ const DEFAULT: DdaySettings = {
   source: "none",
 };
 
+/** localStorage 캐시 — DB fetch 끝나기 전 초기 렌더에서 깜빡임 없이 D-day 버튼이
+ *  뜨게 하는 용도. DB 가 진실 source 라 fetch 후 업데이트로 덮어씀.
+ *  cache 가 stale 일 수 있으나 (파트너가 바꿨을 때) 1초 이내 보정. */
+const CACHE_KEY = "dday_settings_cache_v1";
+
+function loadCache(): DdaySettings {
+  if (typeof window === "undefined") return DEFAULT;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return DEFAULT;
+    const parsed = JSON.parse(raw);
+    return {
+      enabled: !!parsed.enabled,
+      date: typeof parsed.date === "string" ? parsed.date : "",
+      time: typeof parsed.time === "string" ? parsed.time : "",
+      source: parsed.source === "self" || parsed.source === "partner" ? parsed.source : "none",
+    };
+  } catch {
+    return DEFAULT;
+  }
+}
+
+function saveCache(s: DdaySettings) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(s));
+  } catch {}
+}
+
 function normalizeTime(t: string | null): string {
   if (!t) return "";
   // DB TIME 은 "HH:MM:SS" 형식 — 우리 UI 는 "HH:MM" 만 사용.
@@ -43,11 +72,22 @@ function normalizeTime(t: string | null): string {
 
 export function useDdaySettings() {
   const userId = useCurrentUserId();
+  // 초기값을 localStorage 캐시에서 동기적으로 로드 → 첫 렌더부터 D-day 버튼이
+  // 다른 헤더 아이콘과 함께 즉시 표시. SSR 단계에선 DEFAULT, hydration 후 캐시 반영.
   const [settings, setSettings] = useState<DdaySettings>(DEFAULT);
+
+  // 마운트 직후 1회: 캐시 → state 동기화 (SSR/CSR 불일치 회피).
+  useEffect(() => {
+    const cached = loadCache();
+    if (cached.enabled || cached.source !== "none") {
+      setSettings(cached);
+    }
+  }, []);
 
   const fetchSettings = useCallback(async () => {
     if (!userId) {
       setSettings(DEFAULT);
+      saveCache(DEFAULT);
       return;
     }
     // ① 본인 dday 조회.
@@ -60,12 +100,14 @@ export function useDdaySettings() {
       | { dday_enabled: boolean | null; dday_date: string | null; dday_time: string | null }
       | null;
     if (own?.dday_enabled && own.dday_date && own.dday_time) {
-      setSettings({
+      const next: DdaySettings = {
         enabled: true,
         date: own.dday_date,
         time: normalizeTime(own.dday_time),
         source: "self",
-      });
+      };
+      setSettings(next);
+      saveCache(next);
       return;
     }
 
@@ -93,23 +135,27 @@ export function useDdaySettings() {
         }) => p.dday_enabled && p.dday_date && p.dday_time,
       );
       if (validPartner) {
-        setSettings({
+        const next: DdaySettings = {
           enabled: true,
           date: validPartner.dday_date as string,
           time: normalizeTime(validPartner.dday_time as string),
           source: "partner",
-        });
+        };
+        setSettings(next);
+        saveCache(next);
         return;
       }
     }
 
     // ③ 본인 dday 가 disabled 라도 date/time 은 form 복원용으로 유지.
-    setSettings({
+    const next: DdaySettings = {
       enabled: !!own?.dday_enabled,
       date: own?.dday_date ?? "",
       time: normalizeTime(own?.dday_time ?? ""),
       source: "none",
-    });
+    };
+    setSettings(next);
+    saveCache(next);
   }, [userId]);
 
   useEffect(() => {
