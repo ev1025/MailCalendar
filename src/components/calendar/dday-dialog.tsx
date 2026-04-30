@@ -19,12 +19,12 @@ const IFRAME_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Montserrat:900" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Noto+Sans+KR:wght@500&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
       background-color: white;
-      font-family: 'Montserrat', sans-serif;
+      font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
     }
     #timer {
       color: #eeeeee;
@@ -43,7 +43,7 @@ const IFRAME_HTML = `<!DOCTYPE html>
       bottom: 30px;
       right: 13px;
       font-family: 'Noto Sans KR', sans-serif;
-      font-size: 1em;
+      font-size: 0.95em;
       font-weight: 500;
       color: #444;
       background-color: rgba(255, 255, 255, 0.8);
@@ -55,9 +55,12 @@ const IFRAME_HTML = `<!DOCTYPE html>
       justify-content: center;
       gap: 10px;
     }
+    /* 셀 — 4개 모두 동일 크기 유지(width 고정). 3자리 숫자도 들어가도록
+       원본보다 살짝 넓힘 (100 → 110). 폰트는 .numbers 에서 3em 으로 축소. */
     .days, .hours, .minutes, .seconds {
       padding: 20px;
-      width: 100px;
+      width: 110px;
+      box-sizing: content-box;
       border-radius: 5px;
       text-align: center;
     }
@@ -65,10 +68,12 @@ const IFRAME_HTML = `<!DOCTYPE html>
     .hours { background: #eeeeee; color: #183059; }
     .minutes { background: #276FBF; }
     .seconds { background: #F0A202; }
+    /* 폰트 4em → 3em — 3자리 숫자 충돌 방지. line-height 1 로 위·아래 여백 균등. */
     .numbers {
       font-family: 'Montserrat', sans-serif;
       color: #183059;
-      font-size: 4em;
+      font-size: 3em;
+      line-height: 1;
       text-align: center;
     }
   </style>
