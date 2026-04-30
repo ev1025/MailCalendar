@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SearchInput from "@/components/ui/search-input";
-import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info } from "lucide-react";
+import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info, X } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PasswordChangeDialog from "@/components/layout/password-change-dialog";
@@ -59,6 +59,8 @@ function SettingsPageInner() {
   const [locQuery, setLocQuery] = useState("");
   const [locResults, setLocResults] = useState<GeoResult[]>([]);
   const [locSearching, setLocSearching] = useState(false);
+  // 일기예보 카드 — 평소엔 현재 위치 카드만, 클릭 시 검색 input 으로 전환.
+  const [locEditing, setLocEditing] = useState(false);
 
   // 계정 — 비밀번호 변경 / 프로필 삭제 (이전엔 /profile 에 있던 것)
   const { deleteUser } = useAppUsers();
@@ -133,6 +135,7 @@ function SettingsPageInner() {
     });
     setLocQuery("");
     setLocResults([]);
+    setLocEditing(false);
   };
 
   useEffect(() => {
@@ -229,43 +232,64 @@ function SettingsPageInner() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <SearchInput
-                value={locQuery}
-                onChange={setLocQuery}
-                placeholder="지역 변경 (예: 서울, 부산, Tokyo)"
-                size="md"
-              />
-              {locQuery.trim() ? (
-                /* 검색 중 — 결과 드롭다운 */
-                <div className="rounded-md border max-h-60 overflow-y-auto">
-                  {locSearching ? (
-                    <p className="text-xs text-muted-foreground p-3">검색 중...</p>
-                  ) : locResults.length === 0 ? (
-                    <p className="text-xs text-muted-foreground p-3">결과 없음</p>
-                  ) : (
-                    locResults.map((r) => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => pickLocation(r)}
-                        className="flex w-full items-center justify-between gap-2 border-b px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-accent"
-                      >
-                        <span className="font-medium">
-                          {r.name}
-                          {r.admin1 ? `, ${r.admin1}` : ""}
-                        </span>
-                        <span className="text-xs text-muted-foreground">{r.country}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : (
-                /* 검색 아닐 땐 현재 선택된 지역 카드로 표시 — 여행 폼 장소 선택 UX 와 동일 패턴. */
-                <div className="flex items-start gap-2 rounded-md border p-2.5">
+              {!locEditing ? (
+                /* 평소: 현재 위치 카드 — 클릭하면 검색 모드로 전환. */
+                <button
+                  type="button"
+                  onClick={() => setLocEditing(true)}
+                  className="flex w-full items-start gap-2 rounded-md border p-2.5 text-left hover:bg-accent/40 transition-colors"
+                  aria-label="지역 변경"
+                >
                   <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{currentLocation.name}</div>
                   </div>
+                  <span className="text-[11px] text-muted-foreground/60 shrink-0 mt-0.5">변경</span>
+                </button>
+              ) : (
+                /* 편집 모드: 검색 input + 취소 버튼 + 결과 드롭다운. */
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <SearchInput
+                      value={locQuery}
+                      onChange={setLocQuery}
+                      placeholder="지역 검색 (예: 서울, 부산, Tokyo)"
+                      size="md"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setLocEditing(false); setLocQuery(""); setLocResults([]); }}
+                      aria-label="취소"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {locQuery.trim() && (
+                    <div className="rounded-md border max-h-60 overflow-y-auto">
+                      {locSearching ? (
+                        <p className="text-xs text-muted-foreground p-3">검색 중...</p>
+                      ) : locResults.length === 0 ? (
+                        <p className="text-xs text-muted-foreground p-3">결과 없음</p>
+                      ) : (
+                        locResults.map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => pickLocation(r)}
+                            className="flex w-full items-center justify-between gap-2 border-b px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-accent"
+                          >
+                            <span className="font-medium">
+                              {r.name}
+                              {r.admin1 ? `, ${r.admin1}` : ""}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{r.country}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">
