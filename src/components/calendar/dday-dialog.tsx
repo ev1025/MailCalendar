@@ -21,10 +21,15 @@ const IFRAME_HTML = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Montserrat:900" rel="stylesheet">
   <style>
+    html, body { height: 100%; }
     body {
       margin: 0;
       background-color: white;
       font-family: 'Montserrat', sans-serif;
+      /* iframe 전체 영역 안에서 타이머를 가로/세로 가운데 배치. */
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     #timer {
