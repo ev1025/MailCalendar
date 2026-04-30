@@ -19,13 +19,14 @@ const IFRAME_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Noto+Sans+KR:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Montserrat:900" rel="stylesheet">
   <style>
     body {
       margin: 0;
       background-color: white;
-      font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
+      font-family: 'Montserrat', sans-serif;
     }
+
     #timer {
       color: #eeeeee;
       text-transform: uppercase;
@@ -43,7 +44,7 @@ const IFRAME_HTML = `<!DOCTYPE html>
       bottom: 30px;
       right: 13px;
       font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.95em;
+      font-size: 1em;
       font-weight: 500;
       color: #444;
       background-color: rgba(255, 255, 255, 0.8);
@@ -55,25 +56,23 @@ const IFRAME_HTML = `<!DOCTYPE html>
       justify-content: center;
       gap: 10px;
     }
-    /* 셀 — 4개 모두 동일 크기 유지(width 고정). 3자리 숫자도 들어가도록
-       원본보다 살짝 넓힘 (100 → 110). 폰트는 .numbers 에서 3em 으로 축소. */
+
     .days, .hours, .minutes, .seconds {
       padding: 20px;
-      width: 110px;
-      box-sizing: content-box;
+      width: 100px;
       border-radius: 5px;
       text-align: center;
     }
+
     .days { background: #EF2F3C; }
     .hours { background: #eeeeee; color: #183059; }
     .minutes { background: #276FBF; }
     .seconds { background: #F0A202; }
-    /* 폰트 4em → 3em — 3자리 숫자 충돌 방지. line-height 1 로 위·아래 여백 균등. */
+
     .numbers {
       font-family: 'Montserrat', sans-serif;
       color: #183059;
       font-size: 3em;
-      line-height: 1;
       text-align: center;
     }
   </style>
@@ -81,30 +80,44 @@ const IFRAME_HTML = `<!DOCTYPE html>
 <body>
   <div id="timer">
     <div class="row">
-      <div class="days"><div id="days" class="numbers"></div>일</div>
-      <div class="hours"><div id="hours" class="numbers"></div>시간</div>
+      <div class="days">
+        <div id="days" class="numbers"></div>일
+      </div>
+      <div class="hours">
+        <div id="hours" class="numbers"></div>시간
+      </div>
     </div>
     <div class="row">
-      <div class="minutes"><div id="minutes" class="numbers"></div>분</div>
-      <div class="seconds"><div id="seconds" class="numbers"></div>초</div>
+      <div class="minutes">
+        <div id="minutes" class="numbers"></div>분
+      </div>
+      <div class="seconds">
+        <div id="seconds" class="numbers"></div>초
+      </div>
     </div>
   </div>
+
   <script>
     const myDate = new Date('Mar 3, 2025 07:25:00');
+
     setInterval(function () {
       const today = new Date().getTime();
       const diff = today - myDate;
+
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
       document.getElementById("days").innerText = days;
       document.getElementById("hours").innerText = hours;
       document.getElementById("minutes").innerText = minutes;
       document.getElementById("seconds").innerText = seconds;
     }, 1000);
   </script>
-  <div class="anniversary-label">❤ 2025. 03. 03. 07:24 ~</div>
+  <div class="anniversary-label">
+    ❤ 2025. 03. 03. 07:24 ~
+  </div>
 </body>
 </html>`;
 
