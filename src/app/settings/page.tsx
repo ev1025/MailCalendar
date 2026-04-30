@@ -335,22 +335,16 @@ function SettingsPageInner() {
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-foreground/80">기준 날짜</label>
-                    <DatePicker
-                      value={draftDate}
-                      onChange={setDraftDate}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-foreground/80">시각</label>
-                    <TimePicker
-                      value={draftTime}
-                      onChange={setDraftTime}
-                      className="h-9 text-xs"
-                    />
-                  </div>
+                  <DatePicker
+                    value={draftDate}
+                    onChange={setDraftDate}
+                    className="h-9 text-xs"
+                  />
+                  <TimePicker
+                    value={draftTime}
+                    onChange={setDraftTime}
+                    className="h-9 text-xs"
+                  />
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">
