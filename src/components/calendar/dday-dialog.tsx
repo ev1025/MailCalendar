@@ -142,7 +142,7 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        className="max-w-[calc(100%-1.5rem)] sm:max-w-[400px] p-0 gap-0 overflow-hidden bg-white border-[10px] border-gray-600"
+        className="max-w-[calc(100%-1.5rem)] sm:max-w-[400px] p-0 gap-0 overflow-hidden bg-white"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>D-day</DialogTitle>
