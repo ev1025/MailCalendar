@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SearchInput from "@/components/ui/search-input";
-import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PasswordChangeDialog from "@/components/layout/password-change-dialog";
@@ -190,7 +190,12 @@ function SettingsPageInner() {
         <div className="flex flex-col gap-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">테마</CardTitle>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Palette className="h-3.5 w-3.5" />
+                </span>
+                테마
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
@@ -216,8 +221,11 @@ function SettingsPageInner() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm flex items-center gap-2">
-                <MapPin className="h-4 w-4" />일기예보
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <MapPin className="h-3.5 w-3.5" />
+                </span>
+                일기예보
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
@@ -256,8 +264,9 @@ function SettingsPageInner() {
                   )}
                 </div>
               )}
-              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                일기예보 지역을 선택할 수 있어요.
+              <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">
+                <Info className="h-3 w-3 mt-[2px] shrink-0" />
+                <span>일기예보 지역을 선택할 수 있어요.</span>
               </p>
             </CardContent>
           </Card>
@@ -267,7 +276,12 @@ function SettingsPageInner() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">D-day</CardTitle>
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                  </span>
+                  D-day
+                </CardTitle>
                 <button
                   type="button"
                   role="switch"
@@ -311,8 +325,9 @@ function SettingsPageInner() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                    달력 우상단에 D-day 버튼이 표시됩니다.
+                  <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">
+                    <Info className="h-3 w-3 mt-[2px] shrink-0" />
+                    <span>달력 우상단에 D-day 버튼이 표시됩니다.</span>
                   </p>
                   <Button
                     size="sm"
@@ -330,7 +345,12 @@ function SettingsPageInner() {
           {/* 계정 — 비밀번호 변경 + 프로필 삭제 (이전엔 /profile 에 있던 액션) */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">계정</CardTitle>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <UserCircle className="h-3.5 w-3.5" />
+                </span>
+                계정
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-1">
               <button
