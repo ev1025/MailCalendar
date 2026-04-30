@@ -10,12 +10,7 @@ import {
 import MonthPicker from "@/components/layout/month-picker";
 import PageHeader from "@/components/layout/page-header";
 import HeaderViewMenu from "@/components/layout/header-view-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import DdayDialog from "@/components/calendar/dday-dialog";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useWeather } from "@/hooks/use-weather";
 import { useEventTags } from "@/hooks/use-event-tags";
@@ -87,7 +82,7 @@ function CalendarPageInner() {
   const [dayDetailOpen, setDayDetailOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
 
-  // D-day 임베드 다이얼로그 — 외부 apption 대시보드를 iframe 으로 표시.
+  // D-day 다이얼로그
   const [ddayOpen, setDdayOpen] = useState(false);
 
   const {
@@ -232,7 +227,8 @@ function CalendarPageInner() {
         title={viewLabel}
         actions={
           <div className="flex items-center gap-1">
-            {/* D-day — 외부 apption 대시보드 iframe 모달. 가장 왼쪽. */}
+            {/* D-day — 사용자 디자인을 React 로 그대로 임베드한 다이얼로그.
+                (apption 외부 임베드는 X-Frame 차단으로 폐기) */}
             <button
               type="button"
               onClick={() => setDdayOpen(true)}
@@ -443,26 +439,7 @@ function CalendarPageInner() {
         onConfirm={handleScopeConfirm}
       />
 
-      {/* D-day 임베드 — apption 대시보드를 iframe 으로 표시. 오픈 시에만 마운트해
-          닫혀있을 땐 외부 트래픽 0. */}
-      <Dialog open={ddayOpen} onOpenChange={setDdayOpen}>
-        <DialogContent
-          showBackButton={false}
-          className="max-w-[calc(100%-1.5rem)] sm:max-w-3xl p-0 gap-0 overflow-hidden"
-        >
-          <DialogHeader className="px-5 pt-4 pb-2">
-            <DialogTitle className="text-base font-semibold">D-day</DialogTitle>
-          </DialogHeader>
-          <div className="px-3 pb-3">
-            <iframe
-              src="https://apption.co/dashboards/embeds/65371b1c"
-              title="D-day 대시보드"
-              loading="lazy"
-              className="block w-full h-[70vh] border-0 rounded-md bg-background"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DdayDialog open={ddayOpen} onOpenChange={setDdayOpen} />
     </div>
     </>
   );
