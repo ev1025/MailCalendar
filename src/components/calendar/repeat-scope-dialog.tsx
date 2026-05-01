@@ -45,15 +45,16 @@ export default function RepeatScopeDialog({ open, onOpenChange, action, onConfir
         <DialogHeader>
           <DialogTitle>반복 일정 {action}</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-muted-foreground">
+        <div className="flex flex-col gap-2.5">
+          {/* 컨텍스트 안내 — font-medium 으로 위계 살짝 끌어올림. */}
+          <p className="text-[13px] text-foreground/75 leading-relaxed break-keep">
             이 일정은 반복 시리즈의 일부입니다. 어떻게 {action}할까요?
           </p>
           <div className="flex flex-col gap-1.5 mt-1">
             {OPTIONS.map((opt) => (
               <label
                 key={opt.value}
-                className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-all duration-150 tap-feedback ${
                   scope === opt.value ? "border-primary bg-primary/5" : "hover:bg-accent/50"
                 }`}
               >
@@ -66,7 +67,7 @@ export default function RepeatScopeDialog({ open, onOpenChange, action, onConfir
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{opt.label}</p>
-                  <p className="text-xs text-muted-foreground">{opt.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{opt.description}</p>
                 </div>
               </label>
             ))}

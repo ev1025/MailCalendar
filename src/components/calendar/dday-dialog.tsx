@@ -24,8 +24,19 @@ interface Props {
   time: string;
 }
 
-/** 입력 date+time 으로 IFRAME 의 HTML 문자열 생성. */
+/**
+ * 입력 date+time 으로 IFRAME 의 HTML 문자열 생성.
+ *
+ * 보안:
+ *  - date 는 "YYYY-MM-DD" 정규식 통과만 허용 (영숫자+- 만)
+ *  - time 은 "HH:MM" 정규식 통과만 허용
+ *  - 둘 다 검증 실패하면 빈 문자열 반환 → iframe 이 빈 화면 표시
+ *  - 향후 사용자 자유입력 (예: 라벨 커스터마이즈) 추가 시에도 인용 처리 강제.
+ */
 function buildIframeHtml(date: string, time: string): string {
+  // 입력 검증 — 형식 외 문자 들어오면 즉시 거부 (XSS 방지).
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
+  if (!/^\d{2}:\d{2}$/.test(time)) return "";
   // myDate JS 파싱용 ISO. iOS Safari 도 안전하게 파싱하는 형식.
   const isoLike = `${date}T${time}:00`;
   // 라벨용 한글 형식 — "YYYY. MM. DD. HH:MM"

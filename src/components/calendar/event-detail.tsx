@@ -132,31 +132,40 @@ export default function EventDetail({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>반복 일정 삭제</DialogTitle>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: event.color }} />
+                <DialogTitle>반복 일정 삭제</DialogTitle>
+              </div>
+              {/* 컨텍스트 보존 — 삭제 모드 진입해도 어떤 일정인지 명확히 보임. */}
+              <p className="text-xs text-muted-foreground tabular-nums mt-1">
+                <span className="font-medium text-foreground/80">{event.title}</span> · {formatDateShort(event.start_date)}
+              </p>
             </DialogHeader>
             <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground">이 일정은 반복 일정입니다. 어떻게 삭제할까요?</p>
               <div className="flex flex-col gap-2">
-                <Button
-                  variant="outline"
-                  className="justify-start h-auto py-3 px-4"
+                <button
+                  type="button"
                   onClick={() => { setShowDeleteChoice(false); onDelete("single"); }}
+                  className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent/50 tap-feedback"
                 >
-                  <div className="text-left">
+                  <Trash2 className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">이 일정만 삭제</p>
                     <p className="text-xs text-muted-foreground mt-0.5">선택한 일정 1개만 삭제합니다</p>
                   </div>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="justify-start h-auto py-3 px-4 text-destructive hover:text-destructive"
+                </button>
+                <button
+                  type="button"
                   onClick={() => { setShowDeleteChoice(false); onDelete("future"); }}
+                  className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-destructive/5 tap-feedback"
                 >
-                  <div className="text-left">
-                    <p className="text-sm font-medium">이후 동일 일정 모두 삭제</p>
+                  <Trash2 className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-destructive">이후 동일 일정 모두 삭제</p>
                     <p className="text-xs text-muted-foreground mt-0.5">이 날짜 이후 같은 제목의 일정을 모두 삭제합니다</p>
                   </div>
-                </Button>
+                </button>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setShowDeleteChoice(false)}>취소</Button>
             </div>
