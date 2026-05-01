@@ -221,11 +221,12 @@ function RepeatCountField({
   })();
 
   // 드롭다운 열릴 때 — 현재 선택된 회차가 첫 visible 행이 되도록 scroll.
+  // 계속(-1) 일 땐 첫 항목(1회) 가 visible.
   useEffect(() => {
     if (!open || !listRef.current) return;
     const target = repeatCount > 0
       ? listRef.current.querySelector<HTMLElement>(`[data-count="${repeatCount}"]`)
-      : listRef.current.querySelector<HTMLElement>(`[data-count="-1"]`);
+      : null;
     if (target) target.scrollIntoView({ block: "start" });
   }, [open, repeatCount]);
 
@@ -264,8 +265,21 @@ function RepeatCountField({
     },
   });
 
+  const isInfinite = repeatCount === -1;
+  const handleInfiniteToggle = () => {
+    // touchstart → 합성 mousedown 이중 발화 방지 (idempotent 라도 토스트 등 부작용 회피).
+    const now = performance.now();
+    if (now - lastTapRef.current < 350) return;
+    lastTapRef.current = now;
+    setRepeatCount(-1);
+    setCustomDigits("");
+    setOpen(false);
+    inputRef.current?.blur();
+  };
+
   return (
-    <div className="relative w-fit">
+    <div className="relative flex items-center gap-1.5">
+      <div className="relative">
       <input
         ref={inputRef}
         type="text"
@@ -338,16 +352,6 @@ function RepeatCountField({
           ref={listRef}
           className="absolute left-0 top-full mt-1 z-30 w-[10.5rem] max-h-[7.5rem] overflow-y-auto rounded-lg border bg-popover shadow-lg overscroll-contain"
         >
-          <button
-            type="button"
-            data-count="-1"
-            {...itemHandlers(-1)}
-            className={`w-full text-left px-3 py-1.5 text-xs whitespace-nowrap hover:bg-accent transition-colors ${
-              repeatCount === -1 ? "bg-accent font-medium" : ""
-            }`}
-          >
-            계속
-          </button>
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
             <button
               key={i}
@@ -363,6 +367,32 @@ function RepeatCountField({
           ))}
         </div>
       )}
+      </div>
+      {/* 계속 버튼 — input 우측 별도 버튼. 누르면 -1 (무한) 로 즉시 설정.
+          input 포커스(키보드 올라온) 상태에서도 동작하도록 mousedown/touchstart 에서 즉시. */}
+      <button
+        type="button"
+        aria-pressed={isInfinite}
+        onMouseDown={(e) => {
+          e.preventDefault(); // input blur 차단 → onClick 누락 방지
+          handleInfiniteToggle();
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          handleInfiniteToggle();
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        className={`h-9 px-3 rounded-lg border text-xs font-medium shrink-0 transition-colors tap-feedback ${
+          isInfinite
+            ? "bg-primary text-primary-foreground border-primary"
+            : "bg-transparent border-input text-muted-foreground hover:bg-accent hover:text-foreground"
+        }`}
+      >
+        계속
+      </button>
     </div>
   );
 }
