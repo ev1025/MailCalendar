@@ -32,9 +32,12 @@ function SelectTrigger({
   className,
   size = "default",
   children,
+  hideIcon,
   ...props
 }: SelectPrimitive.Trigger.Props & {
   size?: "sm" | "default"
+  /** ChevronDown 아이콘 숨김 — 컴팩트 인라인 토글에서 가로 폭 절약용. */
+  hideIcon?: boolean
 }) {
   return (
     <SelectPrimitive.Trigger
@@ -47,11 +50,13 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon
-        render={
-          <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
-        }
-      />
+      {!hideIcon && (
+        <SelectPrimitive.Icon
+          render={
+            <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+          }
+        />
+      )}
     </SelectPrimitive.Trigger>
   )
 }

@@ -123,13 +123,19 @@ export function MonthlyNthButton({
         value={String(value.week)}
         onValueChange={(v) => v && onChange({ ...value, week: parseInt(v, 10) })}
       >
-        {/* 트리거는 컴팩트한 "1주" 표시. 드롭다운 항목은 "1째주" 로 명확하게. */}
-        <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[2.75rem] px-1.5`}>
+        {/* hideIcon — 컴팩트 토글 (ChevronDown 생략으로 가로 폭 절약).
+            트리거는 컴팩트한 "1주" 표시, 드롭다운 항목은 "1째주" 로 명확하게. */}
+        <SelectTrigger
+          hideIcon
+          className={`${FORM_INPUT_COMPACT} w-fit min-w-[2.5rem] px-1.5`}
+        >
           {value.week}주
         </SelectTrigger>
-        <SelectContent className="min-w-[4.25rem]">
+        {/* align=start — 트리거 좌단과 popup 좌단 정렬. popup 이 더 넓을 때
+            가운데 정렬되면 좌우로 들쭉날쭉해 보이는 문제 해결. */}
+        <SelectContent align="start">
           {[1, 2, 3, 4, 5].map((n) => (
-            <SelectItem key={n} value={String(n)}>
+            <SelectItem key={n} value={String(n)} hideIndicator>
               {n}째주
             </SelectItem>
           ))}
@@ -142,12 +148,15 @@ export function MonthlyNthButton({
         }
       >
         {/* 트리거는 한 글자 "월", 드롭다운은 "월요일" 로 표시. */}
-        <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[2.5rem] px-1.5`}>
+        <SelectTrigger
+          hideIcon
+          className={`${FORM_INPUT_COMPACT} w-fit min-w-[2rem] px-1.5`}
+        >
           {KO_WEEKDAYS[value.weekday]}
         </SelectTrigger>
-        <SelectContent className="min-w-[4.25rem]">
+        <SelectContent align="start">
           {KO_WEEKDAYS.map((w, i) => (
-            <SelectItem key={i} value={String(i)}>
+            <SelectItem key={i} value={String(i)} hideIndicator>
               {w}요일
             </SelectItem>
           ))}
