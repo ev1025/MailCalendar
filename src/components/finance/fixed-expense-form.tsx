@@ -352,7 +352,7 @@ export default function FixedExpenseForm({
 
         {/* 반복 / 반복 횟수 / 격주·N주차 — 달력 일정 폼과 동일 패턴. */}
         <div className="flex items-start gap-3 flex-wrap">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 flex-1 min-w-[7rem]">
             <Label className={FORM_LABEL}>반복</Label>
             <Select
               value={repeat}
@@ -370,7 +370,7 @@ export default function FixedExpenseForm({
                 }
               }}
             >
-              <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
+              <SelectTrigger className={`${FORM_INPUT_COMPACT} w-full`}>
                 {FX_REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
               </SelectTrigger>
               <SelectContent className="min-w-[5rem]">

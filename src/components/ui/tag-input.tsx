@@ -609,6 +609,25 @@ export default function TagInput({
               showCloseButton={false}
               initialFocus={false}
               finalFocus={false}
+              // ── 키보드 가드 ──
+              // 키보드 올라온 상태에서는 (1) 칩 X 제거, (2) "+ N 추가" 버튼,
+              // (3) input/textarea 자체 외에는 어떤 탭도 액션을 발화시키지 않음 —
+              // 키보드만 내려가도록. touchstart 캡처 단계에서 preventDefault 하면
+              // 합성 mousedown/click 이 아예 안 발생해 자식 핸들러가 트리거 안 됨.
+              onTouchStartCapture={(e) => {
+                if (document.activeElement !== inputRef.current) return;
+                const target = e.target as HTMLElement | null;
+                if (!target) return;
+                if (
+                  target.closest(
+                    'input, textarea, [data-tag-action="x-chip"], [data-tag-action="add-new"]',
+                  )
+                ) {
+                  return;
+                }
+                e.preventDefault();
+                inputRef.current?.blur();
+              }}
             >
               {renderBody()}
             </SheetContent>
@@ -661,6 +680,7 @@ export default function TagInput({
                           <span
                             role="button"
                             tabIndex={-1}
+                            data-tag-action="x-chip"
                             // touchstart + mousedown 둘 다 fire 가능하나 tap() ref-debounce 로
                             // 350ms 안에 단일 발화만 처리. preventDefault 는 효과 있을 때만 작동.
                             onTouchStart={(e) => {
@@ -792,6 +812,7 @@ export default function TagInput({
                   {newTagName.trim() && !allTags.some((t) => t.name === newTagName.trim()) && onAddTag && (
                     <button
                       type="button"
+                      data-tag-action="add-new"
                       // onPointerDown preventDefault — 모바일/데스크탑 모두에서 input 포커스
                       // 유지 → 키보드 hide 로 인한 시트 레이아웃 shift 깜빡임 방지.
                       // (이전 onMouseDown 만으로는 모바일 터치 합성 click 시 timing 어긋나서

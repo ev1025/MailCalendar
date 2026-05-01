@@ -153,6 +153,10 @@ export default function EventForm({
       setSelectedTags(event.tag ? event.tag.split(",") : []);
       setRepeat(((event.repeat as RepeatType) || "none") as UIRepeat);
       setRepeatCount(-1);
+      // calendar_events 에는 weekly_interval/monthly_nth 컬럼이 없음 — 수정 진입 시
+      // 매번 기본값으로 리셋해 "이전 폼에서 누른 격주/N주차" 잔존 방지.
+      setWeeklyInterval(1);
+      setMonthlyNth(null);
 
       setShowEndDate(!!event.end_date);
       setShowEndTime(!!event.end_time);
@@ -177,6 +181,8 @@ export default function EventForm({
     setSelectedTags([]);
     setRepeat("none");
     setRepeatCount(-1);
+    setWeeklyInterval(1);
+    setMonthlyNth(null);
     setShowEndDate(false);
     setShowEndTime(false);
   }
@@ -325,9 +331,9 @@ export default function EventForm({
           </div>
 
 
-          {/* 반복 / 반복 횟수 — 두 컬럼 모두 컨텐츠 크기에 맞춤 (잉여 공간 없음). */}
+          {/* 반복 / 반복 횟수 — 컬럼이 row 폭을 채우도록 grow. 아래 태그 박스와 시각 정렬. */}
           <div className="flex items-start gap-3 flex-wrap">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[7rem]">
               <Label className={FORM_LABEL}>반복</Label>
               <Select value={repeat} onValueChange={(v) => {
                 if (v) {
@@ -339,7 +345,7 @@ export default function EventForm({
                   if (v === "infinite") setRepeatCount(-1);
                 }
               }}>
-                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
+                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-full`}>
                   {REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
                 </SelectTrigger>
                 <SelectContent className="min-w-[5rem]">
