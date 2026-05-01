@@ -44,6 +44,32 @@ $$;
 REVOKE EXECUTE ON FUNCTION shared_user_ids() FROM anon, authenticated, public;
 
 -- ────────────────────────────────
+-- 0-3. 헬퍼 함수: 무료 플랜 사용량 조회 (Settings → API 탭에서 표시)
+--      DB 용량(pg_database_size) + Storage 객체 용량/개수.
+-- ────────────────────────────────
+CREATE OR REPLACE FUNCTION get_usage_stats()
+RETURNS TABLE (
+  db_size_bytes BIGINT,
+  storage_size_bytes BIGINT,
+  storage_object_count BIGINT,
+  public_table_count BIGINT
+)
+LANGUAGE SQL STABLE SECURITY DEFINER
+SET search_path = public, storage
+AS $$
+  SELECT
+    pg_database_size(current_database()) AS db_size_bytes,
+    COALESCE((SELECT SUM((metadata->>'size')::bigint) FROM storage.objects), 0) AS storage_size_bytes,
+    COALESCE((SELECT COUNT(*) FROM storage.objects), 0) AS storage_object_count,
+    (SELECT COUNT(*) FROM information_schema.tables
+       WHERE table_schema = 'public' AND table_type = 'BASE TABLE') AS public_table_count;
+$$;
+
+-- 로그인 사용자만 RPC 호출 허용.
+REVOKE EXECUTE ON FUNCTION get_usage_stats() FROM anon, public;
+GRANT EXECUTE ON FUNCTION get_usage_stats() TO authenticated;
+
+-- ────────────────────────────────
 -- 1. app_users — 모두 읽기 가능(공유 대상 목록), 본인만 쓰기/수정/삭제
 -- ────────────────────────────────
 DROP POLICY IF EXISTS "Allow all" ON app_users;
