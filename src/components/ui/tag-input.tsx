@@ -471,6 +471,11 @@ export default function TagInput({
                   <span
                     role="button"
                     tabIndex={-1}
+                    // 모바일 키보드 올라온 상태에서 X 누르면 input blur → 키보드 내려감
+                    // → viewport resize → tap 위치가 어긋나 onClick 누락되던 문제.
+                    // mousedown/touchstart 에서 preventDefault 로 focus 유지.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     onClick={(e) => { e.stopPropagation(); toggleTag(name); }}
                     className="ml-0.5 opacity-60 hover:opacity-100 cursor-pointer"
                     aria-label={`${name} 제거`}
@@ -676,8 +681,15 @@ export default function TagInput({
                       <div
                         key={t.id}
                         className="flex items-center justify-between px-2 py-2 hover:bg-accent rounded cursor-pointer"
-                        onMouseDown={(e) => { if (document.activeElement === inputRef.current) e.preventDefault(); }}
-                        onClick={() => { toggleTag(t.name); setNewTagName(""); }}
+                        // 모바일 키보드 열린 상태에서 onClick 까지 기다리면 blur → keyboard 내려가며
+                        // viewport resize → tap 위치 어긋나 클릭 누락 발생.
+                        // onPointerDown 단계에서 즉시 처리 + preventDefault 로 focus 유지.
+                        onPointerDown={(e) => {
+                          // 편집 버튼 영역에서 시작된 포인터는 onPointerDown stopPropagation 으로 분리됨.
+                          if (document.activeElement === inputRef.current) e.preventDefault();
+                          toggleTag(t.name);
+                          setNewTagName("");
+                        }}
                       >
                         <Badge
                           className="text-xs px-1.5 py-0"
@@ -687,8 +699,12 @@ export default function TagInput({
                         </Badge>
                         <button
                           type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={(e) => { e.stopPropagation(); enterEdit(t); }}
+                          onPointerDown={(e) => {
+                            // 부모 row 의 toggleTag 가 먼저 실행되지 않도록 즉시 차단.
+                            e.stopPropagation();
+                            e.preventDefault();
+                            enterEdit(t);
+                          }}
                           className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent/50"
                           aria-label={`${t.name} 편집`}
                         >
