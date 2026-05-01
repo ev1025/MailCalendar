@@ -77,8 +77,13 @@ function ColorPickerPopover({ color, onChange, isCustom }: { color: string; onCh
   );
 }
 
-const REPEAT_OPTIONS: { value: RepeatType; label: string }[] = [
+// UI 전용 확장 타입 — DB 의 RepeatType ('weekly'/'monthly'/'yearly'/null) 에
+// "infinite" 추가. 저장 시점에 weekly + count=-1 로 변환.
+type UIRepeat = RepeatType | "infinite";
+
+const REPEAT_OPTIONS: { value: UIRepeat; label: string }[] = [
   { value: "none", label: "없음" },
+  { value: "infinite", label: "계속" },
   { value: "weekly", label: "매주" },
   { value: "monthly", label: "매월" },
   { value: "yearly", label: "매년" },
@@ -265,21 +270,8 @@ function RepeatCountField({
     },
   });
 
-  const isInfinite = repeatCount === -1;
-  const handleInfiniteToggle = () => {
-    // touchstart → 합성 mousedown 이중 발화 방지 (idempotent 라도 토스트 등 부작용 회피).
-    const now = performance.now();
-    if (now - lastTapRef.current < 350) return;
-    lastTapRef.current = now;
-    setRepeatCount(-1);
-    setCustomDigits("");
-    setOpen(false);
-    inputRef.current?.blur();
-  };
-
   return (
-    <div className="relative flex items-center gap-1.5">
-      <div className="relative">
+    <div className="relative w-fit">
       <input
         ref={inputRef}
         type="text"
@@ -367,32 +359,6 @@ function RepeatCountField({
           ))}
         </div>
       )}
-      </div>
-      {/* 계속 버튼 — input 우측 별도 버튼. 누르면 -1 (무한) 로 즉시 설정.
-          input 포커스(키보드 올라온) 상태에서도 동작하도록 mousedown/touchstart 에서 즉시. */}
-      <button
-        type="button"
-        aria-pressed={isInfinite}
-        onMouseDown={(e) => {
-          e.preventDefault(); // input blur 차단 → onClick 누락 방지
-          handleInfiniteToggle();
-        }}
-        onTouchStart={(e) => {
-          e.stopPropagation();
-          handleInfiniteToggle();
-        }}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        className={`h-9 px-3 rounded-lg border text-xs font-medium shrink-0 transition-colors tap-feedback ${
-          isInfinite
-            ? "bg-primary text-primary-foreground border-primary"
-            : "bg-transparent border-input text-muted-foreground hover:bg-accent hover:text-foreground"
-        }`}
-      >
-        계속
-      </button>
     </div>
   );
 }
@@ -455,7 +421,7 @@ export default function EventForm({
   const [endTime, setEndTime] = useState("");
   const [color, setColor] = useState(() => randomEventColor());
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [repeat, setRepeat] = useState<RepeatType>("none");
+  const [repeat, setRepeat] = useState<UIRepeat>("none");
   const [repeatCount, setRepeatCount] = useState(-1);
   // 반복 횟수 커스텀 드롭다운 상태 — 빌트인 Select 대신 Popover 기반.
   // 직접 입력 input 이 popover 내부에 있어야 + 8자리 즉시 커밋 + 동일값 재클릭
@@ -480,7 +446,7 @@ export default function EventForm({
       setEndTime(event.end_time ? event.end_time.slice(0, 5) : "");
       setColor(event.color);
       setSelectedTags(event.tag ? event.tag.split(",") : []);
-      setRepeat((event.repeat as RepeatType) || "none");
+      setRepeat(((event.repeat as RepeatType) || "none") as UIRepeat);
       setRepeatCount(-1);
 
       setShowEndDate(!!event.end_date);
@@ -515,13 +481,17 @@ export default function EventForm({
     if (!title.trim() || !startDate) return;
 
     setSaving(true);
+    // UI "infinite" → DB 는 weekly + count=-1 로 매핑. 사용자에겐 "계속" 의미만 보임.
     // repeatCount = 사용자가 본 "추가 반복 횟수" (1 = 이번 + 1번 더 = 총 2번).
     // handleSave 는 총 개수 기준이므로 +1 변환. -1(무한) 은 그대로.
+    const dbRepeat: RepeatType | null =
+      repeat === "none" ? null : repeat === "infinite" ? "weekly" : repeat;
+    const effectiveCount = repeat === "infinite" ? -1 : repeatCount;
     const rc =
-      repeat !== "none" && !event
-        ? repeatCount === -1
+      dbRepeat !== null && !event
+        ? effectiveCount === -1
           ? -1
-          : repeatCount + 1
+          : effectiveCount + 1
         : undefined;
     const { error } = await onSave(
       {
@@ -533,7 +503,7 @@ export default function EventForm({
         end_time: endTime || null,
         color,
         tag: selectedTags.length > 0 ? selectedTags.join(",") : null,
-        repeat: repeat === "none" ? null : repeat,
+        repeat: dbRepeat,
         ...(sharedWith.length > 0 ? { shared_with: sharedWith } : {}),
       } as Omit<CalendarEvent, "id" | "created_at">,
       rc
@@ -650,10 +620,12 @@ export default function EventForm({
               <Label className={FORM_LABEL}>반복</Label>
               <Select value={repeat} onValueChange={(v) => {
                 if (v) {
-                  setRepeat(v as RepeatType);
-                  // 반복 타입 변경 시 직접 입력 popover 도 닫힘 + customDigits 초기화.
+                  setRepeat(v as UIRepeat);
+                  // 반복 타입 변경 시 직접 입력 popover 닫힘 + customDigits 초기화.
+                  // "infinite" 선택 시 repeatCount 도 -1 로 강제 (UI 의도 명시).
                   setRepeatCountOpen(false);
                   setCustomDigits("");
+                  if (v === "infinite") setRepeatCount(-1);
                 }
               }}>
                 <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
@@ -668,13 +640,12 @@ export default function EventForm({
                 </SelectContent>
               </Select>
             </div>
-            {repeat !== "none" && (
+            {/* "infinite"(계속) / "none"(없음) 일 땐 반복 횟수 컬럼 숨김 — 의미 없음. */}
+            {repeat !== "none" && repeat !== "infinite" && (
               <div className="flex flex-col gap-1.5 min-w-0">
                 <Label className={FORM_LABEL}>반복 횟수</Label>
                 {/* 입력 박스 자체가 트리거 — 여행 페이지 위치 검색과 동일 패턴.
-                    포커스 시 드롭다운 등장. 입력값 8자리 완성 시 즉시 커밋.
-                    리스트에서 항목 선택해도 input 에 그 날짜 유지 → 다시 열면
-                    선택한 항목이 상단에 보이도록 scroll. */}
+                    포커스 시 드롭다운 등장. 입력값 8자리 완성 시 즉시 커밋. */}
                 <RepeatCountField
                   startDate={startDate}
                   repeat={repeat}
