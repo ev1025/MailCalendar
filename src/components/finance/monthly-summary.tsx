@@ -8,6 +8,8 @@ interface MonthlySummaryProps {
   /** 고정비 합계 — 부모에서 page.tsx 의 useFixedExpenses 와 동일 인스턴스를 공유.
    *  이전엔 monthly-summary 안에서 별도 훅을 호출해 변경이 즉시 반영 안 되었음. */
   totalFixed: number;
+  /** 전월 같은 기간의 net (수입 - 지출). 전월 대비 카드 계산용. */
+  prevNet: number;
   /** 고정비 카드 우상단 ✏️ — 클릭 시 FixedExpenseManager 열기. */
   onOpenFixed?: () => void;
   /** 수입 카드 우상단 ✏️ — 클릭 시 IncomeManager 열기. */
@@ -24,6 +26,7 @@ export default function MonthlySummary({
   totalIncome,
   totalExpense,
   totalFixed,
+  prevNet,
   onOpenFixed,
   onOpenIncome,
   onAddTransaction,
@@ -85,12 +88,13 @@ export default function MonthlySummary({
     </div>
   );
 
-  // 잔액 = 이번달 수입 − 이번달 지출. 양수=흑자, 음수=적자.
-  const balance = totalIncome - totalExpense;
-  const isSurplus = balance >= 0;
-  const balanceLabel = isSurplus ? "흑자" : "적자";
-  const balanceColor = isSurplus ? "text-finance-gain" : "text-finance-loss";
-  const balanceSign = isSurplus ? "+" : "-";
+  // 이번달 net = 수입 - 지출. 전월 대비 = 이번달 net - 전월 net.
+  const thisNet = totalIncome - totalExpense;
+  const delta = thisNet - prevNet;
+  const isUp = delta >= 0;
+  const deltaColor = isUp ? "text-finance-gain" : "text-finance-loss";
+  const deltaSign = isUp ? "+" : "-";
+  const prevSign = prevNet >= 0 ? "+" : "-";
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-3 md:h-full">
@@ -126,24 +130,15 @@ export default function MonthlySummary({
         />
       </div>
 
-      {/* 2층: 이번달 수입 | 지출 — 각 카드 우상단에 + 액션 (해당 type 으로 폼 열림) */}
+      {/* 2층: 전월 대비 | 이번달 지출 */}
       <div className="grid gap-1.5 md:gap-3 grid-cols-2 md:flex-1 md:min-h-0">
         <Cell
-          label="이번달 수입"
-          color="text-finance-gain"
-          action={
-            onAddTransaction ? (
-              <ActionBtn
-                icon={<Plus className="h-3.5 w-3.5" />}
-                onClick={() => onAddTransaction("income")}
-                label="수입 추가"
-              />
-            ) : undefined
-          }
-          value={`+${formatWon(totalIncome)}`}
+          label="전월 대비"
+          color={deltaColor}
+          value={`${deltaSign}${formatWon(Math.abs(delta))}`}
           sub={
-            <span className={balanceColor}>
-              {balanceLabel} {balanceSign}{formatWon(Math.abs(balance))}
+            <span className="text-muted-foreground">
+              전월 {prevSign}{formatWon(Math.abs(prevNet))}
             </span>
           }
         />

@@ -32,6 +32,18 @@ export default function FinancePage() {
   );
 }
 
+/** YYYY-MM-DD 를 한 달 뒤로(예: 2026-05-31 → 2026-04-30) 이동.
+ *  setMonth 오버플로우 회피 위해 day-of-month 클램프 적용. */
+function shiftMonthBack(ymd: string): string {
+  const d = new Date(ymd + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return ymd;
+  const targetDay = d.getDate();
+  const t = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  const lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+  const day = Math.min(targetDay, lastDay);
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 function FinancePageInner() {
   const router = useRouter();
   const now = new Date();
@@ -73,6 +85,21 @@ function FinancePageInner() {
     expenseByCategory,
     refetch: refetchTransactions,
   } = useTransactions(startDate, endDate);
+
+  // 전월 대비 카드용 — 현재 기간을 1개월 앞당긴 구간의 거래 합계.
+  // 31일 같은 day 가 이전 달에 없으면 그 달 말일로 클램프해 자연스러운 "한 달 전" 의미 유지.
+  const prevStartDate = shiftMonthBack(startDate);
+  const prevEndDate = shiftMonthBack(endDate);
+  const { transactions: prevTransactions } = useTransactions(prevStartDate, prevEndDate);
+  const prevTotalIncome = useMemo(
+    () => prevTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+    [prevTransactions],
+  );
+  const prevTotalExpense = useMemo(
+    () => prevTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
+    [prevTransactions],
+  );
+  const prevNet = prevTotalIncome - prevTotalExpense;
 
   const {
     fixedExpenses,
@@ -232,6 +259,7 @@ function FinancePageInner() {
               totalIncome={baseTotalIncome}
               totalExpense={baseTotalExpense}
               totalFixed={totalFixed}
+              prevNet={prevNet}
               onOpenFixed={() => setFixedOpen(true)}
               onOpenIncome={() => setIncomeOpen(true)}
               onAddTransaction={(t) => {

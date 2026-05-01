@@ -344,7 +344,7 @@ export default function EventForm({
                   if (v === "infinite") setRepeatCount(-1);
                 }
               }}>
-                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
+                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[3.5rem]`}>
                   {REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
                 </SelectTrigger>
                 <SelectContent className="min-w-[5rem]">

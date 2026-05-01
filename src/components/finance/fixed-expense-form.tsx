@@ -301,12 +301,12 @@ export default function FixedExpenseForm({
               className={`${FORM_INPUT_PRIMARY} w-[8.5rem] tabular-nums`}
             />
           </FormField>
-          <FormField label="시작일" className="w-fit">
+          <FormField label="시작일" className="flex-1 min-w-0">
             <DatePicker
               value={anchorDate}
               onChange={setAnchorDate}
-              // 컨텐츠 폭 + 양쪽 살짝 여백 (px-3) — "2026-05-09" 가 답답하지 않게.
-              className={`${FORM_INPUT_COMPACT} w-fit px-3`}
+              // 금액(고정 폭) | 시작일(잉여 공간 grow) | 반복(컨텐츠 폭) 행 정렬.
+              className={`${FORM_INPUT_COMPACT} w-full px-3`}
             />
           </FormField>
           <div className="flex flex-col gap-1.5 w-fit">
