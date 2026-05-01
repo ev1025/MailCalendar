@@ -181,6 +181,15 @@ export async function syncPlanCalendarEvents(params: {
   }
 
   // 재빌드: 기존 삭제 → 새 삽입.
+  // Supabase JS 가 client 트랜잭션을 노출하지 않아 진정한 원자성은 서버 RPC 필요.
+  // 차선책: 삭제 전 기존 행을 메모리에 백업 → INSERT 실패 시 복원 시도.
+  // 이렇게 하면 네트워크 실패에 대해선 견고. 브라우저 종료 같은 케이스는 여전히 한계.
+  const existingRes = await supabase
+    .from("calendar_events")
+    .select("*")
+    .eq("plan_id", planId);
+  const backup = existingRes.data ?? [];
+
   const del = await supabase.from("calendar_events").delete().eq("plan_id", planId);
   if (del.error) return { updated: false, count: 0, error: del.error };
 
@@ -188,14 +197,30 @@ export async function syncPlanCalendarEvents(params: {
 
   const ins = await supabase.from("calendar_events").insert(built.events);
   if (ins.error) {
-    // plan_id 컬럼 없는 구 DB → 폴백 (동기화는 사실상 비활성, 그래도 events 는 들어감)
+    // plan_id 컬럼 없는 구 DB → 폴백.
     const fallback = built.events.map((e) => {
       const { plan_id: _omit, ...rest } = e as { plan_id?: unknown } & Record<string, unknown>;
       void _omit;
       return rest;
     });
     const retry = await supabase.from("calendar_events").insert(fallback);
-    if (retry.error) return { updated: false, count: 0, error: retry.error };
+    if (retry.error) {
+      // INSERT 둘 다 실패 — 백업본 복원으로 데이터 손실 방지.
+      if (backup.length > 0) {
+        const { id: _omitId, ...sample } = backup[0] as Record<string, unknown>;
+        void _omitId; void sample;
+        const restoreRows = backup.map((b) => {
+          const { id, ...rest } = b as Record<string, unknown>;
+          void id;
+          return rest;
+        });
+        const restore = await supabase.from("calendar_events").insert(restoreRows);
+        if (restore.error) {
+          console.error("[calendar-sync] insert + restore 모두 실패. 데이터 손실:", restore.error);
+        }
+      }
+      return { updated: false, count: 0, error: retry.error };
+    }
   }
   return { updated: true, count: built.count };
 }

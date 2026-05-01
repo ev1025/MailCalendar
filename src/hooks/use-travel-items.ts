@@ -143,7 +143,10 @@ export function useTravelItems(visibleUserIds?: string[]) {
       .update({ visited: next, updated_at: now })
       .eq("id", id);
     if (error) {
-      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, visited } : it)));
+      // 충돌 코드 (RLS 거부, 동시 삭제 등) — 단순 로컬 롤백 만으론 부족.
+      // DB 진실값으로 강제 동기화 → 로컬 state 와 DB 일관성 보장.
+      console.warn("[toggleVisited] update failed, force-refetching:", error.message, error.code);
+      await fetchItems();
     }
     return { error };
   };

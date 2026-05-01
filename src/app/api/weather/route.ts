@@ -136,7 +136,9 @@ async function fetchKMAMid(kmaKey: string): Promise<Record<string, WeatherRow>> 
         };
       }
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.warn("[weather] KMA mid forecast failed:", e);
+  }
   return results;
 }
 
@@ -194,20 +196,44 @@ async function fetchKMA(kmaKey: string): Promise<Record<string, WeatherRow>> {
         };
       }
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    console.warn("[weather] KMA short forecast failed:", e);
+  }
   return results;
 }
 
 export async function GET(request: NextRequest) {
-  const lat = request.nextUrl.searchParams.get("lat") || DEFAULT_LAT;
-  const lon = request.nextUrl.searchParams.get("lon") || DEFAULT_LON;
+  // 입력 검증 — 잘못된 값이 조용히 서울 좌표로 폴백되어 디버깅 어려웠던 문제 해결.
+  const rawLat = request.nextUrl.searchParams.get("lat");
+  const rawLon = request.nextUrl.searchParams.get("lon");
+  const lat = rawLat ?? DEFAULT_LAT;
+  const lon = rawLon ?? DEFAULT_LON;
+  const latNum = parseFloat(lat);
+  const lonNum = parseFloat(lon);
+  if (Number.isNaN(latNum) || latNum < -90 || latNum > 90) {
+    return NextResponse.json({ error: "lat 은 -90 ~ 90 범위여야 합니다" }, { status: 400 });
+  }
+  if (Number.isNaN(lonNum) || lonNum < -180 || lonNum > 180) {
+    return NextResponse.json({ error: "lon 은 -180 ~ 180 범위여야 합니다" }, { status: 400 });
+  }
+
   const country = (request.nextUrl.searchParams.get("country") || "KR").toUpperCase();
+  if (!/^[A-Z]{2}$/.test(country)) {
+    return NextResponse.json({ error: "country 는 ISO-2 코드여야 합니다" }, { status: 400 });
+  }
   const isKorea = country === "KR";
+
   const startDate = request.nextUrl.searchParams.get("start");
   const endDate = request.nextUrl.searchParams.get("end");
-
   if (!startDate || !endDate) {
     return NextResponse.json({ error: "start, end 파라미터 필요" }, { status: 400 });
+  }
+  // YYYY-MM-DD 형식 검증.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return NextResponse.json({ error: "start, end 는 YYYY-MM-DD 형식" }, { status: 400 });
+  }
+  if (startDate > endDate) {
+    return NextResponse.json({ error: "start 는 end 보다 작거나 같아야 합니다" }, { status: 400 });
   }
 
   try {
@@ -276,7 +302,9 @@ export async function GET(request: NextRequest) {
             { onConflict: "date" }
           );
         }
-      } catch { /* ignore */ }
+      } catch (e) {
+        console.warn("[weather] history fetch failed:", e);
+      }
     })();
 
     // ③ 기상청 단기예보 (한국 지역만)
@@ -327,10 +355,13 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn("[weather] open-meteo forecast failed:", e);
+    }
 
     return NextResponse.json(results);
-  } catch {
+  } catch (e) {
+    console.error("[weather] route handler failed:", e);
     return NextResponse.json({ error: "날씨 데이터를 가져올 수 없습니다" }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
@@ -8,22 +8,33 @@ export const dynamic = "force-dynamic";
 // service_role 만 RLS 우회 + storage 조회 가능 → 이 라우트만 작동.
 // SUPABASE_SERVICE_ROLE_KEY 미설정 시 503 반환 (클라이언트는 안내 메시지 표시).
 
-export async function GET() {
+// 모듈 레벨 싱글톤 — 매 요청마다 createClient 재호출 회피 (초기화 비용).
+// env 변수 누락 시엔 null. lazy 초기화로 placeholder URL 가지고 createClient 콜
+// 안 하게 막음.
+let cachedClient: SupabaseClient | null = null;
+function getServiceClient(): SupabaseClient | null {
+  if (cachedClient) return cachedClient;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
+  if (!url || !key) return null;
+  cachedClient = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return cachedClient;
+}
+
+export async function GET() {
+  const supabase = getServiceClient();
+  if (!supabase) {
     return NextResponse.json(
       { error: "SUPABASE_SERVICE_ROLE_KEY 미설정 — Vercel 환경변수 추가 필요" },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
-  const supabase = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
   const { data, error } = await supabase.rpc("get_usage_stats");
   if (error) {
+    console.error("[/api/usage] rpc failed:", error.message, error.code);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   const row = Array.isArray(data) ? data[0] : data;

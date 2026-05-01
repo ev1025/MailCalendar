@@ -57,8 +57,14 @@ export async function GET(req: NextRequest) {
   });
 
   if (!res.ok) {
-    const msg = await res.text();
-    return NextResponse.json({ error: `Naver API ${res.status}: ${msg}` }, { status: res.status });
+    // 원본 응답 본문을 클라이언트에 전달하면 내부 키 구조·에러 코드 노출 가능 →
+    // 서버 로그에만 남기고 클라이언트엔 일반화된 메시지.
+    const detail = await res.text().catch(() => "(no body)");
+    console.error(`[naver/search] upstream ${res.status}:`, detail);
+    return NextResponse.json(
+      { error: "장소 검색 서비스에 일시적 문제가 발생했습니다" },
+      { status: res.status >= 500 ? 503 : 502 },
+    );
   }
 
   const data = (await res.json()) as {

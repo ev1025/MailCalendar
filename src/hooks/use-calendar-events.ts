@@ -173,22 +173,22 @@ export function useCalendarEvents(
       .eq("id", id);
 
     if (!error && ev) {
+      // title 매칭으로 visited_dates 정리 — 같은 이름 여행이 우연히 많으면
+      // 무한정 update 가능. start_date 가 visited_dates 에 포함된 행만 미리 필터해서
+      // 실제 영향받을 행만 가져오고, 안전상 50 으로 제한.
       const { data: travelMatches } = await supabase
         .from("travel_items")
         .select("id, visited_dates")
-        .eq("title", ev.title);
+        .eq("title", ev.title)
+        .contains("visited_dates", [ev.start_date])
+        .limit(50);
 
-      if (travelMatches) {
-        for (const item of travelMatches as {
-          id: string;
-          visited_dates: string[] | null;
-        }[]) {
-          if (
-            item.visited_dates &&
-            item.visited_dates.includes(ev.start_date)
-          ) {
-            const next = item.visited_dates.filter((d) => d !== ev.start_date);
-            await supabase
+      if (travelMatches && travelMatches.length > 0) {
+        // 병렬 업데이트 — 순차 await 시 50회 round-trip 누적.
+        await Promise.all(
+          (travelMatches as { id: string; visited_dates: string[] | null }[]).map((item) => {
+            const next = (item.visited_dates ?? []).filter((d) => d !== ev.start_date);
+            return supabase
               .from("travel_items")
               .update({
                 visited_dates: next.length > 0 ? next : null,
@@ -196,8 +196,8 @@ export function useCalendarEvents(
                 updated_at: new Date().toISOString(),
               })
               .eq("id", item.id);
-          }
-        }
+          }),
+        );
       }
     }
 

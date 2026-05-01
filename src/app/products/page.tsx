@@ -786,6 +786,11 @@ function ProductsPageInner() {
                 if (!r.error) {
                   // 제품도 is_active=true 로 표시.
                   await updateProduct(fixedProduct.id, { is_active: true });
+                  // bulkDone 은 fire-and-forget — 실패 시 silent 였던 것을 catch 로 감지.
+                  r.bulkDone?.catch((e) => {
+                    console.error("[product → fixed bulk insert]", e);
+                    toast.error("일부 거래가 등록되지 않았을 수 있습니다");
+                  });
                   toast.success("고정비에 추가되었습니다");
                 } else {
                   toast.error("추가 실패");
