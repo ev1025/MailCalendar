@@ -109,7 +109,14 @@ function CalendarPageInner() {
   // 공유 owner 의 태그까지 색상이 보이려면 visibleUserIds 전달.
   const { tags, addTag, deleteTag, updateTagColor, updateTagName } = useEventTags(visibleUserIds);
 
-  const handleSave = async (data: Omit<CalendarEvent, "id" | "created_at">, repeatCount?: number) => {
+  const handleSave = async (
+    data: Omit<CalendarEvent, "id" | "created_at">,
+    repeatCount?: number,
+    repeatOpts?: {
+      weeklyInterval?: number;
+      monthlyNth?: { week: number; weekday: number } | null;
+    },
+  ) => {
     if (editing) {
       // 시리즈 일정 수정 → scope 선택 다이얼로그 표시
       if (editing.series_id) {
@@ -122,7 +129,7 @@ function CalendarPageInner() {
 
     // 반복 일정 — 원본 + 추가분을 series_id 로 묶어 일괄 insert.
     if (repeatCount && (repeatCount > 1 || repeatCount === -1) && data.repeat) {
-      const batch = buildRepeatEvents(data, repeatCount);
+      const batch = buildRepeatEvents(data, repeatCount, repeatOpts);
       return await addEventsBulk(batch);
     }
 

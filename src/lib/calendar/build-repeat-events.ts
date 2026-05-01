@@ -6,25 +6,28 @@ type RepeatKind = NonNullable<EventInput["repeat"]>;
 /**
  * 반복 일정 생성 — 원본 + 추가분을 series_id 로 묶은 배열 반환.
  *
- * count:
- *  - 양의 정수 N: N개 생성 (원본 1 + 추가분 N-1)
- *  - -1 (무한): weekly 260회(5년), monthly 120회(10년), yearly 30회(30년) 로 보수적 캡.
- *
- * 모든 행은 같은 series_id 를 공유 → 시리즈 단위 수정/삭제 가능.
- * 첫 행만 repeat 필드 유지(원본 식별용), 나머지는 repeat=null.
- *
- * 시간(start_time/end_time) 은 원본 그대로 복사. 날짜만 weekly/monthly/yearly 간격으로 이동.
- * end_date 가 있으면 duration 유지하며 함께 이동.
+ * options:
+ *  - weeklyInterval: weekly 일 때 N주마다. 1=매주(default), 2=격주, 3=3주마다…
+ *  - monthlyNth: monthly 일 때 "N주차 W요일" 모드. null=같은 일자(default).
+ *    예: { week: 2, weekday: 5 } = 둘째 주 금요일
  */
 export function buildRepeatEvents(
   data: EventInput,
   repeatCount: number,
+  options?: {
+    weeklyInterval?: number;
+    monthlyNth?: { week: number; weekday: number } | null;
+  },
 ): (EventInput & { series_id: string })[] {
   if (!data.repeat) return [{ ...data, series_id: makeSeriesId() }];
 
   const start = new Date(data.start_date + "T00:00:00");
   const end = data.end_date ? new Date(data.end_date + "T00:00:00") : null;
   const duration = end ? end.getTime() - start.getTime() : 0;
+  const weeklyInterval = options?.weeklyInterval && options.weeklyInterval > 0
+    ? options.weeklyInterval
+    : 1;
+  const monthlyNth = options?.monthlyNth ?? null;
 
   // 무한 캡 — 너무 많이 만들면 DB·UI 둘 다 부담.
   let count = repeatCount;
@@ -38,10 +41,28 @@ export function buildRepeatEvents(
   ];
 
   for (let i = 1; i < count; i++) {
-    const next = new Date(start);
-    if (data.repeat === "weekly") next.setDate(start.getDate() + 7 * i);
-    else if (data.repeat === "monthly") next.setMonth(start.getMonth() + i);
-    else next.setFullYear(start.getFullYear() + i);
+    let next: Date;
+    if (data.repeat === "weekly") {
+      next = new Date(start);
+      next.setDate(start.getDate() + 7 * weeklyInterval * i);
+    } else if (data.repeat === "monthly") {
+      if (monthlyNth) {
+        // N주차 W요일 모드 — start.month + i 의 N주차 W요일.
+        const target = new Date(start.getFullYear(), start.getMonth() + i, 1);
+        next = nthWeekdayOfMonth(
+          target.getFullYear(),
+          target.getMonth(),
+          monthlyNth.weekday,
+          monthlyNth.week,
+        );
+      } else {
+        next = new Date(start);
+        next.setMonth(start.getMonth() + i);
+      }
+    } else {
+      next = new Date(start);
+      next.setFullYear(start.getFullYear() + i);
+    }
 
     const nextEnd = duration > 0 ? new Date(next.getTime() + duration) : null;
     batch.push({
@@ -54,6 +75,24 @@ export function buildRepeatEvents(
   }
 
   return batch;
+}
+
+/** N째주 W요일의 날짜. 해당 월에 N째주가 없으면 마지막 W요일로 cap. */
+export function nthWeekdayOfMonth(
+  year: number,
+  month: number,
+  weekday: number,
+  nth: number,
+): Date {
+  const first = new Date(year, month, 1);
+  const offset = (weekday - first.getDay() + 7) % 7;
+  const day = 1 + offset + (nth - 1) * 7;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  if (day > lastDay) {
+    // N째주 없음 — 마지막 W요일로 fallback (e.g., 5번째 금요일이 없는 달).
+    return new Date(year, month, day - 7);
+  }
+  return new Date(year, month, day);
 }
 
 function capForKind(kind: RepeatKind): number {

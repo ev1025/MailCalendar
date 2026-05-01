@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { toast } from "sonner";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -29,9 +27,10 @@ import {
   FORM_LABEL,
   FORM_INPUT_PRIMARY,
   FORM_INPUT_COMPACT,
-  FORM_TEXTAREA,
 } from "@/lib/form-classes";
 import type { CalendarEvent, EventTag, RepeatType } from "@/types";
+import { KO_WEEKDAYS } from "@/lib/calendar/repeat-helpers";
+import RepeatCountField from "./repeat-count-field";
 
 const COLORS = [
   "#3B82F6", "#EF4444", "#22C55E", "#F59E0B",
@@ -42,16 +41,6 @@ const COLORS = [
 // 다양한 색상으로 이벤트를 구분하기 쉽게.
 function randomEventColor(): string {
   return COLORS[Math.floor(Math.random() * COLORS.length)];
-}
-
-const TAG_PALETTE = [
-  "#EF4444", "#F97316", "#F59E0B", "#EAB308", "#84CC16",
-  "#22C55E", "#10B981", "#14B8A6", "#06B6D4", "#0EA5E9",
-  "#3B82F6", "#6366F1", "#8B5CF6", "#A855F7", "#D946EF", "#EC4899",
-];
-
-function randomTagColor(): string {
-  return TAG_PALETTE[Math.floor(Math.random() * TAG_PALETTE.length)];
 }
 
 function ColorPickerPopover({ color, onChange, isCustom }: { color: string; onChange: (c: string) => void; isCustom: boolean }) {
@@ -89,299 +78,134 @@ const REPEAT_OPTIONS: { value: UIRepeat; label: string }[] = [
   { value: "yearly", label: "매년" },
 ];
 
-const KO_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-
-/** 반복 일정 마지막 발화일 — start + (count × 주기). count=1 → 다음 1회가 마지막. */
-function formatRepeatEnd(startDate: string, repeat: RepeatType, count: number): string {
-  if (!startDate || repeat === "none" || count <= 0) return "";
-  const d = new Date(startDate + "T00:00:00");
-  if (Number.isNaN(d.getTime())) return "";
-  if (repeat === "weekly") d.setDate(d.getDate() + 7 * count);
-  else if (repeat === "monthly") d.setMonth(d.getMonth() + count);
-  else if (repeat === "yearly") d.setFullYear(d.getFullYear() + count);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}(${KO_WEEKDAYS[d.getDay()]})`;
-}
-
-/** 8자리 숫자 → "YYYY-MM-DD" 부분 포맷. 4자리부터 "-" 자동 삽입. */
-function formatDigitsAsDate(digits: string): string {
-  const d = digits.replace(/\D/g, "").slice(0, 8);
-  if (d.length <= 4) return d;
-  if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`;
-  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
-}
-
-/** 8자리 (YYYYMMDD) → Date | null. 잘못된 날짜 (예: 13월) 거부. */
-function parseDigitsToDate(digits: string): Date | null {
-  if (!/^\d{8}$/.test(digits)) return null;
-  const y = parseInt(digits.slice(0, 4), 10);
-  const m = parseInt(digits.slice(4, 6), 10);
-  const dd = parseInt(digits.slice(6, 8), 10);
-  if (m < 1 || m > 12 || dd < 1 || dd > 31) return null;
-  const date = new Date(y, m - 1, dd);
-  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== dd) return null;
-  return date;
-}
-
-/** 사이클 안 맞으면 자동 교정 + 사유. 시작일 비어있거나 raw 가 invalid 면 null. */
-function correctRepeatEnd(
-  startDate: string,
-  repeat: RepeatType,
-  raw: Date,
-): { corrected: Date; reason: string } | null {
-  if (!startDate) return null;
-  const start = new Date(startDate + "T00:00:00");
-  if (Number.isNaN(start.getTime())) return null;
-
-  let corrected = new Date(raw);
-  let reason: string | null = null;
-
-  if (repeat === "weekly") {
-    const targetDay = start.getDay();
-    if (raw.getDay() !== targetDay) {
-      // 가장 가까운 target dayOfWeek 로 snap (forward·backward 중 짧은 쪽).
-      let diff = (targetDay - raw.getDay() + 7) % 7; // 0~6
-      if (diff > 3) diff -= 7; // -3~3 으로 변환
-      corrected.setDate(corrected.getDate() + diff);
-      reason = `매주 ${KO_WEEKDAYS[targetDay]}요일만 입력 가능`;
-    }
-  } else if (repeat === "monthly") {
-    const targetDay = start.getDate();
-    if (raw.getDate() !== targetDay) {
-      // 같은 연/월에 startDay 적용. 그 달 일수 초과 시 그 달 마지막 일로 cap.
-      corrected = new Date(raw.getFullYear(), raw.getMonth(), 1);
-      const lastDay = new Date(raw.getFullYear(), raw.getMonth() + 1, 0).getDate();
-      corrected.setDate(Math.min(targetDay, lastDay));
-      reason = `매월 ${targetDay}일만 입력 가능`;
-    }
-  } else if (repeat === "yearly") {
-    const targetMonth = start.getMonth();
-    const targetDay = start.getDate();
-    if (raw.getMonth() !== targetMonth || raw.getDate() !== targetDay) {
-      corrected = new Date(raw.getFullYear(), targetMonth, targetDay);
-      reason = `매년 ${targetMonth + 1}월 ${targetDay}일만 입력 가능`;
-    }
-  }
-
-  // 교정 후에도 시작일 ≤ 결과면 한 사이클 앞당김. (반복 기간 의미 없는 케이스 방지)
-  while (corrected <= start) {
-    if (repeat === "weekly") corrected.setDate(corrected.getDate() + 7);
-    else if (repeat === "monthly") corrected.setMonth(corrected.getMonth() + 1);
-    else corrected.setFullYear(corrected.getFullYear() + 1);
-    if (!reason) reason = "종료일이 시작일보다 빠름";
-  }
-
-  return reason ? { corrected, reason } : { corrected, reason: "" };
-}
-
-/**
- * 반복 횟수 입력 컴포넌트 — 여행 페이지의 위치 검색 박스 패턴.
- *
- * UX:
- *  - 입력 박스 자체가 트리거. 포커스 시 아래 드롭다운 자동 등장.
- *  - 8자리 숫자 입력 → "YYYY-MM-DD" 자동 포맷 → 완성 시 즉시 repeatCount 커밋.
- *  - 드롭다운 항목 클릭 → 그 날짜를 input 에 채움 + 드롭다운 닫힘.
- *  - 다시 input 클릭 → 직전에 선택했던 회차가 드롭다운 최상단에 위치하도록 scroll.
- *  - "계속" 옵션은 input 비움 + 닫힘.
- */
-function RepeatCountField({
-  startDate,
-  repeat,
-  repeatCount,
-  setRepeatCount,
-  customDigits,
-  setCustomDigits,
-  open,
-  setOpen,
-  inputRef,
+/** 매주 N주마다 인라인 토글 — "종료 설정" 패턴.
+ *  interval=1 일 땐 "+ 격주" 점선 버튼, 누르면 그 자리에서 [숫자 input] 주마다 로 변환.
+ *  X 로 매주(interval=1) 로 복귀. */
+function WeeklyIntervalButton({
+  interval,
+  onChange,
 }: {
-  startDate: string;
-  repeat: RepeatType;
-  repeatCount: number;
-  setRepeatCount: (n: number) => void;
-  customDigits: string;
-  setCustomDigits: (s: string) => void;
-  open: boolean;
-  setOpen: (o: boolean) => void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  interval: number;
+  onChange: (n: number) => void;
 }) {
-  const listRef = useRef<HTMLDivElement>(null);
-  // 항목 탭 vs 스크롤 구분 — touchstart 에서 y 기록, touchmove 시 8px 초과면
-  // cancel. touchend 에서 cancel 안 됐으면 액션 발화.
-  const tapStartRef = useRef<{ y: number; cancelled: boolean } | null>(null);
-  // touchend → 합성 mousedown 이중 발화 방지.
-  const lastTapRef = useRef(0);
-
-  // input 표시값.
-  // - open(편집 중): YYYY-MM-DD 디지트 포맷 (사용자 backspace·재입력 가능)
-  // - closed(commit 후): "N회 - YYYY.MM.DD(요일)" 의도된 결과 표시
-  const displayValue = (() => {
-    if (open) return formatDigitsAsDate(customDigits);
-    if (repeatCount > 0 && startDate) {
-      return `${repeatCount}회 - ${formatRepeatEnd(startDate, repeat, repeatCount)}`;
-    }
-    return "";
-  })();
-
-  // 드롭다운 열릴 때 — 현재 선택된 회차가 첫 visible 행이 되도록 scroll.
-  // 계속(-1) 일 땐 첫 항목(1회) 가 visible.
-  useEffect(() => {
-    if (!open || !listRef.current) return;
-    const target = repeatCount > 0
-      ? listRef.current.querySelector<HTMLElement>(`[data-count="${repeatCount}"]`)
-      : null;
-    if (target) target.scrollIntoView({ block: "start" });
-  }, [open, repeatCount]);
-
-  const handleSelectCount = (n: number) => {
-    const now = performance.now();
-    if (now - lastTapRef.current < 350) return; // 이중 발화 방지
-    lastTapRef.current = now;
-    setRepeatCount(n);
-    if (n > 0 && startDate) {
-      const end = formatRepeatEnd(startDate, repeat, n);
-      setCustomDigits(end.replace(/\D/g, "").slice(0, 8));
-    } else {
-      setCustomDigits("");
-    }
-    setOpen(false);
-  };
-
-  // 항목 버튼용 핸들러 묶음 — 스크롤 시 선택되지 않게.
-  const itemHandlers = (n: number) => ({
-    onTouchStart: (e: React.TouchEvent) => {
-      tapStartRef.current = { y: e.touches[0].clientY, cancelled: false };
-    },
-    onTouchMove: (e: React.TouchEvent) => {
-      if (tapStartRef.current && Math.abs(e.touches[0].clientY - tapStartRef.current.y) > 8) {
-        tapStartRef.current.cancelled = true;
-      }
-    },
-    onTouchEnd: () => {
-      const valid = tapStartRef.current && !tapStartRef.current.cancelled;
-      tapStartRef.current = null;
-      if (valid) handleSelectCount(n);
-    },
-    onMouseDown: (e: React.MouseEvent) => {
-      e.preventDefault(); // input blur 차단 (desktop)
-      handleSelectCount(n);
-    },
-  });
-
+  const isActive = interval > 1;
+  if (!isActive) {
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(2)}
+        className={`${FORM_INPUT_COMPACT} shrink-0 rounded-md border border-dashed text-muted-foreground hover:border-foreground hover:text-foreground transition-colors px-2 whitespace-nowrap`}
+      >
+        + 격주
+      </button>
+    );
+  }
   return (
-    <div className="relative w-fit">
+    <div className="flex items-center gap-1 shrink-0">
       <input
-        ref={inputRef}
         type="text"
         inputMode="numeric"
-        value={displayValue}
+        value={interval}
         onChange={(e) => {
-          const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
-          setCustomDigits(digits);
-          if (digits.length === 8) {
-            const parsed = parseDigitsToDate(digits);
-            if (!parsed) {
-              toast.error("올바르지 않은 날짜입니다");
-              return;
-            }
-            // 사이클 안 맞으면 자동 교정 + toast 알림.
-            const result = correctRepeatEnd(startDate, repeat, parsed);
-            if (!result) {
-              toast.error("시작일을 먼저 입력하세요");
-              return;
-            }
-            if (result.reason) {
-              const m = String(result.corrected.getMonth() + 1).padStart(2, "0");
-              const d = String(result.corrected.getDate()).padStart(2, "0");
-              const wd = KO_WEEKDAYS[result.corrected.getDay()];
-              toast.error(
-                `${result.reason} — ${result.corrected.getFullYear()}-${m}-${d}(${wd}) 로 교정`,
-              );
-            }
-            const count = computeCountFromEnd(startDate, repeat, result.corrected);
-            setRepeatCount(count);
-            setOpen(false);
-          }
+          const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+          if (digits === "") return;
+          const n = parseInt(digits, 10);
+          if (n >= 2) onChange(n);
         }}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
-          // Backspace 명시 처리 — 포맷팅된 dash 때문에 onChange 만으론
-          // 1 keystroke 에 2 char 가 사라지는 것처럼 보이는 문제 회피.
-          if (e.key === "Backspace") {
-            const el = e.currentTarget;
-            if (
-              el.selectionStart === el.value.length &&
-              el.selectionEnd === el.value.length &&
-              customDigits.length > 0
-            ) {
-              e.preventDefault();
-              setCustomDigits(customDigits.slice(0, -1));
-            }
-          }
-        }}
-        onFocus={() => {
-          // 편집 진입 시 — 현재 선택된 회차의 종료일 digits 로 prefill.
-          // 사용자가 보던 "N회 - ..." 가 그대로 편집 가능한 디지트 형태로 전환.
-          if (repeatCount > 0 && startDate) {
-            const end = formatRepeatEnd(startDate, repeat, repeatCount);
-            setCustomDigits(end.replace(/\D/g, "").slice(0, 8));
-          } else {
-            setCustomDigits("");
-          }
-          setOpen(true);
-        }}
-        onBlur={() => {
-          // 드롭다운 항목 mousedown/touchend 가 먼저 처리되도록 지연.
-          setTimeout(() => setOpen(false), 200);
-        }}
-        placeholder="직접 입력"
-        className={`${FORM_INPUT_COMPACT} h-9 w-[10.5rem] rounded-lg border border-input bg-transparent px-2 tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
+        className={`${FORM_INPUT_COMPACT} w-12 rounded-lg border border-input bg-transparent px-2 text-center tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
       />
-      {open && (
-        <div
-          ref={listRef}
-          className="absolute left-0 top-full mt-1 z-30 w-[10.5rem] max-h-[7.5rem] overflow-y-auto rounded-lg border bg-popover shadow-lg overscroll-contain"
-        >
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-            <button
-              key={i}
-              type="button"
-              data-count={i}
-              {...itemHandlers(i)}
-              className={`w-full text-left px-3 py-1.5 text-xs whitespace-nowrap hover:bg-accent transition-colors tabular-nums ${
-                repeatCount === i ? "bg-accent font-medium" : ""
-              }`}
-            >
-              {i}회{startDate ? ` - ${formatRepeatEnd(startDate, repeat, i)}` : ""}
-            </button>
-          ))}
-        </div>
-      )}
+      <span className="text-xs text-muted-foreground">주마다</span>
+      <button
+        type="button"
+        onClick={() => onChange(1)}
+        className="text-muted-foreground hover:text-foreground p-0.5 shrink-0"
+        aria-label="격주 해제"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
 
-/** 시작일·반복 타입·종료일 → 반복 횟수. 사이클에 안 맞으면 floor. */
-function computeCountFromEnd(startDate: string, repeat: RepeatType, endDate: Date): number {
-  if (!startDate || repeat === "none") return 1;
-  const start = new Date(startDate + "T00:00:00");
-  if (Number.isNaN(start.getTime()) || endDate <= start) return 1;
-  if (repeat === "weekly") {
-    const days = Math.round((endDate.getTime() - start.getTime()) / 86400000);
-    return Math.max(1, Math.floor(days / 7));
-  }
-  if (repeat === "monthly") {
-    return Math.max(
-      1,
-      (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth()),
+/** 매월 N주차 W요일 인라인 토글 — "종료 설정" 패턴.
+ *  null 일 땐 "+ N주차" 점선 버튼, 누르면 그 자리에서 두 개의 Select(주·요일) 로 변환.
+ *  X 로 같은 일자 모드(null) 로 복귀. 초기 추천값은 시작일의 실제 N주차·요일. */
+function MonthlyNthButton({
+  startDate,
+  value,
+  onChange,
+}: {
+  startDate: string;
+  value: { week: number; weekday: number } | null;
+  onChange: (v: { week: number; weekday: number } | null) => void;
+}) {
+  const startInfo = (() => {
+    if (!startDate) return null;
+    const d = new Date(startDate + "T00:00:00");
+    if (Number.isNaN(d.getTime())) return null;
+    return { week: Math.ceil(d.getDate() / 7), weekday: d.getDay() };
+  })();
+
+  if (!value) {
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          onChange({
+            week: startInfo?.week ?? 1,
+            weekday: startInfo?.weekday ?? 1,
+          })
+        }
+        className={`${FORM_INPUT_COMPACT} shrink-0 rounded-md border border-dashed text-muted-foreground hover:border-foreground hover:text-foreground transition-colors px-2 whitespace-nowrap`}
+      >
+        + N주차
+      </button>
     );
   }
-  if (repeat === "yearly") {
-    return Math.max(1, endDate.getFullYear() - start.getFullYear());
-  }
-  return 1;
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      <Select
+        value={String(value.week)}
+        onValueChange={(v) => v && onChange({ ...value, week: parseInt(v, 10) })}
+      >
+        <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.25rem]`}>
+          {value.week}째주
+        </SelectTrigger>
+        <SelectContent className="min-w-[4.25rem]">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <SelectItem key={n} value={String(n)}>
+              {n}째주
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={String(value.weekday)}
+        onValueChange={(v) =>
+          v && onChange({ ...value, weekday: parseInt(v, 10) })
+        }
+      >
+        <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.25rem]`}>
+          {KO_WEEKDAYS[value.weekday]}요일
+        </SelectTrigger>
+        <SelectContent className="min-w-[4.25rem]">
+          {KO_WEEKDAYS.map((w, i) => (
+            <SelectItem key={i} value={String(i)}>
+              {w}요일
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <button
+        type="button"
+        onClick={() => onChange(null)}
+        className="text-muted-foreground hover:text-foreground p-0.5 shrink-0"
+        aria-label="N주차 해제"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
 }
 
 interface EventFormProps {
@@ -395,7 +219,14 @@ interface EventFormProps {
   onUpdateTagColor?: (id: string, color: string) => Promise<{ error: unknown }>;
   onRenameTag?: (id: string, name: string) => Promise<{ error: unknown }>;
   weatherMap?: Record<string, import("@/types").WeatherData>;
-  onSave: (data: Omit<CalendarEvent, "id" | "created_at">, repeatCount?: number) => Promise<{ error: unknown }>;
+  onSave: (
+    data: Omit<CalendarEvent, "id" | "created_at">,
+    repeatCount?: number,
+    repeatOpts?: {
+      weeklyInterval?: number;
+      monthlyNth?: { week: number; weekday: number } | null;
+    },
+  ) => Promise<{ error: unknown }>;
   onBack?: () => void;
 }
 
@@ -423,6 +254,10 @@ export default function EventForm({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [repeat, setRepeat] = useState<UIRepeat>("none");
   const [repeatCount, setRepeatCount] = useState(-1);
+  // 매주 N주마다 — 1=매주(default), 2=격주, 3·4=3·4주마다.
+  const [weeklyInterval, setWeeklyInterval] = useState(1);
+  // 매월 N주차 W요일 — null=같은 일자(default).
+  const [monthlyNth, setMonthlyNth] = useState<{ week: number; weekday: number } | null>(null);
   // 반복 횟수 커스텀 드롭다운 상태 — 빌트인 Select 대신 Popover 기반.
   // 직접 입력 input 이 popover 내부에 있어야 + 8자리 즉시 커밋 + 동일값 재클릭
   // 가능하게 하려면 Select 의 제약을 벗어나야 함.
@@ -506,7 +341,13 @@ export default function EventForm({
         repeat: dbRepeat,
         ...(sharedWith.length > 0 ? { shared_with: sharedWith } : {}),
       } as Omit<CalendarEvent, "id" | "created_at">,
-      rc
+      rc,
+      // 매주 N주마다 / 매월 N주차 W요일 옵션 — buildRepeatEvents 가 사용.
+      dbRepeat === "weekly"
+        ? { weeklyInterval }
+        : dbRepeat === "monthly"
+          ? { monthlyNth }
+          : undefined,
     );
     setSaving(false);
     if (!error) {
@@ -644,19 +485,36 @@ export default function EventForm({
             {repeat !== "none" && repeat !== "infinite" && (
               <div className="flex flex-col gap-1.5 min-w-0">
                 <Label className={FORM_LABEL}>반복 횟수</Label>
-                {/* 입력 박스 자체가 트리거 — 여행 페이지 위치 검색과 동일 패턴.
-                    포커스 시 드롭다운 등장. 입력값 8자리 완성 시 즉시 커밋. */}
-                <RepeatCountField
-                  startDate={startDate}
-                  repeat={repeat}
-                  repeatCount={repeatCount}
-                  setRepeatCount={setRepeatCount}
-                  customDigits={customDigits}
-                  setCustomDigits={setCustomDigits}
-                  open={repeatCountOpen}
-                  setOpen={setRepeatCountOpen}
-                  inputRef={customInputRef}
-                />
+                <div className="flex items-center gap-1.5">
+                  <RepeatCountField
+                    startDate={startDate}
+                    repeat={repeat}
+                    repeatCount={repeatCount}
+                    setRepeatCount={setRepeatCount}
+                    customDigits={customDigits}
+                    setCustomDigits={setCustomDigits}
+                    open={repeatCountOpen}
+                    setOpen={setRepeatCountOpen}
+                    inputRef={customInputRef}
+                    weeklyInterval={weeklyInterval}
+                    monthlyNth={monthlyNth}
+                  />
+                  {/* 매주 — 격주/3주/4주 토글 (입력 박스 우측). */}
+                  {repeat === "weekly" && (
+                    <WeeklyIntervalButton
+                      interval={weeklyInterval}
+                      onChange={setWeeklyInterval}
+                    />
+                  )}
+                  {/* 매월 — N주차 W요일 토글. */}
+                  {repeat === "monthly" && (
+                    <MonthlyNthButton
+                      startDate={startDate}
+                      value={monthlyNth}
+                      onChange={setMonthlyNth}
+                    />
+                  )}
+                </div>
               </div>
             )}
           </div>
