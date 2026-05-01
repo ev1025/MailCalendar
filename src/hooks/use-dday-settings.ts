@@ -72,17 +72,12 @@ function normalizeTime(t: string | null): string {
 
 export function useDdaySettings() {
   const userId = useCurrentUserId();
-  // 초기값을 localStorage 캐시에서 동기적으로 로드 → 첫 렌더부터 D-day 버튼이
-  // 다른 헤더 아이콘과 함께 즉시 표시. SSR 단계에선 DEFAULT, hydration 후 캐시 반영.
-  const [settings, setSettings] = useState<DdaySettings>(DEFAULT);
-
-  // 마운트 직후 1회: 캐시 → state 동기화 (SSR/CSR 불일치 회피).
-  useEffect(() => {
-    const cached = loadCache();
-    if (cached.enabled || cached.source !== "none") {
-      setSettings(cached);
-    }
-  }, []);
+  // 초기값을 lazy callback 으로 — 첫 렌더부터 캐시값 동기 로드.
+  // 이렇게 안 하면 마운트 후 useEffect 가 setSettings 할 때까지 1프레임 지연이
+  // 발생해서 D-day 버튼이 다른 헤더 아이콘보다 늦게 나타남.
+  // SSR 단계에선 typeof window === "undefined" 라 DEFAULT 반환 (hydration 후
+  // 캐시값으로 잠깐 deviation — 시각적 차이 미세, 기능적 문제 없음).
+  const [settings, setSettings] = useState<DdaySettings>(loadCache);
 
   const fetchSettings = useCallback(async () => {
     if (!userId) {

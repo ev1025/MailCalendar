@@ -35,15 +35,73 @@ type Theme = "system" | "light" | "dark";
 function ApiSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg overflow-hidden">
       <button
-        className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium hover:bg-accent/50 transition-colors"
+        className="flex items-center justify-between w-full px-3 sm:px-4 py-3 text-sm font-medium hover:bg-accent/50 transition-colors"
         onClick={() => setOpen(!open)}
       >
-        {title}
-        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        <span className="text-left">{title}</span>
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
       </button>
-      {open && <div className="px-4 pb-4 pt-1 border-t">{children}</div>}
+      {open && (
+        <div className="px-3 sm:px-4 pt-3 pb-3.5 sm:pb-4 border-t bg-muted/20 flex flex-col gap-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 라벨/값 한 줄. 모든 ApiSection 의 메타데이터는 이걸로 통일. */
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`flex items-center justify-between gap-3 text-xs ${className}`}>
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="text-foreground/90 text-right min-w-0">{children}</span>
+    </div>
+  );
+}
+
+/** 하위 그룹화 — 좌측 색 막대로 시각적 단락. */
+function Subsection({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2 pl-3 border-l-2 border-primary/20">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">{title}</p>
+        {hint && <span className="text-[11px] text-muted-foreground/70">{hint}</span>}
+      </div>
+      <div className="flex flex-col gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+/** 정보/경고 박스. */
+function Note({ tone = "info", children }: { tone?: "info" | "warning"; children: React.ReactNode }) {
+  const cls =
+    tone === "warning"
+      ? "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-900"
+      : "bg-background text-muted-foreground border-border";
+  return (
+    <div className={`flex items-start gap-1.5 text-[11px] rounded-md border px-2.5 py-2 leading-relaxed ${cls}`}>
+      <Info className="h-3 w-3 mt-0.5 shrink-0" />
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/** 외부 링크 푸터 — 모든 ApiSection 의 마지막에 동일한 위치/스타일. */
+function LinkFooter({ href, label }: { href: string; label: string }) {
+  return (
+    <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-border/50 text-[11px]">
+      <span className="text-muted-foreground">관리 사이트</span>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 text-blue-600 hover:underline"
+      >
+        {label} <ExternalLink className="h-3 w-3" />
+      </a>
     </div>
   );
 }
@@ -472,101 +530,76 @@ function SettingsPageInner() {
 
           {/* 데이터베이스 — 사용량 추적 포함 */}
           <ApiSection title="데이터베이스 — Supabase" defaultOpen>
-            <div className="flex flex-col gap-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">요금제</span>
-                <Badge variant="secondary" className="text-xs">Free</Badge>
-              </div>
+            <Field label="요금제">
+              <Badge variant="secondary" className="text-[10px] h-5">Free</Badge>
+            </Field>
 
-              {/* 사용량 진행률 — DB / Storage */}
-              <div className="flex flex-col gap-2.5 pt-1">
-                {usageLoading && !usage ? (
-                  <p className="text-xs text-muted-foreground">사용량 조회 중...</p>
-                ) : usageError ? (
-                  <p className="text-xs text-red-600">
-                    조회 실패: {usageError}
-                    <span className="block text-muted-foreground mt-0.5">
-                      Vercel 환경변수에 SUPABASE_SERVICE_ROLE_KEY 등록 필요
-                    </span>
-                  </p>
-                ) : usage ? (
-                  <>
-                    <UsageBar
-                      label="DB 용량"
-                      value={usage.dbSizeBytes}
-                      limit={SUPABASE_FREE_LIMITS.dbBytes}
-                      valueText={formatBytes(usage.dbSizeBytes)}
-                    />
-                    <UsageBar
-                      label={`Storage (파일 ${usage.storageObjectCount}개)`}
-                      value={usage.storageSizeBytes}
-                      limit={SUPABASE_FREE_LIMITS.storageBytes}
-                      valueText={formatBytes(usage.storageSizeBytes)}
-                    />
-                  </>
-                ) : null}
-              </div>
+            <Subsection title="실시간 사용량">
+              {usageLoading && !usage ? (
+                <p className="text-[11px] text-muted-foreground">조회 중...</p>
+              ) : usageError ? (
+                <Note tone="warning">
+                  <span className="font-medium">조회 실패: {usageError}</span>
+                  <br />
+                  Vercel 환경변수에 <code className="text-[10px]">SUPABASE_SERVICE_ROLE_KEY</code> 등록 필요
+                </Note>
+              ) : usage ? (
+                <>
+                  <UsageBar
+                    label="DB 용량"
+                    value={usage.dbSizeBytes}
+                    limit={SUPABASE_FREE_LIMITS.dbBytes}
+                    valueText={formatBytes(usage.dbSizeBytes)}
+                  />
+                  <UsageBar
+                    label={`Storage (파일 ${usage.storageObjectCount}개)`}
+                    value={usage.storageSizeBytes}
+                    limit={SUPABASE_FREE_LIMITS.storageBytes}
+                    valueText={formatBytes(usage.storageSizeBytes)}
+                  />
+                </>
+              ) : null}
+            </Subsection>
 
-              {/* 직접 추적 불가 — 한도만 표시 */}
-              <div className="flex flex-col gap-1 pt-1 border-t">
-                <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/70 pt-2">
-                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  <span>아래는 앱에서 직접 조회 불가 — Supabase 대시보드에서 확인</span>
-                </p>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Egress (월별 외부 전송)</span>
-                  <span className="text-muted-foreground/70">한도 {formatBytes(SUPABASE_FREE_LIMITS.egressBytesPerMonth)}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Edge 함수 호출</span>
-                  <span className="text-muted-foreground/70">한도 {SUPABASE_FREE_LIMITS.edgeFunctionInvocationsPerMonth.toLocaleString()}/월</span>
-                </div>
-              </div>
+            <Subsection title="대시보드에서 확인" hint="앱에서 추적 불가">
+              <Field label="Egress (월별)">
+                <span className="text-muted-foreground">한도 {formatBytes(SUPABASE_FREE_LIMITS.egressBytesPerMonth)}</span>
+              </Field>
+              <Field label="Edge 함수 호출">
+                <span className="text-muted-foreground">한도 {SUPABASE_FREE_LIMITS.edgeFunctionInvocationsPerMonth.toLocaleString()}/월</span>
+              </Field>
+            </Subsection>
 
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  onClick={refetchUsage}
-                  disabled={usageLoading}
-                  className="text-[11px] text-blue-600 hover:underline disabled:opacity-50"
-                >
-                  새로고침
-                </button>
-                <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
-                  대시보드 <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
+            <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-border/50 text-[11px]">
+              <button
+                onClick={refetchUsage}
+                disabled={usageLoading}
+                className="text-blue-600 hover:underline disabled:opacity-50"
+              >
+                새로고침
+              </button>
+              <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+                대시보드 <ExternalLink className="h-3 w-3" />
+              </a>
             </div>
           </ApiSection>
 
           {/* 호스팅 — Vercel */}
           <ApiSection title="호스팅 — Vercel">
-            <div className="flex flex-col gap-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">요금제</span>
-                <Badge variant="secondary" className="text-xs">Hobby</Badge>
-              </div>
+            <Field label="요금제">
+              <Badge variant="secondary" className="text-[10px] h-5">Hobby</Badge>
+            </Field>
 
-              <div className="flex flex-col gap-1 pt-1 border-t">
-                <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/70 pt-2">
-                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
-                  <span>앱 내 직접 추적 불가 — Vercel 대시보드 Usage 탭에서 확인</span>
-                </p>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">대역폭</span>
-                  <span className="text-muted-foreground/70">한도 {formatBytes(VERCEL_HOBBY_LIMITS.bandwidthBytesPerMonth)}/월</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">빌드 시간</span>
-                  <span className="text-muted-foreground/70">한도 {VERCEL_HOBBY_LIMITS.buildMinutesPerMonth.toLocaleString()}분/월</span>
-                </div>
-              </div>
+            <Subsection title="대시보드에서 확인" hint="앱에서 추적 불가">
+              <Field label="대역폭">
+                <span className="text-muted-foreground">한도 {formatBytes(VERCEL_HOBBY_LIMITS.bandwidthBytesPerMonth)}/월</span>
+              </Field>
+              <Field label="빌드 시간">
+                <span className="text-muted-foreground">한도 {VERCEL_HOBBY_LIMITS.buildMinutesPerMonth.toLocaleString()}분/월</span>
+              </Field>
+            </Subsection>
 
-              <div className="flex justify-end pt-1">
-                <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
-                  대시보드 <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            </div>
+            <LinkFooter href="https://vercel.com/dashboard" label="vercel.com" />
           </ApiSection>
 
           {/* === 정보 (날씨·공휴일) === */}
@@ -574,98 +607,68 @@ function SettingsPageInner() {
 
           {/* 날씨 API */}
           <ApiSection title="날씨 API">
-            <div className="flex flex-col gap-4 text-sm">
-              {/* 기상청 단기예보 */}
-              <div className="flex flex-col gap-2">
-                <p className="font-medium text-xs text-muted-foreground">기상청 단기예보</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">API 이름</span>
-                  <span className="text-xs">VilageFcstInfoService_2.0</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">만료일</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">{kmaExpiry}</span>
-                    <Badge variant={kmaWarning || daysLeft <= 0 ? "destructive" : "secondary"} className="text-xs">
-                      {daysLeft > 0 ? `${daysLeft}일 남음` : "만료됨"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
+            <Subsection title="기상청 단기예보">
+              <Field label="API">
+                <code className="text-[10px]">VilageFcstInfoService_2.0</code>
+              </Field>
+              <Field label="만료일">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="text-[11px]">{kmaExpiry}</span>
+                  <Badge variant={kmaWarning || daysLeft <= 0 ? "destructive" : "secondary"} className="text-[10px] h-5">
+                    {daysLeft > 0 ? `D-${daysLeft}` : "만료"}
+                  </Badge>
+                </span>
+              </Field>
+            </Subsection>
 
-              {/* 기상청 중기예보 */}
-              <div className="flex flex-col gap-2">
-                <p className="font-medium text-xs text-muted-foreground">기상청 중기예보</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">API 이름</span>
-                  <span className="text-xs">MidFcstInfoService</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">만료일</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">{kmaExpiry}</span>
-                    <Badge variant={kmaWarning || daysLeft <= 0 ? "destructive" : "secondary"} className="text-xs">
-                      {daysLeft > 0 ? `${daysLeft}일 남음` : "만료됨"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
+            <Subsection title="기상청 중기예보">
+              <Field label="API">
+                <code className="text-[10px]">MidFcstInfoService</code>
+              </Field>
+              <Field label="만료일">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="text-[11px]">{kmaExpiry}</span>
+                  <Badge variant={kmaWarning || daysLeft <= 0 ? "destructive" : "secondary"} className="text-[10px] h-5">
+                    {daysLeft > 0 ? `D-${daysLeft}` : "만료"}
+                  </Badge>
+                </span>
+              </Field>
+            </Subsection>
 
-              {/* 갱신 안내 */}
-              <div className="flex flex-col gap-1.5 pt-2 border-t text-xs text-muted-foreground">
-                <div className="flex items-center justify-between">
-                  <span>갱신 사이트</span>
-                  <a href="https://www.data.go.kr" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                    공공데이터포털 (data.go.kr) <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>로그인 방법</span>
-                  <span>네이버 간편로그인</span>
-                </div>
-              </div>
+            <Subsection title="Open-Meteo" hint="과거·장기 예보">
+              <Field label="요금">
+                <Badge variant="secondary" className="text-[10px] h-5">무료 (키 불필요)</Badge>
+              </Field>
+              <Field label="만료">
+                <Badge variant="secondary" className="text-[10px] h-5">만료 없음</Badge>
+              </Field>
+            </Subsection>
 
-              {/* Open-Meteo */}
-              <div className="flex flex-col gap-2 pt-2 border-t">
-                <p className="font-medium text-xs text-muted-foreground">Open-Meteo (과거 날씨 + 장기 예보)</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">요금</span>
-                  <Badge variant="secondary" className="text-xs">무료 (키 불필요)</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">만료</span>
-                  <Badge variant="secondary" className="text-xs">만료 없음</Badge>
-                </div>
-              </div>
-            </div>
+            <Note>
+              기상청 키 갱신: 공공데이터포털(data.go.kr) → 네이버 간편로그인.
+            </Note>
+            <LinkFooter href="https://www.data.go.kr" label="data.go.kr" />
           </ApiSection>
 
           {/* 특일정보 API */}
           <ApiSection title="공휴일 API — 한국천문연구원">
-            <div className="flex flex-col gap-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">API 이름</span>
-                <span className="text-xs">특일 정보 (SpcdeInfoService)</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">만료일</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs">{holidayExpiry}</span>
-                  <Badge variant={holidayWarning ? "destructive" : holidayDaysLeft <= 0 ? "destructive" : "secondary"} className="text-xs">
-                    {holidayDaysLeft > 0 ? `${holidayDaysLeft}일 남음` : "만료됨"}
-                  </Badge>
-                </div>
-              </div>
-              {holidayWarning && (
-                <p className="text-xs text-destructive font-medium">⚠️ 만료 2개월 이내 — 갱신이 필요합니다</p>
-              )}
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                <span>갱신 사이트</span>
-                <a href="https://www.data.go.kr" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                  공공데이터포털 <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            </div>
+            <Field label="API">
+              <code className="text-[10px]">SpcdeInfoService</code>
+            </Field>
+            <Field label="만료일">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-[11px]">{holidayExpiry}</span>
+                <Badge variant={holidayWarning || holidayDaysLeft <= 0 ? "destructive" : "secondary"} className="text-[10px] h-5">
+                  {holidayDaysLeft > 0 ? `D-${holidayDaysLeft}` : "만료"}
+                </Badge>
+              </span>
+            </Field>
+            {holidayWarning && (
+              <Note tone="warning">
+                만료 2개월 이내 — 공공데이터포털에서 키 갱신 필요.
+              </Note>
+            )}
+            <LinkFooter href="https://www.data.go.kr" label="data.go.kr" />
           </ApiSection>
 
           {/* === 지도·경로 (위치·길찾기) === */}
@@ -673,178 +676,98 @@ function SettingsPageInner() {
 
           {/* 여행 계획 — 수단별 라우팅 아키텍처 한눈에 */}
           <ApiSection title="여행 계획 경로 — 수단별 API 매핑">
-            <div className="flex flex-col gap-2 text-xs">
-              <p className="text-muted-foreground leading-relaxed">
-                여행 계획의 구간별 소요시간은 수단에 따라 다른 API 를 호출합니다.
-              </p>
-              <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs">
-                <span>🚗 <b>승용차</b></span>
-                <span className="text-muted-foreground">NCP Directions 5 (네이버)</span>
-                <span>🚶 <b>도보</b></span>
-                <span className="text-muted-foreground">Google Directions (walking)</span>
-                <span>🚌 <b>버스</b></span>
-                <span className="text-muted-foreground">Google Directions (transit, bus)</span>
-                <span>🚆 <b>기차</b></span>
-                <span className="text-muted-foreground">공공데이터 KORAIL → 실패 시 Google rail 폴백</span>
-              </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              구간 소요시간은 수단별로 다른 API 를 호출합니다.
+            </p>
+            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-[11px]">
+              <span className="font-medium">🚗 승용차</span>
+              <span className="text-muted-foreground">NCP Directions 5</span>
+              <span className="font-medium">🚶 도보</span>
+              <span className="text-muted-foreground">Google Directions (walking)</span>
+              <span className="font-medium">🚌 버스</span>
+              <span className="text-muted-foreground">Google Directions (transit)</span>
+              <span className="font-medium">🚆 기차</span>
+              <span className="text-muted-foreground">KORAIL → 실패 시 Google rail 폴백</span>
             </div>
           </ApiSection>
 
           {/* NCP Maps — 여러 상품이 하나의 키 아래에서 각자 신청 필요 */}
           <ApiSection title="네이버 클라우드 플랫폼 — Maps">
-            <div className="flex flex-col gap-4 text-sm">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                NCP Maps 는 여러 하위 상품이 있고, 각각 <b>개별 신청</b>이 필요합니다.
-                키는 하나이지만 상품별로 권한이 부여됩니다.
-                <br />환경변수:{" "}
-                <code>NEXT_PUBLIC_NCP_MAP_CLIENT_ID</code> /{" "}
-                <code>NCP_MAP_CLIENT_SECRET</code>
-              </p>
-
-              {/* Dynamic / Static Map */}
-              <div className="flex flex-col gap-1.5">
-                <p className="font-medium text-xs">Web Dynamic Map · Static Map</p>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">용도</span>
-                  <span>여행 계획 지도 렌더링</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">요금</span>
-                  <Badge variant="secondary" className="text-xs">월 6만건 무료</Badge>
-                </div>
-              </div>
-
-              {/* Directions 5 */}
-              <div className="flex flex-col gap-1.5 pt-3 border-t">
-                <p className="font-medium text-xs">Directions 5 <span className="text-muted-foreground">(승용차 경로)</span></p>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">용도</span>
-                  <span>자가용·택시 소요시간 + 실제 도로 path</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">요금</span>
-                  <Badge variant="secondary" className="text-xs">월 6만건 무료</Badge>
-                </div>
-                <p className="text-xs text-amber-600 leading-relaxed">
-                  ⚠️ 별도 신청 필수 — 콘솔에서 Maps 상품 목록의
-                  &quot;Directions 5 이용 신청&quot; 필요. 미신청 시 HTTP 200 이지만
-                  빈 body 를 반환하여 경로가 안 뜸.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                <span>관리 사이트</span>
-                <a
-                  href="https://console.ncloud.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  console.ncloud.com <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              하위 상품마다 <b className="text-foreground/80">개별 신청</b> 필요. 키는 하나, 상품별 권한 부여.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <code className="text-[10px] bg-background border rounded px-1.5 py-0.5">NEXT_PUBLIC_NCP_MAP_CLIENT_ID</code>
+              <code className="text-[10px] bg-background border rounded px-1.5 py-0.5">NCP_MAP_CLIENT_SECRET</code>
             </div>
+
+            <Subsection title="Web Dynamic Map · Static Map">
+              <Field label="용도">여행 계획 지도 렌더링</Field>
+              <Field label="요금"><Badge variant="secondary" className="text-[10px] h-5">월 6만건 무료</Badge></Field>
+            </Subsection>
+
+            <Subsection title="Directions 5" hint="승용차 경로">
+              <Field label="용도">자가용·택시 소요시간 + 도로 path</Field>
+              <Field label="요금"><Badge variant="secondary" className="text-[10px] h-5">월 6만건 무료</Badge></Field>
+            </Subsection>
+
+            <Note tone="warning">
+              <b>별도 신청 필수</b> — 콘솔에서 &ldquo;Directions 5 이용 신청&rdquo; 필요.
+              미신청 시 HTTP 200 이지만 빈 body 반환 → 경로가 안 뜸.
+            </Note>
+
+            <LinkFooter href="https://console.ncloud.com" label="console.ncloud.com" />
           </ApiSection>
 
           {/* 네이버 검색 (Developers) — NCP 아닌 별도 Developers 사이트 */}
-          <ApiSection title="네이버 개발자센터 — 검색(Local Search)">
-            <div className="flex flex-col gap-2 text-sm">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                여행 계획 장소 검색에 사용. NCP 와 별개인 <b>네이버 개발자센터</b> 발급 키.
-                <br />환경변수:{" "}
-                <code>NAVER_SEARCH_CLIENT_ID</code> /{" "}
-                <code>NAVER_SEARCH_CLIENT_SECRET</code>
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">요금</span>
-                <Badge variant="secondary" className="text-xs">무료 (일 25,000건)</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">만료</span>
-                <Badge variant="secondary" className="text-xs">만료 없음</Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                <span>관리 사이트</span>
-                <a
-                  href="https://developers.naver.com/apps/#/list"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  developers.naver.com <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
+          <ApiSection title="네이버 개발자센터 — 검색 (Local Search)">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              여행 계획 장소 검색용. NCP 와 별개인 <b className="text-foreground/80">네이버 개발자센터</b> 발급 키.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <code className="text-[10px] bg-background border rounded px-1.5 py-0.5">NAVER_SEARCH_CLIENT_ID</code>
+              <code className="text-[10px] bg-background border rounded px-1.5 py-0.5">NAVER_SEARCH_CLIENT_SECRET</code>
             </div>
+            <Field label="요금"><Badge variant="secondary" className="text-[10px] h-5">무료 (일 25,000건)</Badge></Field>
+            <Field label="만료"><Badge variant="secondary" className="text-[10px] h-5">만료 없음</Badge></Field>
+            <LinkFooter href="https://developers.naver.com/apps/#/list" label="developers.naver.com" />
           </ApiSection>
 
           {/* Google Maps Directions — 도보 · 버스 · 기차폴백 */}
           <ApiSection title="Google Maps — Directions API">
-            <div className="flex flex-col gap-2 text-sm">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                여행 계획에서 NCP 가 제공하지 않는 수단(도보·버스·지하철·기차폴백)을 담당.
-                Google 의 다양한 mode 를 하나의 키로 사용.
-                <br />환경변수: <code>GOOGLE_MAPS_API_KEY</code>
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">사용 mode</span>
-                <span className="text-xs">walking · transit(bus, rail, subway)</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">요금</span>
-                <Badge variant="secondary" className="text-xs">월 $200 크레딧 무료</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed pt-1">
-                Directions API 단가 $0.005/건 → 월 40,000건까지 실결제 0원.
-                개인 여행 계획 용도는 사실상 영구 무료.
-                &quot;Requests per day&quot; 한도 100 정도로 제한 걸어두면 과금 방지 확실.
-              </p>
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                <span>관리 사이트</span>
-                <a
-                  href="https://console.cloud.google.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  console.cloud.google.com <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              NCP 가 제공하지 않는 수단(도보·버스·지하철·기차폴백) 담당.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <code className="text-[10px] bg-background border rounded px-1.5 py-0.5">GOOGLE_MAPS_API_KEY</code>
             </div>
+            <Field label="사용 mode">
+              <span className="text-[11px]">walking · transit (bus·rail·subway)</span>
+            </Field>
+            <Field label="요금"><Badge variant="secondary" className="text-[10px] h-5">월 $200 크레딧 무료</Badge></Field>
+            <Note>
+              단가 $0.005/건 → 월 40,000건까지 실결제 0원. 개인 용도엔 사실상 무료.
+              과금 방지를 위해 콘솔에서 &ldquo;Requests per day&rdquo; 한도 100 으로 잠가두기.
+            </Note>
+            <LinkFooter href="https://console.cloud.google.com" label="console.cloud.google.com" />
           </ApiSection>
 
           {/* 공공데이터 — KORAIL 열차운행정보 */}
-          <ApiSection title="공공데이터포털 — 한국철도공사 열차운행정보">
-            <div className="flex flex-col gap-2 text-sm">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                KTX · SRT · ITX · 새마을 등 기차 구간 소요시간을 실제 운행계획으로 조회.
-                미설정·실패 시 Google rail 로 자동 폴백.
-                <br />환경변수: <code>PUBLIC_TRAIN_API_KEY</code> (디코딩 인증키)
-                <br />엔드포인트: <code>apis.data.go.kr/B551457/run/v2/plans</code>
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">제공사</span>
-                <span className="text-xs">한국철도공사 (KORAIL)</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">요금</span>
-                <Badge variant="secondary" className="text-xs">무료</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">매칭 방식</span>
-                <span className="text-xs">좌표 ↔ 25개 주요 역 (15km 이내)</span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                <span>데이터셋</span>
-                <a
-                  href="https://www.data.go.kr/data/15125762/openapi.do"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  15125762 <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
+          <ApiSection title="공공데이터포털 — KORAIL 열차운행정보">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              KTX·SRT·ITX·새마을 구간 소요시간을 실제 운행계획으로 조회.
+              미설정·실패 시 Google rail 자동 폴백.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <code className="text-[10px] bg-background border rounded px-1.5 py-0.5">PUBLIC_TRAIN_API_KEY</code>
             </div>
+            <Field label="엔드포인트">
+              <code className="text-[10px]">B551457/run/v2/plans</code>
+            </Field>
+            <Field label="제공사">한국철도공사 (KORAIL)</Field>
+            <Field label="요금"><Badge variant="secondary" className="text-[10px] h-5">무료</Badge></Field>
+            <Field label="매칭">좌표 ↔ 25개 주요 역 (15km 이내)</Field>
+            <LinkFooter href="https://www.data.go.kr/data/15125762/openapi.do" label="data.go.kr (15125762)" />
           </ApiSection>
 
         </div>
