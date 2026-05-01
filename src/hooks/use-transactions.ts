@@ -32,13 +32,15 @@ export function useTransactions(startDate: string, endDate?: string) {
     return `${d.getFullYear()}-${String(d.getMonth() + 2).padStart(2, "0")}-01`;
   })();
 
+  // 카테고리는 글로벌 시드(user_id IS NULL) + 본인 추가분만 조회.
+  // 다른 사용자가 만든 커스텀 카테고리는 보이지 않음.
   const fetchCategories = useCallback(async () => {
-    const { data } = await supabase
-      .from("expense_categories")
-      .select("*")
-      .order("name");
+    let q = supabase.from("expense_categories").select("*").order("name");
+    if (userId) q = q.or(`user_id.is.null,user_id.eq.${userId}`);
+    else q = q.is("user_id", null);
+    const { data } = await q;
     if (data) setCategories(data);
-  }, []);
+  }, [userId]);
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -190,9 +192,10 @@ export function useTransactions(startDate: string, endDate?: string) {
     type: "income" | "expense",
     color: string
   ) => {
+    if (!userId) return { error: "로그인 후 사용 가능합니다" };
     const { error } = await supabase
       .from("expense_categories")
-      .insert({ name, type, color, icon: null });
+      .insert({ name, type, color, icon: null, user_id: userId });
     if (error) return { error: error.message || String(error) };
     await fetchCategories();
     return { error: null };

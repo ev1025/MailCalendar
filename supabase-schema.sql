@@ -702,3 +702,49 @@ ALTER TABLE app_users
   ADD COLUMN IF NOT EXISTS dday_enabled BOOLEAN DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS dday_date DATE,
   ADD COLUMN IF NOT EXISTS dday_time TIME;
+
+-- =============================================
+-- 보안 강화: 글로벌 테이블 → per-user 전환
+-- =============================================
+-- 기존엔 expense_categories / app_settings 가 USING(true) 로 전체 공유돼서
+-- 한 사용자가 다른 사용자의 카테고리·설정을 수정·삭제할 수 있었음 (보안 lint 경고).
+-- user_id 컬럼 추가 후 정책을 본인 row 만 R/W 로 변경.
+
+-- expense_categories: user_id 컬럼 추가 (기본 시드 14개는 user_id IS NULL 로 글로벌 유지)
+ALTER TABLE expense_categories
+  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES app_users(id) ON DELETE CASCADE;
+
+-- app_settings: user_id 컬럼 추가 + PK 를 (user_id, key) 로 변경
+ALTER TABLE app_settings
+  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES app_users(id) ON DELETE CASCADE;
+
+-- 기존 글로벌 row → 각 사용자에게 복사 (existing 데이터 보존)
+INSERT INTO app_settings (user_id, key, value, updated_at)
+  SELECT u.id, s.key, s.value, NOW()
+  FROM app_users u
+  CROSS JOIN app_settings s
+  WHERE s.user_id IS NULL
+  ON CONFLICT DO NOTHING;
+DELETE FROM app_settings WHERE user_id IS NULL;
+
+-- PK 재설정 (user_id, key)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'app_settings_pkey' AND conrelid = 'app_settings'::regclass
+  ) THEN
+    -- 기존 PK 가 (key) 단일이면 삭제 후 재생성
+    PERFORM 1 FROM pg_index i
+    JOIN pg_constraint c ON c.conindid = i.indexrelid
+    WHERE c.conname = 'app_settings_pkey'
+      AND array_length(i.indkey::int[], 1) = 1;
+    IF FOUND THEN
+      ALTER TABLE app_settings DROP CONSTRAINT app_settings_pkey;
+      ALTER TABLE app_settings ADD PRIMARY KEY (user_id, key);
+    END IF;
+  END IF;
+END $$;
+
+-- supplements: 레거시 테이블 삭제 (쇼핑기록 products 로 흡수됨)
+DROP TABLE IF EXISTS supplements CASCADE;

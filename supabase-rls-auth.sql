@@ -21,6 +21,9 @@ AS $$
   SELECT id FROM app_users WHERE auth_user_id = auth.uid() LIMIT 1;
 $$;
 
+-- 외부 RPC(/rest/v1/rpc/auth_app_user_id) 호출 차단 — RLS 내부 호출은 영향 없음.
+REVOKE EXECUTE ON FUNCTION auth_app_user_id() FROM anon, authenticated, public;
+
 -- ────────────────────────────────
 -- 0-2. 헬퍼 함수: 나와 양방향 공유 관계인 사용자 id 들
 --      (내가 viewer 인 owner + 내가 owner 인 viewer)
@@ -36,6 +39,9 @@ AS $$
   SELECT viewer_id FROM calendar_shares
   WHERE owner_id = auth_app_user_id() AND status = 'accepted'
 $$;
+
+-- 외부 RPC 호출 차단.
+REVOKE EXECUTE ON FUNCTION shared_user_ids() FROM anon, authenticated, public;
 
 -- ────────────────────────────────
 -- 1. app_users — 모두 읽기 가능(공유 대상 목록), 본인만 쓰기/수정/삭제
@@ -263,33 +269,57 @@ CREATE POLICY "Via plan" ON travel_plan_tasks
   );
 
 -- ────────────────────────────────
--- 7. 공용/전역 테이블 (로그인한 사용자면 모두 R/W)
+-- 7. expense_categories — Read 전체 허용(시드 카테고리 + 사용자 추가분 모두 보임),
+--    Write/Update/Delete 는 본인이 만든 행만 (user_id = me)
+--    선행 작업: ALTER TABLE expense_categories ADD COLUMN user_id (schema.sql 에 포함)
 -- ────────────────────────────────
--- expense_categories: 기본 시드 + 사용자 추가분 공유
 DROP POLICY IF EXISTS "Allow all" ON expense_categories;
 DROP POLICY IF EXISTS "Authenticated" ON expense_categories;
-CREATE POLICY "Authenticated" ON expense_categories
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Read all" ON expense_categories;
+DROP POLICY IF EXISTS "Insert own" ON expense_categories;
+DROP POLICY IF EXISTS "Update own" ON expense_categories;
+DROP POLICY IF EXISTS "Delete own" ON expense_categories;
 
--- app_settings: monthly_income 등
+CREATE POLICY "Read all" ON expense_categories
+  FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Insert own" ON expense_categories
+  FOR INSERT TO authenticated WITH CHECK (user_id = auth_app_user_id());
+CREATE POLICY "Update own" ON expense_categories
+  FOR UPDATE TO authenticated
+  USING (user_id = auth_app_user_id())
+  WITH CHECK (user_id = auth_app_user_id());
+CREATE POLICY "Delete own" ON expense_categories
+  FOR DELETE TO authenticated USING (user_id = auth_app_user_id());
+
+-- ────────────────────────────────
+-- 8. app_settings — 본인 row 만 R/W (per-user)
+--    선행 작업: ALTER TABLE app_settings ADD COLUMN user_id, PK 변경 (schema.sql)
+-- ────────────────────────────────
 DROP POLICY IF EXISTS "Allow all" ON app_settings;
 DROP POLICY IF EXISTS "Authenticated" ON app_settings;
-CREATE POLICY "Authenticated" ON app_settings
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Own rows" ON app_settings;
 
--- supplements: legacy 테이블 (쇼핑기록으로 흡수됨, 잔여 데이터용)
-DROP POLICY IF EXISTS "Allow all" ON supplements;
-DROP POLICY IF EXISTS "Authenticated" ON supplements;
-CREATE POLICY "Authenticated" ON supplements
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Own rows" ON app_settings FOR ALL TO authenticated
+  USING (user_id = auth_app_user_id())
+  WITH CHECK (user_id = auth_app_user_id());
 
 -- ────────────────────────────────
--- 8. 특수: weather_cache — 서버 라우트(/api/weather)가 anon 으로 접근
---    공용 캐시라 로그인 없이 R/W (민감 정보 아님)
+-- 9. weather_cache — 공용 캐시. SELECT 만 anon 에 허용 (linter 예외).
+--    INSERT/UPDATE/DELETE 는 service_role 만 (정책 없음 → RLS 차단).
+--    /api/weather 라우트는 SUPABASE_SERVICE_ROLE_KEY 가 설정돼야 캐시에 쓸 수 있음.
 -- ────────────────────────────────
 DROP POLICY IF EXISTS "Allow all" ON weather_cache;
-CREATE POLICY "Public cache" ON weather_cache
-  FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Public cache" ON weather_cache;
+DROP POLICY IF EXISTS "Read cache" ON weather_cache;
+
+CREATE POLICY "Read cache" ON weather_cache
+  FOR SELECT TO anon, authenticated USING (true);
+
+-- ────────────────────────────────
+-- 10. supplements — 레거시. 정책만 정리 (테이블 자체는 schema.sql 의 DROP TABLE 로 제거됨)
+-- ────────────────────────────────
+DROP POLICY IF EXISTS "Allow all" ON supplements;
+DROP POLICY IF EXISTS "Authenticated" ON supplements;
 
 -- ────────────────────────────────
 -- 확인용

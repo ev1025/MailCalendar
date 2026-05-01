@@ -3,10 +3,19 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
-);
+// weather_cache 의 RLS 는 anon SELECT 만 허용(린트 0024 권고).
+// INSERT/UPDATE 는 service_role 만 가능 → 서버 라우트는 service_role 키를 우선 사용.
+// SUPABASE_SERVICE_ROLE_KEY 미설정 환경(예: 로컬 개발)에선 anon 키로 폴백 — 캐시 쓰기는
+// 실패하지만 읽기와 외부 API 호출은 정상 동작.
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "placeholder-key";
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 const DEFAULT_LAT = "37.5665";
 const DEFAULT_LON = "126.978";
