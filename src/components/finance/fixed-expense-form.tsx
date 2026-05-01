@@ -337,11 +337,13 @@ export default function FixedExpenseForm({
           </div>
         </div>
 
-        {/* 반복 횟수 + 격주/N주차 — 별도 행 (없음/계속 일 땐 숨김). */}
+        {/* 반복 횟수 + 격주/N주차 — 별도 행 (없음/계속 일 땐 숨김).
+            items-end 로 input baseline 정렬 — modifier 의 자체 라벨도 sibling
+            라벨과 같은 y 에 위치. */}
         {repeat !== "none" && repeat !== "infinite" && (
-          <div className="flex flex-col gap-1.5 min-w-0">
-            <Label className={FORM_LABEL}>반복 횟수</Label>
-            <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-end gap-2 flex-wrap">
+            <div className="flex flex-col gap-1.5 min-w-0">
+              <Label className={FORM_LABEL}>반복 횟수</Label>
               <RepeatCountField
                 startDate={repeatStartDate}
                 repeat={repeatTypeForField}
@@ -355,20 +357,20 @@ export default function FixedExpenseForm({
                 weeklyInterval={weeklyInterval}
                 monthlyNth={monthlyNth}
               />
-              {repeat === "weekly" && (
-                <WeeklyIntervalButton
-                  interval={weeklyInterval}
-                  onChange={setWeeklyInterval}
-                />
-              )}
-              {repeat === "monthly" && (
-                <MonthlyNthButton
-                  startDate={repeatStartDate}
-                  value={monthlyNth}
-                  onChange={setMonthlyNth}
-                />
-              )}
             </div>
+            {repeat === "weekly" && (
+              <WeeklyIntervalButton
+                interval={weeklyInterval}
+                onChange={setWeeklyInterval}
+              />
+            )}
+            {repeat === "monthly" && (
+              <MonthlyNthButton
+                startDate={repeatStartDate}
+                value={monthlyNth}
+                onChange={setMonthlyNth}
+              />
+            )}
           </div>
         )}
         {(repeat === "infinite" || repeat === "monthly") && !monthlyNth && (

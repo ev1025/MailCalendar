@@ -331,9 +331,9 @@ export default function EventForm({
           </div>
 
 
-          {/* 반복 / 반복 횟수 / 격주·N주차 — 한 행에 컴팩트 정렬.
-              컬럼은 컨텐츠 폭, gap-2 / 모디파이어는 input 옆에 인라인. */}
-          <div className="flex items-start gap-2 flex-wrap">
+          {/* 반복 / 반복 횟수 / 격주·N주차 — 한 행. items-end 로 input baseline 정렬
+              (모디파이어 active 시 자체 라벨이 sibling 라벨과 같은 y 에 위치). */}
+          <div className="flex items-end gap-2 flex-wrap">
             <div className="flex flex-col gap-1.5 w-fit">
               <Label className={FORM_LABEL}>반복</Label>
               <Select value={repeat} onValueChange={(v) => {
@@ -358,9 +358,9 @@ export default function EventForm({
             </div>
             {/* "infinite"(계속) / "none"(없음) 일 땐 반복 횟수 컬럼 숨김 — 의미 없음. */}
             {repeat !== "none" && repeat !== "infinite" && (
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <Label className={FORM_LABEL}>반복 횟수</Label>
-                <div className="flex items-center gap-1">
+              <>
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <Label className={FORM_LABEL}>반복 횟수</Label>
                   <RepeatCountField
                     startDate={startDate}
                     repeat={repeat}
@@ -374,23 +374,23 @@ export default function EventForm({
                     weeklyInterval={weeklyInterval}
                     monthlyNth={monthlyNth}
                   />
-                  {/* 매주 — 격주/3주/4주 토글 (입력 박스 우측). */}
-                  {repeat === "weekly" && (
-                    <WeeklyIntervalButton
-                      interval={weeklyInterval}
-                      onChange={setWeeklyInterval}
-                    />
-                  )}
-                  {/* 매월 — N주차 W요일 토글. */}
-                  {repeat === "monthly" && (
-                    <MonthlyNthButton
-                      startDate={startDate}
-                      value={monthlyNth}
-                      onChange={setMonthlyNth}
-                    />
-                  )}
                 </div>
-              </div>
+                {/* 매주 — 격주/3주/4주 토글 (active 시 라벨 "격주" 노출). */}
+                {repeat === "weekly" && (
+                  <WeeklyIntervalButton
+                    interval={weeklyInterval}
+                    onChange={setWeeklyInterval}
+                  />
+                )}
+                {/* 매월 — N주차 W요일 토글 (active 시 라벨 "N주" 노출). */}
+                {repeat === "monthly" && (
+                  <MonthlyNthButton
+                    startDate={startDate}
+                    value={monthlyNth}
+                    onChange={setMonthlyNth}
+                  />
+                )}
+              </>
             )}
           </div>
 

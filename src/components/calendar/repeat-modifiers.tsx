@@ -7,8 +7,9 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
-import { FORM_INPUT_COMPACT } from "@/lib/form-classes";
+import { FORM_INPUT_COMPACT, FORM_LABEL } from "@/lib/form-classes";
 import { KO_WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 
 /** 매주 N주마다 인라인 토글 — "종료 설정" 패턴.
@@ -45,39 +46,42 @@ export function WeeklyIntervalButton({
     );
   }
   return (
-    <div className="flex items-center gap-0.5 shrink-0">
-      <input
-        type="text"
-        inputMode="numeric"
-        value={draft}
-        onFocus={() => setDraft("")}
-        onChange={(e) => {
-          const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
-          setDraft(digits);
-          // 유효한 값이면 즉시 반영. 빈 칸이거나 1 이하면 onBlur 에서 보정.
-          const n = parseInt(digits, 10);
-          if (!Number.isNaN(n) && n >= 2) onChange(n);
-        }}
-        onBlur={() => {
-          const n = parseInt(draft, 10);
-          if (Number.isNaN(n) || n < 2) {
-            // 빈 칸 / 1 이하 → 직전 interval 로 복원 (없으면 2 = 격주).
-            const fallback = interval >= 2 ? interval : 2;
-            setDraft(String(fallback));
-            if (interval < 2) onChange(fallback);
-          }
-        }}
-        className={`${FORM_INPUT_COMPACT} w-10 rounded-lg border border-input bg-transparent px-1 text-center tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
-      />
-      <span className="text-xs text-muted-foreground">주</span>
-      <button
-        type="button"
-        onClick={() => onChange(1)}
-        className="text-muted-foreground hover:text-foreground p-0.5 shrink-0"
-        aria-label="격주 해제"
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
+    <div className="flex flex-col gap-1.5 shrink-0">
+      <Label className={FORM_LABEL}>격주</Label>
+      <div className="flex items-center gap-0.5">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          onFocus={() => setDraft("")}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
+            setDraft(digits);
+            // 유효한 값이면 즉시 반영. 빈 칸이거나 1 이하면 onBlur 에서 보정.
+            const n = parseInt(digits, 10);
+            if (!Number.isNaN(n) && n >= 2) onChange(n);
+          }}
+          onBlur={() => {
+            const n = parseInt(draft, 10);
+            if (Number.isNaN(n) || n < 2) {
+              // 빈 칸 / 1 이하 → 직전 interval 로 복원 (없으면 2 = 격주).
+              const fallback = interval >= 2 ? interval : 2;
+              setDraft(String(fallback));
+              if (interval < 2) onChange(fallback);
+            }
+          }}
+          className={`${FORM_INPUT_COMPACT} w-10 rounded-lg border border-input bg-transparent px-1 text-center tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
+        />
+        <span className="text-xs text-muted-foreground">주</span>
+        <button
+          type="button"
+          onClick={() => onChange(1)}
+          className="text-muted-foreground hover:text-foreground p-0.5 shrink-0"
+          aria-label="격주 해제"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -118,36 +122,41 @@ export function MonthlyNthButton({
     );
   }
   return (
-    <div className="flex items-center gap-0.5 shrink-0">
-      <Select
-        value={String(value.week)}
-        onValueChange={(v) => v && onChange({ ...value, week: parseInt(v, 10) })}
-      >
-        {/* hideIcon — 컴팩트 토글 (ChevronDown 생략으로 가로 폭 절약).
-            트리거는 컴팩트한 "1주" 표시, 드롭다운 항목은 "1째주" 로 명확하게. */}
-        <SelectTrigger
-          hideIcon
-          className={`${FORM_INPUT_COMPACT} w-fit min-w-[2.5rem] px-1.5`}
+    // items-end — 라벨이 있는 N째주 column 과 라벨 없는 요일 select / X 의 baseline 정렬.
+    <div className="flex items-end gap-0.5 shrink-0">
+      <div className="flex flex-col gap-1.5">
+        <Label className={FORM_LABEL}>N주</Label>
+        <Select
+          value={String(value.week)}
+          onValueChange={(v) => v && onChange({ ...value, week: parseInt(v, 10) })}
         >
-          {value.week}주
-        </SelectTrigger>
-        {/* align=start — 트리거 좌단과 popup 좌단 정렬. popup 이 더 넓을 때
-            가운데 정렬되면 좌우로 들쭉날쭉해 보이는 문제 해결. */}
-        <SelectContent align="start" className="w-fit min-w-fit">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <SelectItem key={n} value={String(n)} hideIndicator>
-              {n}째주
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          {/* hideIcon — 컴팩트 토글 (ChevronDown 생략으로 가로 폭 절약).
+              트리거는 컴팩트한 "1주" 표시, 드롭다운 항목은 "1째주" 로 명확하게. */}
+          <SelectTrigger
+            hideIcon
+            className={`${FORM_INPUT_COMPACT} w-fit min-w-[2.5rem] px-1.5`}
+          >
+            {value.week}주
+          </SelectTrigger>
+          {/* align=start — 트리거 좌단과 popup 좌단 정렬. popup 이 더 넓을 때
+              가운데 정렬되면 좌우로 들쭉날쭉해 보이는 문제 해결. */}
+          <SelectContent align="start" className="w-fit min-w-fit">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <SelectItem key={n} value={String(n)} hideIndicator>
+                {n}째주
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <Select
         value={String(value.weekday)}
         onValueChange={(v) =>
           v && onChange({ ...value, weekday: parseInt(v, 10) })
         }
       >
-        {/* 트리거는 한 글자 "월", 드롭다운은 "월요일" 로 표시. */}
+        {/* 요일은 라벨 없음 — N주 라벨이 좌측에서 두 select 의 의미를 충분히 설명.
+            트리거는 한 글자 "월", 드롭다운은 "월요일" 로 표시. */}
         <SelectTrigger
           hideIcon
           className={`${FORM_INPUT_COMPACT} w-fit min-w-[2rem] px-1.5`}
@@ -165,7 +174,7 @@ export function MonthlyNthButton({
       <button
         type="button"
         onClick={() => onChange(null)}
-        className="text-muted-foreground hover:text-foreground p-0.5 shrink-0"
+        className="text-muted-foreground hover:text-foreground p-0.5 shrink-0 mb-1.5"
         aria-label="N주차 해제"
       >
         <X className="h-3.5 w-3.5" />
