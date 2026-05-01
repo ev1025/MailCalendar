@@ -46,6 +46,9 @@ export interface Expense {
   installment_id?: string | null;
   /** 할부 총 개월 수 (2~24). null/1 이면 일시불. */
   installment_total?: number | null;
+  /** 고정비 출처 — 자동 등록된 거래 추적용. 삭제 다이얼로그에서 "이 거래만 삭제 vs
+   *  고정비 자체 수정" 분기에 사용. 고정비 row 삭제 시 ON DELETE SET NULL. */
+  fixed_expense_id?: string | null;
   created_at: string;
   category?: ExpenseCategory;
 }

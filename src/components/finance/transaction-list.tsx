@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import DeleteRecordDescription from "@/components/ui/delete-record-description";
 import type { Expense } from "@/types";
@@ -12,6 +19,9 @@ interface TransactionListProps {
   transactions: Expense[];
   onEdit: (tx: Expense) => void;
   onDelete: (id: string) => void;
+  /** 고정비 출처 거래에서 "고정비 자체 수정" 선택 시 호출. 호출자는 매니저를
+   *  열고 해당 fixed_expense_id 를 편집 모드로 포커스. 미지정 시 해당 옵션 미표시. */
+  onEditFixed?: (fixedExpenseId: string) => void;
 }
 
 function formatWon(amount: number) {
@@ -22,9 +32,14 @@ export default function TransactionList({
   transactions,
   onEdit,
   onDelete,
+  onEditFixed,
 }: TransactionListProps) {
   // 삭제 확인 다이얼로그 — 실수로 영구 삭제 방지.
   const [deletingTx, setDeletingTx] = useState<Expense | null>(null);
+
+  // 고정비 출처 거래는 별도 분기 다이얼로그 사용. onEditFixed 가 주어졌고
+  // 거래에 fixed_expense_id 가 있을 때만 분기 다이얼로그 표시.
+  const isFixedSourced = !!(deletingTx?.fixed_expense_id && onEditFixed);
   // 날짜별로 그룹화
   const grouped = transactions.reduce(
     (acc, tx) => {
@@ -119,8 +134,72 @@ export default function TransactionList({
         </div>
       ))}
 
+      {/* 고정비 출처 거래 — 분기 다이얼로그 (이번 달만 / 고정비 자체 수정). */}
+      <Dialog
+        open={isFixedSourced}
+        onOpenChange={(o) => { if (!o) setDeletingTx(null); }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>고정비 거래 처리</DialogTitle>
+          </DialogHeader>
+          {deletingTx && (
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground/90">
+                  {deletingTx.title || deletingTx.description || "이 거래"}
+                </span>
+                는 고정비에서 자동 등록된 거래입니다. 어떻게 처리할까요?
+              </p>
+              <div className="flex flex-col gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (deletingTx) await onDelete(deletingTx.id);
+                    setDeletingTx(null);
+                  }}
+                  className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
+                >
+                  <Trash2 className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">이번 달 거래만 삭제</p>
+                    <p className="text-xs text-muted-foreground">
+                      고정비 자체는 유지. 다음 달엔 다시 자동 등록됩니다.
+                    </p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (deletingTx?.fixed_expense_id && onEditFixed) {
+                      onEditFixed(deletingTx.fixed_expense_id);
+                    }
+                    setDeletingTx(null);
+                  }}
+                  className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
+                >
+                  <Pencil className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">고정비 자체 수정</p>
+                    <p className="text-xs text-muted-foreground">
+                      금액·결제일·반복 기간을 바꾸려면 여기서.
+                    </p>
+                  </div>
+                </button>
+              </div>
+              <div className="flex justify-end pt-1">
+                <Button type="button" variant="outline" onClick={() => setDeletingTx(null)}>
+                  취소
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 일반 거래 — 단순 확인 다이얼로그. */}
       <ConfirmDialog
-        open={!!deletingTx}
+        open={!!deletingTx && !isFixedSourced}
         onOpenChange={(o) => { if (!o) setDeletingTx(null); }}
         title={
           deletingTx

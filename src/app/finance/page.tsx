@@ -316,6 +316,12 @@ function FinancePageInner() {
               transactions={filteredTransactions}
               onEdit={handleTxClick}
               onDelete={async (id) => { await deleteTransaction(id); }}
+              onEditFixed={(fixedExpenseId) => {
+                // 거래 삭제 다이얼로그에서 "고정비 자체 수정" 선택 → 매니저를 해당
+                // 항목 편집 모드로 열기. 매니저가 닫힐 때 initialEditingId 는 자동 reset.
+                setManagerInitialEditingId(fixedExpenseId);
+                setFixedOpen(true);
+              }}
             />
           )}
         </div>

@@ -105,6 +105,7 @@ export function useFixedExpenses() {
     }
 
     // ── ② expense bulk INSERT — fire-and-forget. caller 가 await 하지 않으면 폼이 즉시 닫힘 ──
+    const fixedExpenseId = inserted?.id; // 출처 추적용 FK
     const bulkDone = (async () => {
       const months = repeatMonths === -1 ? 120 : Math.max(1, repeatMonths);
       const today = new Date();
@@ -127,16 +128,20 @@ export function useFixedExpenses() {
           type: item.type,
           payment_method: item.payment_method,
           user_id: userId,
+          fixed_expense_id: fixedExpenseId,
         });
       }
       if (txs.length === 0) return;
       const ins = await supabase.from("expenses").insert(txs);
       if (ins.error) {
-        // user_id/title 미지원 구 DB 폴백
+        // user_id/title/fixed_expense_id 미지원 구 DB 폴백 — 모두 제거 후 재시도.
         const fallback = txs.map((t) => {
-          const { title, user_id, ...rest } = t as { title?: unknown; user_id?: unknown } & Record<string, unknown>;
-          void title;
-          void user_id;
+          const { title, user_id, fixed_expense_id, ...rest } = t as {
+            title?: unknown;
+            user_id?: unknown;
+            fixed_expense_id?: unknown;
+          } & Record<string, unknown>;
+          void title; void user_id; void fixed_expense_id;
           return rest;
         });
         await supabase.from("expenses").insert(fallback);
@@ -366,7 +371,8 @@ export function useFixedExpenses() {
       if (exists) continue;
 
       // 고정비의 title/description 을 각각 expenses 의 같은 필드로 전달.
-      // title 컬럼 없는 DB 대비 에러 시 title 제거하고 재시도.
+      // fixed_expense_id 로 출처 추적 — 삭제 다이얼로그에서 분기 가능.
+      // 컬럼 미지원 구 DB 대비 에러 시 신규 컬럼 모두 제거 후 재시도.
       const payload = {
         title: fx.title,
         amount: fx.amount,
@@ -376,11 +382,12 @@ export function useFixedExpenses() {
         type: fx.type,
         payment_method: fx.payment_method,
         user_id: userId,
+        fixed_expense_id: fx.id,
       };
       const { error } = await supabase.from("expenses").insert(payload);
       if (error) {
-        const { title, ...rest } = payload;
-        void title;
+        const { title, fixed_expense_id, ...rest } = payload as typeof payload & { fixed_expense_id?: unknown };
+        void title; void fixed_expense_id;
         await supabase.from("expenses").insert(rest);
       }
       count++;
@@ -460,6 +467,7 @@ export function useFixedExpenses() {
         type: fx.type,
         payment_method: fx.payment_method,
         user_id: userId,
+        fixed_expense_id: fx.id,
       });
     }
 
@@ -467,9 +475,12 @@ export function useFixedExpenses() {
       const ins = await supabase.from("expenses").insert(txsToInsert);
       if (ins.error) {
         const fallback = txsToInsert.map((t) => {
-          const { title, user_id, ...rest } = t as { title?: unknown; user_id?: unknown } & Record<string, unknown>;
-          void title;
-          void user_id;
+          const { title, user_id, fixed_expense_id, ...rest } = t as {
+            title?: unknown;
+            user_id?: unknown;
+            fixed_expense_id?: unknown;
+          } & Record<string, unknown>;
+          void title; void user_id; void fixed_expense_id;
           return rest;
         });
         await supabase.from("expenses").insert(fallback);

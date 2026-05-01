@@ -748,3 +748,15 @@ END $$;
 
 -- supplements: 레거시 테이블 삭제 (쇼핑기록 products 로 흡수됨)
 DROP TABLE IF EXISTS supplements CASCADE;
+
+-- =============================================
+-- expenses.fixed_expense_id — 고정비에서 자동 등록된 거래 추적
+-- =============================================
+-- 거래 행이 어느 고정비에서 자동 생성됐는지 추적해서 삭제 다이얼로그에서
+-- "이 거래만 삭제 vs 고정비 자체 수정" 분기를 가능하게 함.
+-- 고정비 자체 삭제 시 거래는 ON DELETE SET NULL 로 살려둠 (회고 가치).
+ALTER TABLE expenses
+  ADD COLUMN IF NOT EXISTS fixed_expense_id UUID
+  REFERENCES fixed_expenses(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_expenses_fixed_expense_id
+  ON expenses(fixed_expense_id);
