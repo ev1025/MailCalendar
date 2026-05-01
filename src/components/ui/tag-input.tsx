@@ -200,6 +200,17 @@ export default function TagInput({
   const [open, setOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 모바일 이중 발화 방지 — touchstart 직후 합성 mousedown/click 이 React passive
+  // listener 라 preventDefault 가 안 먹혀 같은 핸들러가 2번 호출됨. lastTap 기록
+  // 후 350ms 이내 호출은 무시해 단일 발화 보장.
+  const lastTapRef = useRef(0);
+  const tap = (fn: () => void) => {
+    const now = performance.now();
+    if (now - lastTapRef.current < 350) return;
+    lastTapRef.current = now;
+    fn();
+  };
   // 데스크탑(md 이상)에서는 바텀시트 대신 트리거 아래 Popover 로 렌더
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -480,17 +491,15 @@ export default function TagInput({
                   <span
                     role="button"
                     tabIndex={-1}
-                    // iOS Safari — mousedown 은 touchend 후 합성되어 늦음 → focus 이미 변경됨.
-                    // touchstart preventDefault → 합성 mouse/click 모두 발화 안 함 → blur 회피.
+                    // tap() ref-debounce — 350ms 안에 단일 발화만 처리.
                     onTouchStart={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
-                      toggleTag(name);
+                      tap(() => toggleTag(name));
                     }}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      toggleTag(name);
+                      tap(() => toggleTag(name));
                     }}
                     onClick={(e) => {
                       e.preventDefault();
@@ -631,19 +640,16 @@ export default function TagInput({
                           <span
                             role="button"
                             tabIndex={-1}
-                            // iOS Safari — mousedown 은 touchend 후 합성되어 늦음 (focus 이미 변경됨).
-                            // touchstart 에서 직접 처리 + preventDefault → 합성 mouse/click 이벤트
-                            // 자체가 발화 안 함 → blur·키보드 dismiss·시트 외부클릭 모두 회피.
-                            // onMouseDown 은 desktop 폴백 (터치 없는 환경).
+                            // touchstart + mousedown 둘 다 fire 가능하나 tap() ref-debounce 로
+                            // 350ms 안에 단일 발화만 처리. preventDefault 는 효과 있을 때만 작동.
                             onTouchStart={(e) => {
-                              e.preventDefault();
                               e.stopPropagation();
-                              toggleTag(name);
+                              tap(() => toggleTag(name));
                             }}
                             onMouseDown={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              toggleTag(name);
+                              tap(() => toggleTag(name));
                             }}
                             onClick={(e) => {
                               e.preventDefault();
@@ -717,17 +723,19 @@ export default function TagInput({
                       <div
                         key={t.id}
                         className="flex items-center justify-between px-2 py-2 hover:bg-accent rounded cursor-pointer"
-                        // iOS Safari — touchstart 에서 처리 + preventDefault 로 합성 mouse/click 차단.
-                        // 그 결과 click 이 viewport resize 후 다른 행에 발화하는 이중 발화 자체가 사라짐.
-                        onTouchStart={(e) => {
-                          e.preventDefault();
-                          toggleTag(t.name);
-                          setNewTagName("");
+                        // tap() ref-debounce — touchstart + mousedown 이중 발화 방지.
+                        onTouchStart={() => {
+                          tap(() => {
+                            toggleTag(t.name);
+                            setNewTagName("");
+                          });
                         }}
                         onMouseDown={(e) => {
                           e.preventDefault();
-                          toggleTag(t.name);
-                          setNewTagName("");
+                          tap(() => {
+                            toggleTag(t.name);
+                            setNewTagName("");
+                          });
                         }}
                         onClick={(e) => {
                           e.preventDefault();
