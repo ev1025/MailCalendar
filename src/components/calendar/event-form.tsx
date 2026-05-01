@@ -120,38 +120,55 @@ function parseDigitsToDate(digits: string): Date | null {
   return date;
 }
 
-/**
- * 입력된 종료일이 시작일·반복 타입과 사이클 맞는지 검증.
- * 매주: 같은 요일 / 매월: 같은 일 / 매년: 같은 월·일.
- * mismatch 면 한글 사유 메시지 반환, OK 면 null.
- */
-function validateRepeatEnd(
+/** 사이클 안 맞으면 자동 교정 + 사유. 시작일 비어있거나 raw 가 invalid 면 null. */
+function correctRepeatEnd(
   startDate: string,
   repeat: RepeatType,
-  end: Date,
-): string | null {
-  if (!startDate) return "시작일을 먼저 입력하세요";
+  raw: Date,
+): { corrected: Date; reason: string } | null {
+  if (!startDate) return null;
   const start = new Date(startDate + "T00:00:00");
-  if (Number.isNaN(start.getTime())) return "시작일이 올바르지 않습니다";
-  if (end <= start) return "종료일이 시작일보다 같거나 빠릅니다";
+  if (Number.isNaN(start.getTime())) return null;
+
+  let corrected = new Date(raw);
+  let reason: string | null = null;
+
   if (repeat === "weekly") {
-    if (end.getDay() !== start.getDay()) {
-      return `매주 ${KO_WEEKDAYS[start.getDay()]}요일만 입력 가능합니다`;
-    }
-    const days = Math.round((end.getTime() - start.getTime()) / 86400000);
-    if (days % 7 !== 0) {
-      return `매주 ${KO_WEEKDAYS[start.getDay()]}요일만 입력 가능합니다`;
+    const targetDay = start.getDay();
+    if (raw.getDay() !== targetDay) {
+      // 가장 가까운 target dayOfWeek 로 snap (forward·backward 중 짧은 쪽).
+      let diff = (targetDay - raw.getDay() + 7) % 7; // 0~6
+      if (diff > 3) diff -= 7; // -3~3 으로 변환
+      corrected.setDate(corrected.getDate() + diff);
+      reason = `매주 ${KO_WEEKDAYS[targetDay]}요일만 입력 가능`;
     }
   } else if (repeat === "monthly") {
-    if (end.getDate() !== start.getDate()) {
-      return `매월 ${start.getDate()}일만 입력 가능합니다`;
+    const targetDay = start.getDate();
+    if (raw.getDate() !== targetDay) {
+      // 같은 연/월에 startDay 적용. 그 달 일수 초과 시 그 달 마지막 일로 cap.
+      corrected = new Date(raw.getFullYear(), raw.getMonth(), 1);
+      const lastDay = new Date(raw.getFullYear(), raw.getMonth() + 1, 0).getDate();
+      corrected.setDate(Math.min(targetDay, lastDay));
+      reason = `매월 ${targetDay}일만 입력 가능`;
     }
   } else if (repeat === "yearly") {
-    if (end.getMonth() !== start.getMonth() || end.getDate() !== start.getDate()) {
-      return `매년 ${start.getMonth() + 1}월 ${start.getDate()}일만 입력 가능합니다`;
+    const targetMonth = start.getMonth();
+    const targetDay = start.getDate();
+    if (raw.getMonth() !== targetMonth || raw.getDate() !== targetDay) {
+      corrected = new Date(raw.getFullYear(), targetMonth, targetDay);
+      reason = `매년 ${targetMonth + 1}월 ${targetDay}일만 입력 가능`;
     }
   }
-  return null;
+
+  // 교정 후에도 시작일 ≤ 결과면 한 사이클 앞당김. (반복 기간 의미 없는 케이스 방지)
+  while (corrected <= start) {
+    if (repeat === "weekly") corrected.setDate(corrected.getDate() + 7);
+    else if (repeat === "monthly") corrected.setMonth(corrected.getMonth() + 1);
+    else corrected.setFullYear(corrected.getFullYear() + 1);
+    if (!reason) reason = "종료일이 시작일보다 빠름";
+  }
+
+  return reason ? { corrected, reason } : { corrected, reason: "" };
 }
 
 /**
@@ -263,13 +280,21 @@ function RepeatCountField({
               toast.error("올바르지 않은 날짜입니다");
               return;
             }
-            // 시작일·반복 타입과 사이클 일치 검증.
-            const errMsg = validateRepeatEnd(startDate, repeat, parsed);
-            if (errMsg) {
-              toast.error(errMsg);
+            // 사이클 안 맞으면 자동 교정 + toast 알림.
+            const result = correctRepeatEnd(startDate, repeat, parsed);
+            if (!result) {
+              toast.error("시작일을 먼저 입력하세요");
               return;
             }
-            const count = computeCountFromEnd(startDate, repeat, parsed);
+            if (result.reason) {
+              const m = String(result.corrected.getMonth() + 1).padStart(2, "0");
+              const d = String(result.corrected.getDate()).padStart(2, "0");
+              const wd = KO_WEEKDAYS[result.corrected.getDay()];
+              toast.error(
+                `${result.reason} — ${result.corrected.getFullYear()}.${m}.${d}(${wd}) 로 교정`,
+              );
+            }
+            const count = computeCountFromEnd(startDate, repeat, result.corrected);
             setRepeatCount(count);
             setOpen(false);
           }
