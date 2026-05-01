@@ -81,8 +81,10 @@ export function useDdaySettings() {
 
   const fetchSettings = useCallback(async () => {
     if (!userId) {
-      setSettings(DEFAULT);
-      saveCache(DEFAULT);
+      // userId 가 null 인 경우는 두 가지: ① auth 로딩 중 ② 로그아웃.
+      // 둘 다 현재 cache 값을 그대로 유지 — DEFAULT 로 덮어쓰면 첫 렌더에 보였던
+      // D-day 버튼이 깜빡이며 사라졌다가 DB fetch 후 다시 나타나는 현상 발생.
+      // 로그아웃은 auth 게이트가 화면 자체를 가리므로 따로 클리어 불필요.
       return;
     }
     // ① 본인 dday 조회.
