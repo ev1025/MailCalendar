@@ -97,7 +97,7 @@ function formatRepeatEnd(startDate: string, repeat: RepeatType, count: number): 
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-  return `${y}.${m}.${day}(${KO_WEEKDAYS[d.getDay()]})`;
+  return `${y}-${m}-${day}(${KO_WEEKDAYS[d.getDay()]})`;
 }
 
 /** 8자리 숫자 → "YYYY-MM-DD" 부분 포맷. 4자리부터 "-" 자동 삽입. */
@@ -291,7 +291,7 @@ function RepeatCountField({
               const d = String(result.corrected.getDate()).padStart(2, "0");
               const wd = KO_WEEKDAYS[result.corrected.getDay()];
               toast.error(
-                `${result.reason} — ${result.corrected.getFullYear()}.${m}.${d}(${wd}) 로 교정`,
+                `${result.reason} — ${result.corrected.getFullYear()}-${m}-${d}(${wd}) 로 교정`,
               );
             }
             const count = computeCountFromEnd(startDate, repeat, result.corrected);
@@ -331,12 +331,12 @@ function RepeatCountField({
           setTimeout(() => setOpen(false), 200);
         }}
         placeholder="직접 입력"
-        className={`${FORM_INPUT_COMPACT} h-9 w-44 rounded-lg border border-input bg-transparent px-2.5 tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
+        className={`${FORM_INPUT_COMPACT} h-9 w-[10.5rem] rounded-lg border border-input bg-transparent px-2 tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
       />
       {open && (
         <div
           ref={listRef}
-          className="absolute left-0 top-full mt-1 z-30 w-44 max-h-[7.5rem] overflow-y-auto rounded-lg border bg-popover shadow-lg overscroll-contain"
+          className="absolute left-0 top-full mt-1 z-30 w-[10.5rem] max-h-[7.5rem] overflow-y-auto rounded-lg border bg-popover shadow-lg overscroll-contain"
         >
           <button
             type="button"
