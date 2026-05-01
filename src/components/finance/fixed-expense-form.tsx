@@ -307,7 +307,7 @@ export default function FixedExpenseForm({
           </button>
         </div>
 
-        {/* 금액 + 결제일/시작일 — 한 행. */}
+        {/* 금액 + 결제일/시작일 + 반복 — 한 행. 시작일·반복 dropdown 은 컨텐츠 폭. */}
         <div className="flex items-start gap-3 flex-wrap">
           <FormField label="금액" required>
             <Input
@@ -340,20 +340,16 @@ export default function FixedExpenseForm({
             </FormField>
           )}
           {showAnchorDate && (
-            <FormField label="시작일">
+            <FormField label="시작일" className="w-fit">
               <DatePicker
                 value={anchorDate || todayYmd()}
                 onChange={setAnchorDate}
-                // YYYY-MM-DD 표시 + 캘린더 아이콘이 답답하지 않게 충분히 확보.
-                className={`${FORM_INPUT_COMPACT} w-[10rem]`}
+                // 컨텐츠 폭에 맞춰 — 트리거 내부의 "YYYY.MM.DD" 만 보일 정도.
+                className={`${FORM_INPUT_COMPACT} w-fit`}
               />
             </FormField>
           )}
-        </div>
-
-        {/* 반복 / 반복 횟수 / 격주·N주차 — 달력 일정 폼과 동일 패턴. */}
-        <div className="flex items-start gap-3 flex-wrap">
-          <div className="flex flex-col gap-1.5 flex-1 min-w-[7rem]">
+          <div className="flex flex-col gap-1.5 w-fit">
             <Label className={FORM_LABEL}>반복</Label>
             <Select
               value={repeat}
@@ -371,10 +367,10 @@ export default function FixedExpenseForm({
                 }
               }}
             >
-              <SelectTrigger className={`${FORM_INPUT_COMPACT} w-full`}>
+              <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
                 {FX_REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
               </SelectTrigger>
-              <SelectContent className="min-w-[5rem]">
+              <SelectContent className="min-w-[4.5rem]">
                 {FX_REPEAT_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
@@ -383,40 +379,42 @@ export default function FixedExpenseForm({
               </SelectContent>
             </Select>
           </div>
-          {repeat !== "none" && repeat !== "infinite" && (
-            <div className="flex flex-col gap-1.5 min-w-0">
-              <Label className={FORM_LABEL}>반복 횟수</Label>
-              <div className="flex items-center gap-1.5">
-                <RepeatCountField
-                  startDate={repeatStartDate}
-                  repeat={repeatTypeForField}
-                  repeatCount={repeatCount}
-                  setRepeatCount={setRepeatCount}
-                  customDigits={customDigits}
-                  setCustomDigits={setCustomDigits}
-                  open={repeatCountOpen}
-                  setOpen={setRepeatCountOpen}
-                  inputRef={repeatInputRef}
-                  weeklyInterval={weeklyInterval}
-                  monthlyNth={monthlyNth}
-                />
-                {repeat === "weekly" && (
-                  <WeeklyIntervalButton
-                    interval={weeklyInterval}
-                    onChange={setWeeklyInterval}
-                  />
-                )}
-                {repeat === "monthly" && (
-                  <MonthlyNthButton
-                    startDate={repeatStartDate}
-                    value={monthlyNth}
-                    onChange={setMonthlyNth}
-                  />
-                )}
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* 반복 횟수 + 격주/N주차 — 별도 행 (없음/계속 일 땐 숨김). */}
+        {repeat !== "none" && repeat !== "infinite" && (
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <Label className={FORM_LABEL}>반복 횟수</Label>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <RepeatCountField
+                startDate={repeatStartDate}
+                repeat={repeatTypeForField}
+                repeatCount={repeatCount}
+                setRepeatCount={setRepeatCount}
+                customDigits={customDigits}
+                setCustomDigits={setCustomDigits}
+                open={repeatCountOpen}
+                setOpen={setRepeatCountOpen}
+                inputRef={repeatInputRef}
+                weeklyInterval={weeklyInterval}
+                monthlyNth={monthlyNth}
+              />
+              {repeat === "weekly" && (
+                <WeeklyIntervalButton
+                  interval={weeklyInterval}
+                  onChange={setWeeklyInterval}
+                />
+              )}
+              {repeat === "monthly" && (
+                <MonthlyNthButton
+                  startDate={repeatStartDate}
+                  value={monthlyNth}
+                  onChange={setMonthlyNth}
+                />
+              )}
+            </div>
+          </div>
+        )}
         {showDayOfMonth && (
           <p className="text-[11px] text-muted-foreground -mt-2 leading-snug">
             29~31일은 해당 일자가 없는 달(2월 등)엔 월말에 자동 반영돼요.
