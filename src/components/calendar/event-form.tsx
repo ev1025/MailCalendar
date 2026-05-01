@@ -136,19 +136,19 @@ function validateRepeatEnd(
   if (end <= start) return "종료일이 시작일보다 같거나 빠릅니다";
   if (repeat === "weekly") {
     if (end.getDay() !== start.getDay()) {
-      return `매주 반복은 ${KO_WEEKDAYS[start.getDay()]}요일만 입력할 수 있습니다`;
+      return `매주 ${KO_WEEKDAYS[start.getDay()]}요일만 입력 가능합니다`;
     }
     const days = Math.round((end.getTime() - start.getTime()) / 86400000);
     if (days % 7 !== 0) {
-      return "매주 반복 주기에 맞지 않는 날짜입니다";
+      return `매주 ${KO_WEEKDAYS[start.getDay()]}요일만 입력 가능합니다`;
     }
   } else if (repeat === "monthly") {
     if (end.getDate() !== start.getDate()) {
-      return `매월 반복은 ${start.getDate()}일만 입력할 수 있습니다`;
+      return `매월 ${start.getDate()}일만 입력 가능합니다`;
     }
   } else if (repeat === "yearly") {
     if (end.getMonth() !== start.getMonth() || end.getDate() !== start.getDate()) {
-      return `매년 반복은 ${start.getMonth() + 1}월 ${start.getDate()}일만 입력할 수 있습니다`;
+      return `매년 ${start.getMonth() + 1}월 ${start.getDate()}일만 입력 가능합니다`;
     }
   }
   return null;
