@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -120,6 +121,40 @@ function parseDigitsToDate(digits: string): Date | null {
 }
 
 /**
+ * 입력된 종료일이 시작일·반복 타입과 사이클 맞는지 검증.
+ * 매주: 같은 요일 / 매월: 같은 일 / 매년: 같은 월·일.
+ * mismatch 면 한글 사유 메시지 반환, OK 면 null.
+ */
+function validateRepeatEnd(
+  startDate: string,
+  repeat: RepeatType,
+  end: Date,
+): string | null {
+  if (!startDate) return "시작일을 먼저 입력하세요";
+  const start = new Date(startDate + "T00:00:00");
+  if (Number.isNaN(start.getTime())) return "시작일이 올바르지 않습니다";
+  if (end <= start) return "종료일이 시작일보다 같거나 빠릅니다";
+  if (repeat === "weekly") {
+    if (end.getDay() !== start.getDay()) {
+      return `매주 반복은 ${KO_WEEKDAYS[start.getDay()]}요일만 입력할 수 있습니다`;
+    }
+    const days = Math.round((end.getTime() - start.getTime()) / 86400000);
+    if (days % 7 !== 0) {
+      return "매주 반복 주기에 맞지 않는 날짜입니다";
+    }
+  } else if (repeat === "monthly") {
+    if (end.getDate() !== start.getDate()) {
+      return `매월 반복은 ${start.getDate()}일만 입력할 수 있습니다`;
+    }
+  } else if (repeat === "yearly") {
+    if (end.getMonth() !== start.getMonth() || end.getDate() !== start.getDate()) {
+      return `매년 반복은 ${start.getMonth() + 1}월 ${start.getDate()}일만 입력할 수 있습니다`;
+    }
+  }
+  return null;
+}
+
+/**
  * 반복 횟수 입력 컴포넌트 — 여행 페이지의 위치 검색 박스 패턴.
  *
  * UX:
@@ -158,11 +193,12 @@ function RepeatCountField({
   const lastTapRef = useRef(0);
 
   // input 표시값.
+  // - open(편집 중): YYYY-MM-DD 디지트 포맷 (사용자 backspace·재입력 가능)
+  // - closed(commit 후): "N회 - YYYY.MM.DD(요일)" 의도된 결과 표시
   const displayValue = (() => {
-    if (customDigits.length > 0) return formatDigitsAsDate(customDigits);
+    if (open) return formatDigitsAsDate(customDigits);
     if (repeatCount > 0 && startDate) {
-      const end = formatRepeatEnd(startDate, repeat, repeatCount);
-      return end.replace(/\./g, "-").replace(/\([^)]*\)/, "").trim();
+      return `${repeatCount}회 - ${formatRepeatEnd(startDate, repeat, repeatCount)}`;
     }
     return "";
   })();
@@ -223,18 +259,25 @@ function RepeatCountField({
           setCustomDigits(digits);
           if (digits.length === 8) {
             const parsed = parseDigitsToDate(digits);
-            if (parsed && startDate) {
-              const count = computeCountFromEnd(startDate, repeat, parsed);
-              setRepeatCount(count);
-              setOpen(false);
+            if (!parsed) {
+              toast.error("올바르지 않은 날짜입니다");
+              return;
             }
+            // 시작일·반복 타입과 사이클 일치 검증.
+            const errMsg = validateRepeatEnd(startDate, repeat, parsed);
+            if (errMsg) {
+              toast.error(errMsg);
+              return;
+            }
+            const count = computeCountFromEnd(startDate, repeat, parsed);
+            setRepeatCount(count);
+            setOpen(false);
           }
         }}
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
-          // Backspace 를 명시 처리 — 포맷팅된 dash 때문에 onChange 만으로는
+          // Backspace 명시 처리 — 포맷팅된 dash 때문에 onChange 만으론
           // 1 keystroke 에 2 char 가 사라지는 것처럼 보이는 문제 회피.
-          // 커서가 끝에 있고 selection 없으면 raw digit 1개만 제거.
           if (e.key === "Backspace") {
             const el = e.currentTarget;
             if (
@@ -247,7 +290,17 @@ function RepeatCountField({
             }
           }
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          // 편집 진입 시 — 현재 선택된 회차의 종료일 digits 로 prefill.
+          // 사용자가 보던 "N회 - ..." 가 그대로 편집 가능한 디지트 형태로 전환.
+          if (repeatCount > 0 && startDate) {
+            const end = formatRepeatEnd(startDate, repeat, repeatCount);
+            setCustomDigits(end.replace(/\D/g, "").slice(0, 8));
+          } else {
+            setCustomDigits("");
+          }
+          setOpen(true);
+        }}
         onBlur={() => {
           // 드롭다운 항목 mousedown/touchend 가 먼저 처리되도록 지연.
           setTimeout(() => setOpen(false), 200);
