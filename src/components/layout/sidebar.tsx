@@ -103,13 +103,13 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 else if (!autoCollapse && collapsed) onToggle();
               }}
               className={cn(
-                "flex items-center rounded-md transition-colors",
+                "flex items-center rounded-md transition-all duration-200 tap-feedback",
                 collapsed
                   ? "justify-center p-2.5"
                   : "gap-2.5 px-2.5 py-1.5 text-[13px]",
                 active
                   ? "bg-accent font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground hover:translate-x-0.5"
               )}
             >
               <item.icon className="h-4 w-4 shrink-0" />

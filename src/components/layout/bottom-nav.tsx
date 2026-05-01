@@ -58,7 +58,7 @@ export default function BottomNav() {
               href={item.href}
               style={active ? { color: ACTIVE_COLOR } : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] transition-colors active:bg-accent/50",
+                "flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] transition-all duration-200 active:bg-accent/50 active:scale-95",
                 active ? "font-semibold" : "text-muted-foreground"
               )}
             >
