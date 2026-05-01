@@ -210,25 +210,34 @@ export default function AddToPlanDialog({ open, onOpenChange, travelItem, onDone
           })()}
         </p>
 
-        <div className="flex gap-2">
-          <Button
+        {/* 탭 스타일로 명확히 — 두 옵션이 상호배타적임을 시각적으로 강조. */}
+        <div role="tablist" aria-label="계획 선택 방식" className="flex p-0.5 bg-muted/50 rounded-lg">
+          <button
             type="button"
-            size="sm"
-            variant={mode === "pick" ? "default" : "outline"}
+            role="tab"
+            aria-selected={mode === "pick"}
             onClick={() => setMode("pick")}
-            className="flex-1 h-8 text-xs"
+            className={`flex-1 h-8 text-xs font-medium rounded-md transition-all duration-150 tap-feedback ${
+              mode === "pick"
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             기존 계획
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            size="sm"
-            variant={mode === "new" ? "default" : "outline"}
+            role="tab"
+            aria-selected={mode === "new"}
             onClick={() => setMode("new")}
-            className="flex-1 h-8 text-xs"
+            className={`flex-1 h-8 text-xs font-medium rounded-md transition-all duration-150 tap-feedback inline-flex items-center justify-center gap-1 ${
+              mode === "new"
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <Plus className="h-3 w-3 mr-1" /> 새 계획
-          </Button>
+            <Plus className="h-3 w-3" /> 새 계획
+          </button>
         </div>
 
         {mode === "pick" ? (

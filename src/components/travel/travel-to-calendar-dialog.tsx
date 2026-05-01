@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import DatePicker from "@/components/ui/date-picker";
 import TimePicker from "@/components/ui/time-picker";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import type { TravelItem, TravelTag, EventTag } from "@/types";
 
 interface Props {
@@ -150,8 +150,9 @@ export default function TravelToCalendarDialog({
               {showEndDate ? (
                 <DatePicker value={endDate} onChange={setEndDate} min={date} className="h-8 min-w-0 text-xs" />
               ) : (
-                <button type="button" className="h-8 min-w-0 rounded-md border border-dashed text-xs text-muted-foreground hover:border-foreground hover:text-foreground transition-colors px-1" onClick={() => setShowEndDate(true)}>
-                  종료 설정
+                <button type="button" className="h-8 min-w-0 rounded-md border border-dashed text-xs text-muted-foreground hover:border-foreground hover:text-foreground transition-colors px-1.5 inline-flex items-center justify-center gap-0.5" onClick={() => setShowEndDate(true)}>
+                  <Plus className="h-3 w-3" />
+                  <span>종료</span>
                 </button>
               )}
               {showEndDate ? (
