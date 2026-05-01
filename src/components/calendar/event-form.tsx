@@ -331,24 +331,23 @@ export default function EventForm({
           </div>
 
 
-          {/* 반복 / 반복 횟수 — 컬럼이 row 폭을 채우도록 grow. 아래 태그 박스와 시각 정렬. */}
-          <div className="flex items-start gap-3 flex-wrap">
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[7rem]">
+          {/* 반복 / 반복 횟수 / 격주·N주차 — 한 행에 컴팩트 정렬.
+              컬럼은 컨텐츠 폭, gap-2 / 모디파이어는 input 옆에 인라인. */}
+          <div className="flex items-start gap-2 flex-wrap">
+            <div className="flex flex-col gap-1.5 w-fit">
               <Label className={FORM_LABEL}>반복</Label>
               <Select value={repeat} onValueChange={(v) => {
                 if (v) {
                   setRepeat(v as UIRepeat);
-                  // 반복 타입 변경 시 직접 입력 popover 닫힘 + customDigits 초기화.
-                  // "infinite" 선택 시 repeatCount 도 -1 로 강제 (UI 의도 명시).
                   setRepeatCountOpen(false);
                   setCustomDigits("");
                   if (v === "infinite") setRepeatCount(-1);
                 }
               }}>
-                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-full`}>
+                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
                   {REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
                 </SelectTrigger>
-                <SelectContent className="min-w-[5rem]">
+                <SelectContent className="min-w-[4.5rem]">
                   {REPEAT_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
@@ -361,7 +360,7 @@ export default function EventForm({
             {repeat !== "none" && repeat !== "infinite" && (
               <div className="flex flex-col gap-1.5 min-w-0">
                 <Label className={FORM_LABEL}>반복 횟수</Label>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <RepeatCountField
                     startDate={startDate}
                     repeat={repeat}

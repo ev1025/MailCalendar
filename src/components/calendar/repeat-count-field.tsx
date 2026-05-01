@@ -151,13 +151,29 @@ export default function RepeatCountField({
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
           if (e.key === "Backspace") {
+            e.preventDefault();
+            if (!open) {
+              // 커밋된 표시 상태(closed) — 편집 모드로 전환 + 종료일 digits 의
+              // 마지막 1자 지움. 사용자가 input 에 포커스(커서 깜빡임) 한 채
+              // backspace 를 누르면 즉시 YYYYMMDD 편집 가능 상태로 진입.
+              if (repeatCount > 0 && startDate) {
+                const end = formatRepeatEnd(startDate, repeat, repeatCount, { weeklyInterval, monthlyNth });
+                const digits = end.replace(/\D/g, "").slice(0, 8);
+                setCustomDigits(digits.slice(0, -1));
+              } else {
+                setCustomDigits("");
+              }
+              setOpen(true);
+              return;
+            }
+            // 편집 모드 — 마지막 digit 지움 (포맷팅된 dash 때문에 onChange 만으론
+            // 1 keystroke 에 2 char 가 사라지는 문제 회피).
             const el = e.currentTarget;
             if (
               el.selectionStart === el.value.length &&
               el.selectionEnd === el.value.length &&
               customDigits.length > 0
             ) {
-              e.preventDefault();
               setCustomDigits(customDigits.slice(0, -1));
             }
           }

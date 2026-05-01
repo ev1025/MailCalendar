@@ -45,7 +45,7 @@ export function WeeklyIntervalButton({
     );
   }
   return (
-    <div className="flex items-center gap-1 shrink-0">
+    <div className="flex items-center gap-0.5 shrink-0">
       <input
         type="text"
         inputMode="numeric"
@@ -67,9 +67,9 @@ export function WeeklyIntervalButton({
             if (interval < 2) onChange(fallback);
           }
         }}
-        className={`${FORM_INPUT_COMPACT} w-12 rounded-lg border border-input bg-transparent px-2 text-center tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
+        className={`${FORM_INPUT_COMPACT} w-10 rounded-lg border border-input bg-transparent px-1 text-center tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
       />
-      <span className="text-xs text-muted-foreground">주마다</span>
+      <span className="text-xs text-muted-foreground">주</span>
       <button
         type="button"
         onClick={() => onChange(1)}
@@ -118,13 +118,14 @@ export function MonthlyNthButton({
     );
   }
   return (
-    <div className="flex items-center gap-1 shrink-0">
+    <div className="flex items-center gap-0.5 shrink-0">
       <Select
         value={String(value.week)}
         onValueChange={(v) => v && onChange({ ...value, week: parseInt(v, 10) })}
       >
-        <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.25rem]`}>
-          {value.week}째주
+        {/* 트리거는 컴팩트한 "1주" 표시. 드롭다운 항목은 "1째주" 로 명확하게. */}
+        <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[2.75rem] px-1.5`}>
+          {value.week}주
         </SelectTrigger>
         <SelectContent className="min-w-[4.25rem]">
           {[1, 2, 3, 4, 5].map((n) => (
@@ -140,8 +141,9 @@ export function MonthlyNthButton({
           v && onChange({ ...value, weekday: parseInt(v, 10) })
         }
       >
-        <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.25rem]`}>
-          {KO_WEEKDAYS[value.weekday]}요일
+        {/* 트리거는 한 글자 "월", 드롭다운은 "월요일" 로 표시. */}
+        <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[2.5rem] px-1.5`}>
+          {KO_WEEKDAYS[value.weekday]}
         </SelectTrigger>
         <SelectContent className="min-w-[4.25rem]">
           {KO_WEEKDAYS.map((w, i) => (
