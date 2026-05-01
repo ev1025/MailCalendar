@@ -31,6 +31,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { toDragProps } from "@/lib/dnd-types";
 
 const ORDER_KEY = "travel_list_custom_order";
 
@@ -92,6 +93,7 @@ const TravelRow = memo(function TravelRow({
 }: TravelRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id, disabled: !dragEnabled });
+  const dragProps = toDragProps<HTMLElement>({ attributes, listeners });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -112,8 +114,8 @@ const TravelRow = memo(function TravelRow({
         <div className="flex items-center justify-center">
           <RowActionPopover
             triggerLabel="행 메뉴"
-            dragAttributes={dragEnabled ? (attributes as unknown as React.HTMLAttributes<HTMLElement>) : undefined}
-            dragListeners={dragEnabled ? (listeners as unknown as React.HTMLAttributes<HTMLElement>) : undefined}
+            dragAttributes={dragEnabled ? dragProps.attributes : undefined}
+            dragListeners={dragEnabled ? dragProps.listeners : undefined}
             items={[
               {
                 icon: <Check className="h-3.5 w-3.5" />,

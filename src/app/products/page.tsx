@@ -19,6 +19,7 @@ import RowActionPopover from "@/components/ui/row-action-popover";
 import { useUrlStringParam } from "@/hooks/use-url-param";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { toDragProps } from "@/lib/dnd-types";
 import {
   DndContext,
   closestCenter,
@@ -84,6 +85,7 @@ const ProductRow = memo(function ProductRow({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: p.id });
+  const dragProps = toDragProps<HTMLElement>({ attributes, listeners });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -101,8 +103,8 @@ const ProductRow = memo(function ProductRow({
       <td className="px-0.5 py-1 w-7" onClick={(e) => e.stopPropagation()}>
         <RowActionPopover
           triggerLabel="제품 메뉴"
-          dragAttributes={attributes as unknown as React.HTMLAttributes<HTMLElement>}
-          dragListeners={listeners as unknown as React.HTMLAttributes<HTMLElement>}
+          dragAttributes={dragProps.attributes}
+          dragListeners={dragProps.listeners}
           items={[
             {
               icon: <Wallet className="h-3.5 w-3.5 text-amber-500" />,

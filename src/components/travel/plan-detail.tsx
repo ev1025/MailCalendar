@@ -36,6 +36,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { toDragProps } from "@/lib/dnd-types";
 
 interface Props {
   planId: string;
@@ -92,6 +93,7 @@ function SortableTaskRow({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
+  const dragProps = toDragProps<HTMLButtonElement>({ attributes, listeners });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -105,8 +107,8 @@ function SortableTaskRow({
         onClick={onClick}
         onDelete={onDelete}
         expectedTime={expectedTime}
-        dragListeners={listeners as unknown as React.HTMLAttributes<HTMLButtonElement>}
-        dragAttributes={attributes as unknown as React.HTMLAttributes<HTMLButtonElement>}
+        dragListeners={dragProps.listeners}
+        dragAttributes={dragProps.attributes}
       />
     </div>
   );
