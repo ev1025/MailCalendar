@@ -133,8 +133,14 @@ export default function AvatarCropDialog({ src, open, onOpenChange, onConfirm }:
           <DialogTitle>프로필 이미지 편집</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3 items-center">
-          <p className="text-xs text-muted-foreground">
-            한 손가락으로 이동, 두 손가락으로 확대/축소
+          {/* 디바이스별로 다른 인터랙션 안내 — 모바일/데스크탑 사용자 모두 즉시 인지. */}
+          <p className="text-xs text-muted-foreground text-center break-keep leading-relaxed">
+            <span className="md:hidden">
+              한 손가락으로 이동 · 두 손가락으로 확대/축소
+            </span>
+            <span className="hidden md:inline">
+              드래그로 이동 · 마우스 휠로 확대/축소
+            </span>
           </p>
           <div
             className="relative rounded-full overflow-hidden bg-muted ring-2 ring-border cursor-grab active:cursor-grabbing select-none"

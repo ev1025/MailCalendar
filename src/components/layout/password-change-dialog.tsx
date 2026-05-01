@@ -100,8 +100,23 @@ export default function PasswordChangeDialog({ open, onOpenChange }: Props) {
                 if (e.key === "Enter") handleSubmit();
               }}
               autoComplete="new-password"
+              aria-invalid={confirmPw !== "" && confirmPw !== newPw}
               className="h-10"
             />
+            {/* 실시간 매칭 피드백 — 두 필드 모두 입력됐을 때만 표시. */}
+            {newPw && confirmPw && (
+              newPw === confirmPw ? (
+                <p className="text-[11px] text-success flex items-center gap-1">
+                  <span aria-hidden>✓</span>
+                  비밀번호가 일치합니다
+                </p>
+              ) : (
+                <p className="text-[11px] text-destructive flex items-center gap-1">
+                  <span aria-hidden>✗</span>
+                  비밀번호가 일치하지 않습니다
+                </p>
+              )
+            )}
           </div>
 
           {error && <p className="text-xs text-destructive">{error}</p>}
