@@ -119,6 +119,155 @@ function parseDigitsToDate(digits: string): Date | null {
   return date;
 }
 
+/**
+ * 반복 횟수 입력 컴포넌트 — 여행 페이지의 위치 검색 박스 패턴.
+ *
+ * UX:
+ *  - 입력 박스 자체가 트리거. 포커스 시 아래 드롭다운 자동 등장.
+ *  - 8자리 숫자 입력 → "YYYY-MM-DD" 자동 포맷 → 완성 시 즉시 repeatCount 커밋.
+ *  - 드롭다운 항목 클릭 → 그 날짜를 input 에 채움 + 드롭다운 닫힘.
+ *  - 다시 input 클릭 → 직전에 선택했던 회차가 드롭다운 최상단에 위치하도록 scroll.
+ *  - "계속" 옵션은 input 비움 + 닫힘.
+ */
+function RepeatCountField({
+  startDate,
+  repeat,
+  repeatCount,
+  setRepeatCount,
+  customDigits,
+  setCustomDigits,
+  open,
+  setOpen,
+  inputRef,
+}: {
+  startDate: string;
+  repeat: RepeatType;
+  repeatCount: number;
+  setRepeatCount: (n: number) => void;
+  customDigits: string;
+  setCustomDigits: (s: string) => void;
+  open: boolean;
+  setOpen: (o: boolean) => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+}) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // input 표시값 — repeatCount 가 양수면 그 날짜를, 그 외엔 customDigits 의 포맷.
+  const displayValue = (() => {
+    if (customDigits.length > 0) return formatDigitsAsDate(customDigits);
+    if (repeatCount > 0 && startDate) {
+      const end = formatRepeatEnd(startDate, repeat, repeatCount);
+      return end.replace(/\./g, "-").replace(/\([^)]*\)/, "").trim();
+    }
+    return "";
+  })();
+
+  // 드롭다운 열릴 때 — 현재 선택된 회차가 첫 visible 행이 되도록 scroll.
+  useEffect(() => {
+    if (!open || !listRef.current) return;
+    const target = repeatCount > 0
+      ? listRef.current.querySelector<HTMLElement>(`[data-count="${repeatCount}"]`)
+      : listRef.current.querySelector<HTMLElement>(`[data-count="-1"]`);
+    if (target) target.scrollIntoView({ block: "start" });
+  }, [open, repeatCount]);
+
+  const handleSelectCount = (n: number) => {
+    setRepeatCount(n);
+    if (n > 0 && startDate) {
+      // 선택한 회차의 종료일을 customDigits 에 prefill — input 에 보임.
+      const end = formatRepeatEnd(startDate, repeat, n);
+      setCustomDigits(end.replace(/\D/g, "").slice(0, 8));
+    } else {
+      // "계속" 선택 시 input 비움.
+      setCustomDigits("");
+    }
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative w-fit">
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        value={displayValue}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+          setCustomDigits(digits);
+          if (digits.length === 8) {
+            const parsed = parseDigitsToDate(digits);
+            if (parsed && startDate) {
+              const count = computeCountFromEnd(startDate, repeat, parsed);
+              setRepeatCount(count);
+              setOpen(false);
+            }
+          } else if (digits.length === 0) {
+            // 비우면 직전 선택 해제 (계속 모드 디폴트로).
+            // repeatCount 는 유지 — 사용자가 placeholder 보고 다시 선택 가능.
+          }
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          // 드롭다운 항목 클릭이 먼저 처리되도록 지연 후 닫기.
+          setTimeout(() => setOpen(false), 150);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+        }}
+        placeholder="직접 입력"
+        // 입력 텍스트 길이에 맞춰 너비 — placeholder 도 표시되게 min 보장.
+        style={{ width: `${Math.max(displayValue.length, 9) + 1.5}ch` }}
+        className={`${FORM_INPUT_COMPACT} tabular-nums px-2`}
+      />
+      {open && (
+        <div
+          ref={listRef}
+          className="absolute left-0 top-full mt-1 z-30 max-h-[7.5rem] overflow-y-auto rounded-md border bg-popover shadow-lg w-fit min-w-full"
+        >
+          <button
+            type="button"
+            data-count="-1"
+            // mousedown 에서 처리 — input blur 보다 먼저 (모바일 클릭 누락 방지).
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleSelectCount(-1);
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              handleSelectCount(-1);
+            }}
+            className={`w-full text-left px-3 py-1.5 text-xs whitespace-nowrap hover:bg-accent transition-colors ${
+              repeatCount === -1 ? "bg-accent font-medium" : ""
+            }`}
+          >
+            계속
+          </button>
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+            <button
+              key={i}
+              type="button"
+              data-count={i}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectCount(i);
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                handleSelectCount(i);
+              }}
+              className={`w-full text-left px-3 py-1.5 text-xs whitespace-nowrap hover:bg-accent transition-colors tabular-nums ${
+                repeatCount === i ? "bg-accent font-medium" : ""
+              }`}
+            >
+              {i}회{startDate ? ` - ${formatRepeatEnd(startDate, repeat, i)}` : ""}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** 시작일·반복 타입·종료일 → 반복 횟수. 사이클에 안 맞으면 floor. */
 function computeCountFromEnd(startDate: string, repeat: RepeatType, endDate: Date): number {
   if (!startDate || repeat === "none") return 1;
@@ -393,91 +542,21 @@ export default function EventForm({
             {repeat !== "none" && (
               <div className="flex flex-col gap-1.5 min-w-0">
                 <Label className={FORM_LABEL}>반복 횟수</Label>
-                <Popover
+                {/* 입력 박스 자체가 트리거 — 여행 페이지 위치 검색과 동일 패턴.
+                    포커스 시 드롭다운 등장. 입력값 8자리 완성 시 즉시 커밋.
+                    리스트에서 항목 선택해도 input 에 그 날짜 유지 → 다시 열면
+                    선택한 항목이 상단에 보이도록 scroll. */}
+                <RepeatCountField
+                  startDate={startDate}
+                  repeat={repeat}
+                  repeatCount={repeatCount}
+                  setRepeatCount={setRepeatCount}
+                  customDigits={customDigits}
+                  setCustomDigits={setCustomDigits}
                   open={repeatCountOpen}
-                  onOpenChange={(o) => {
-                    setRepeatCountOpen(o);
-                    // 열릴 때마다 input 초기화 — 이전 값이 prefill 되지 않게.
-                    if (o) {
-                      setCustomDigits("");
-                      // popover 마운트 직후 input 포커스.
-                      setTimeout(() => customInputRef.current?.focus(), 0);
-                    }
-                  }}
-                >
-                  <PopoverTrigger
-                    className={`${FORM_INPUT_COMPACT} w-fit min-w-[5rem] inline-flex items-center cursor-pointer`}
-                  >
-                    <span className="truncate text-left">
-                      {repeatCount === -1
-                        ? "계속"
-                        : startDate
-                          ? `${repeatCount}회 - ${formatRepeatEnd(startDate, repeat, repeatCount)}`
-                          : `${repeatCount}회`}
-                    </span>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    className="w-fit p-1"
-                  >
-                    {/* 직접 입력 — popover 최상단 input. 8자리 입력 즉시 커밋 + popover 닫힘.
-                        입력값은 popover 열릴 때 매번 초기화 — 이전 값 prefill 안 함. */}
-                    <input
-                      ref={customInputRef}
-                      type="text"
-                      inputMode="numeric"
-                      value={formatDigitsAsDate(customDigits)}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
-                        setCustomDigits(digits);
-                        if (digits.length === 8) {
-                          const parsed = parseDigitsToDate(digits);
-                          if (parsed && startDate) {
-                            const count = computeCountFromEnd(startDate, repeat, parsed);
-                            setRepeatCount(count);
-                            setRepeatCountOpen(false);
-                          }
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") setRepeatCountOpen(false);
-                      }}
-                      placeholder="직접 입력 (YYYYMMDD)"
-                      className="w-full h-8 px-2 text-xs tabular-nums rounded-md border bg-transparent outline-none focus:border-ring mb-1"
-                    />
-                    {/* 옵션 리스트 — 계속이 첫 항목 (디폴트). max-h ≈ 2 버튼 (~4rem) →
-                        input + 계속 + 1회 가 한눈에 (3개), 2회부터 스크롤. */}
-                    <div className="max-h-[4rem] overflow-y-auto">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRepeatCount(-1);
-                          setRepeatCountOpen(false);
-                        }}
-                        className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors ${
-                          repeatCount === -1 ? "bg-accent font-medium" : ""
-                        }`}
-                      >
-                        계속
-                      </button>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => {
-                            setRepeatCount(i);
-                            setRepeatCountOpen(false);
-                          }}
-                          className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors tabular-nums ${
-                            repeatCount === i ? "bg-accent font-medium" : ""
-                          }`}
-                        >
-                          {i}회{startDate ? ` - ${formatRepeatEnd(startDate, repeat, i)}` : ""}
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                  setOpen={setRepeatCountOpen}
+                  inputRef={customInputRef}
+                />
               </div>
             )}
           </div>
