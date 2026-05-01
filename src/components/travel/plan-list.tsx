@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Trash2, Copy, CalendarPlus, CalendarMinus, Plus } from "lucide-react";
+import { Trash2, Copy, CalendarPlus, CalendarMinus, Plus, Check } from "lucide-react";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import SearchInput from "@/components/ui/search-input";
 import { Button } from "@/components/ui/button";
@@ -127,6 +127,18 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
   const [newOpen, setNewOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // 가본 곳 포함 토글 — 종료일 < 오늘 인 계획을 숨김 / 표시.
+  // sessionStorage 영속 — 한 세션 동안만 사용자 선택을 기억.
+  const [showVisited, setShowVisited] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return sessionStorage.getItem("travel_plan_show_visited") !== "false";
+  });
+  const updateShowVisited = (v: boolean) => {
+    setShowVisited(v);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("travel_plan_show_visited", String(v));
+    }
+  };
   // 사용자 드래그 정렬 — localStorage 영속. usePersistentState 가 lazy 초기 + 쓰기 동시 처리.
   const [customOrder, setCustomOrder] = usePersistentState<string[]>(ORDER_KEY, []);
   // "달력에 추가" 확인 다이얼로그 — 등록될 일정 수를 미리 안내.
@@ -148,17 +160,28 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   );
 
-  // 검색 필터 (제목·기간 부분 일치)
+  // 종료일이 어제 이하(=end_date < today) 인 계획은 "가본 곳". end_date 가 없으면
+  // 진행 중으로 간주 (안 숨김).
+  const isPastPlan = (p: TravelPlan): boolean => {
+    if (!p.end_date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(p.end_date + "T00:00:00");
+    return end.getTime() < today.getTime();
+  };
+
+  // 검색 + 가본 곳 포함 필터.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return plans;
     return plans.filter((p) => {
+      if (!showVisited && isPastPlan(p)) return false;
+      if (!q) return true;
       if (p.title.toLowerCase().includes(q)) return true;
       if ((p.start_date ?? "").includes(q)) return true;
       if ((p.end_date ?? "").includes(q)) return true;
       return false;
     });
-  }, [plans, search]);
+  }, [plans, search, showVisited]);
 
   // 기본 정렬: start_date 오름차순 (null 은 뒤로). 사용자 드래그 순서가 있으면
   // customOrder 를 우선 적용. 검색 중이면 날짜순 유지(드래그 비활성).
@@ -349,6 +372,19 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
             onChange={setSearch}
             placeholder="계획 제목·날짜 검색"
           />
+          {/* 가본 곳 포함 — active 면 종료일 < 오늘 인 계획도 표시. */}
+          <button
+            type="button"
+            onClick={() => updateShowVisited(!showVisited)}
+            className={`flex items-center gap-1 shrink-0 rounded-md border px-2.5 h-8 text-[11px] transition-colors ${
+              showVisited
+                ? "border-primary text-primary bg-primary/10"
+                : "text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            <Check className="h-3 w-3" />
+            가본 곳 포함
+          </button>
           <Button
             size="sm"
             className="h-8 shrink-0"
