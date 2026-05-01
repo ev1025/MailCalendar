@@ -132,12 +132,23 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* 라이트 ↔ 다크 모드 전환 시 모든 색상 부드럽게 transition.
+       JS 가 .dark 클래스를 토글할 때 모든 oklch 변수 값이 250ms 에 걸쳐 보간됨.
+       prefers-reduced-motion 시 자동 무력화. */
+    transition: background-color 250ms ease, color 250ms ease;
   }
   html {
     @apply font-sans;
     font-feature-settings: "ss01", "ss02";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  /* 카드·border·muted 같은 색상도 같이 부드럽게 — 일부 요소만 따로 변하면 어색.
+     transform/opacity 등 movement 속성은 제외 (성능 + 의도하지 않은 효과 회피). */
+  *, *::before, *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 200ms;
+    transition-timing-function: ease;
   }
 
   h1, h2, h3 {
