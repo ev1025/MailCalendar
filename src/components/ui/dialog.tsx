@@ -204,6 +204,121 @@ function DialogDescription({
   )
 }
 
+/**
+ * 다이얼로그 헤더의 제목 옆에 들어가는 아이콘 칩.
+ * Settings 카드 헤더와 동일한 시각 언어 — 제목에 맥락을 줌.
+ *
+ * tone: primary(파랑)·warning·destructive·success 의 4 종.
+ */
+function DialogIcon({
+  children,
+  tone = "primary",
+  className,
+}: {
+  children: React.ReactNode
+  tone?: "primary" | "warning" | "destructive" | "success"
+  className?: string
+}) {
+  const toneCls =
+    tone === "warning"
+      ? "bg-warning-bg text-warning"
+      : tone === "destructive"
+      ? "bg-destructive/10 text-destructive"
+      : tone === "success"
+      ? "bg-success-bg text-success"
+      : "bg-primary/10 text-primary"
+  return (
+    <span
+      data-slot="dialog-icon"
+      className={cn(
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+        toneCls,
+        className
+      )}
+      aria-hidden="true"
+    >
+      {children}
+    </span>
+  )
+}
+
+/**
+ * 본문 시멘틱 섹션 — title 옵션 + 본문. 위계 분리 명확.
+ */
+function DialogSection({
+  title,
+  hint,
+  children,
+  className,
+}: {
+  title?: string
+  hint?: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div data-slot="dialog-section" className={cn("flex flex-col gap-2", className)}>
+      {title && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-foreground/80">
+            {title}
+          </p>
+          {hint && <span className="text-[10px] text-muted-foreground/60">{hint}</span>}
+        </div>
+      )}
+      {children}
+    </div>
+  )
+}
+
+/**
+ * 라벨 + 컨트롤 한 행 — 폼 필드용. inline horizontal 레이아웃.
+ */
+function DialogField({
+  label,
+  hint,
+  required,
+  children,
+  className,
+}: {
+  label: string
+  hint?: React.ReactNode
+  required?: boolean
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div data-slot="dialog-field" className={cn("flex flex-col gap-1.5", className)}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-foreground/85">
+          {label}
+          {required && <span className="ml-0.5 text-destructive">*</span>}
+        </span>
+        {hint && <span className="text-[11px] text-muted-foreground/70">{hint}</span>}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/**
+ * 푸터 액션 영역 — 취소(좌, ghost/outline) + 확인(우, primary/destructive) 표준.
+ * 모바일에선 stretch (flex), 데스크탑에선 right-aligned.
+ */
+function DialogActions({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      data-slot="dialog-actions"
+      className={cn(
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2 pt-1",
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
 export {
   Dialog,
   DialogClose,
@@ -215,4 +330,8 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  DialogIcon,
+  DialogSection,
+  DialogField,
+  DialogActions,
 }
