@@ -37,22 +37,34 @@ const DEFAULT: DdaySettings = {
 
 /** localStorage 캐시 — DB fetch 끝나기 전 초기 렌더에서 깜빡임 없이 D-day 버튼이
  *  뜨게 하는 용도. DB 가 진실 source 라 fetch 후 업데이트로 덮어씀.
- *  cache 가 stale 일 수 있으나 (파트너가 바꿨을 때) 1초 이내 보정. */
+ *  TTL: 24h — 그보다 오래된 캐시는 stale 로 보고 무시 (파트너가 바꿨을 가능성).
+ *  TTL 짧으면 매번 빈 화면, 길면 stale UX. 24h 가 절충점. */
 const CACHE_KEY = "dday_settings_cache_v1";
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface CachedDday extends DdaySettings {
+  /** 캐시 기록 시각 (ms epoch). TTL 만료 판정용. */
+  cachedAt?: number;
+}
 
 function loadCache(): DdaySettings {
   if (typeof window === "undefined") return DEFAULT;
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return DEFAULT;
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw) as CachedDday;
+    // TTL 만료 — DEFAULT 반환해서 fetch 가 진실 source 로 채우게.
+    if (parsed.cachedAt && Date.now() - parsed.cachedAt > CACHE_TTL_MS) {
+      return DEFAULT;
+    }
     return {
       enabled: !!parsed.enabled,
       date: typeof parsed.date === "string" ? parsed.date : "",
       time: typeof parsed.time === "string" ? parsed.time : "",
       source: parsed.source === "self" || parsed.source === "partner" ? parsed.source : "none",
     };
-  } catch {
+  } catch (e) {
+    console.warn("[dday cache] parse failed:", e);
     return DEFAULT;
   }
 }
@@ -60,8 +72,11 @@ function loadCache(): DdaySettings {
 function saveCache(s: DdaySettings) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(s));
-  } catch {}
+    const payload: CachedDday = { ...s, cachedAt: Date.now() };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+  } catch (e) {
+    console.warn("[dday cache] write failed:", e);
+  }
 }
 
 function normalizeTime(t: string | null): string {

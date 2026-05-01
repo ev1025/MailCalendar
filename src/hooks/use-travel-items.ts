@@ -94,14 +94,18 @@ export function useTravelItems(visibleUserIds?: string[]) {
   };
 
   const updateItem = async (id: string, updates: Partial<Omit<TravelItem, "id" | "created_at">>) => {
+    // 낙관적 업데이트 — 자주 쓰는 mutation 이라 round-trip 대기 없이 즉시 UI 반영.
+    // 실패 시 fetchItems() 로 서버 진실값 복원.
+    const now = new Date().toISOString();
+    const prev = items;
+    setItems((cur) => cur.map((it) => (it.id === id ? { ...it, ...updates, updated_at: now } : it)));
     const { error } = await supabase
       .from("travel_items")
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...updates, updated_at: now })
       .eq("id", id);
     if (error) {
       console.warn("[travel_items update] 1차 실패:", error.message, error.code);
-      // DB 에 아직 없을 수 있는 컬럼 모두 제거 후 재시도.
-      // (마이그레이션이 빠진 환경 대응)
+      // DB 에 아직 없을 수 있는 컬럼 모두 제거 후 재시도 (마이그레이션 빠진 환경).
       const {
         month, color, visited_dates, place_name, address, lat, lng,
         mood, price_tier, rating, couple_notes, cover_image_url,
@@ -112,22 +116,27 @@ export function useTravelItems(visibleUserIds?: string[]) {
       void mood; void price_tier; void rating; void couple_notes; void cover_image_url; void places;
       const { error: retry } = await supabase
         .from("travel_items")
-        .update({ ...rest, updated_at: new Date().toISOString() })
+        .update({ ...rest, updated_at: now })
         .eq("id", id);
       if (retry) {
         console.warn("[travel_items update] 2차 실패:", retry.message, retry.code);
+        setItems(prev); // 롤백
       } else {
         await fetchItems();
       }
       return { error: retry };
     }
-    await fetchItems();
     return { error: null };
   };
 
   const deleteItem = async (id: string) => {
+    // 낙관적 — 즉시 리스트에서 제거. 실패 시 복원.
+    const prev = items;
+    setItems((cur) => cur.filter((it) => it.id !== id));
     const { error } = await supabase.from("travel_items").delete().eq("id", id);
-    if (!error) await fetchItems();
+    if (error) {
+      setItems(prev);
+    }
     return { error };
   };
 
