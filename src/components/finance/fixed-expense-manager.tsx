@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import FormPage from "@/components/ui/form-page";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -255,13 +255,13 @@ export default function FixedExpenseManager({
                       isOpen ? "border-primary/40" : ""
                     }`}
                   >
-                    {/* 카테고리 헤더 — 행 전체가 토글. 펼침 상태는 활성 테두리 색 +
-                        펼쳐진 항목 자체로 시각화 (별도 화살표 없음). */}
+                    {/* 카테고리 헤더 — 행 전체가 토글. ChevronDown 회전 애니메이션으로
+                        펼침 상태 시각화 (이전엔 시각적 단서 약했음). */}
                     <button
                       type="button"
                       onClick={() => toggleCat(catName)}
                       aria-expanded={isOpen}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent/50 transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent/50 transition-colors text-left tap-feedback"
                     >
                       <span
                         className="h-2.5 w-2.5 rounded-full shrink-0"
@@ -274,6 +274,9 @@ export default function FixedExpenseManager({
                       <span className="text-sm font-semibold tabular-nums text-finance-loss shrink-0">
                         -{formatWon(group.total)}
                       </span>
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`}
+                      />
                     </button>
 
                     {/* 카테고리 내부 항목들 — 펼쳐진 경우만 */}
