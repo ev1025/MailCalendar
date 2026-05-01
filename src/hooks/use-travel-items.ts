@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { TravelItem } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
+import { useAutoRefetch } from "@/hooks/use-auto-refetch";
 
 /**
  * visibleUserIds: 달력 탭에서 선택한 "볼 사용자들"
@@ -50,19 +51,7 @@ export function useTravelItems(visibleUserIds?: string[]) {
   }, [fetchItems]);
 
   // 포그라운드 복귀·세션 refresh 시 재조회 — 공유자 변경사항 안정적 반영.
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") fetchItems();
-    };
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") fetchItems();
-    });
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      sub.subscription.unsubscribe();
-    };
-  }, [fetchItems]);
+  useAutoRefetch(fetchItems);
 
   // month/color/visited_dates 컬럼이 없을 수 있어 fallback 처리
   const addItem = async (item: Omit<TravelItem, "id" | "created_at" | "updated_at">) => {

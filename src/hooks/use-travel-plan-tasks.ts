@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { syncPlanCalendarEvents } from "@/lib/travel/calendar-sync";
 import { useCurrentUserId } from "@/lib/current-user";
+import { useAutoRefetch } from "@/hooks/use-auto-refetch";
 import type { TravelPlanTask } from "@/types";
 
 // 특정 plan_id 의 travel_plan_tasks CRUD.
@@ -47,19 +48,7 @@ export function useTravelPlanTasks(planId: string | null) {
   }, [fetchTasks]);
 
   // 포그라운드 복귀 / 세션 refresh 시 재조회 — 공유자 수정 내용 갱신.
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") fetchTasks();
-    };
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") fetchTasks();
-    });
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      sub.subscription.unsubscribe();
-    };
-  }, [fetchTasks]);
+  useAutoRefetch(fetchTasks);
 
   const addTask = async (input: Omit<TravelPlanTask, "id" | "created_at">) => {
     const { data, error } = await supabase

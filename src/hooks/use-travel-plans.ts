@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
+import { useAutoRefetch } from "@/hooks/use-auto-refetch";
 import { syncPlanCalendarEvents } from "@/lib/travel/calendar-sync";
 import type { TravelPlan } from "@/types";
 
@@ -52,20 +53,8 @@ export function useTravelPlans(visibleUserIds?: string[]) {
 
   // 앱이 다시 포그라운드로 올라올 때 재조회 —
   // 공유자가 업데이트한 내용이 세션 중에 갱신되도록. auth 토큰 refresh 후
-  // 또는 백그라운드→포그라운드 복귀 타이밍에 stale 데이터 제거.
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") fetchPlans();
-    };
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") fetchPlans();
-    });
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      sub.subscription.unsubscribe();
-    };
-  }, [fetchPlans]);
+  // 백그라운드→포그라운드 복귀 + Auth 갱신 시 재조회.
+  useAutoRefetch(fetchPlans);
 
   const addPlan = async (
     input: Pick<TravelPlan, "title"> & Partial<Pick<TravelPlan, "start_date" | "end_date" | "notes">>
