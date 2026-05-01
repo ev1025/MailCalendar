@@ -26,20 +26,23 @@ export function setRememberMe(remember: boolean) {
   localStorage.setItem(REMEMBER_KEY, remember ? "true" : "false");
 }
 
-/** 세션 값을 쿠키 여러 조각으로 저장 (길이 제한 우회). Secure + SameSite=Lax. */
+/** 세션 값을 쿠키 여러 조각으로 저장 (길이 제한 우회). Secure + SameSite=Lax.
+ *  Secure 는 HTTPS 일 때만 — iOS Safari ITP 가 non-Secure 쿠키를 단기 세션 쿠키로
+ *  강등시켜 7일도 못 가는 사례 방지. localhost http 개발은 Secure 생략. */
 function cookieSet(key: string, value: string) {
   if (typeof document === "undefined") return;
   // 기존 chunks 제거
   cookieRemove(key);
   // 1년 만료. Supabase refresh token 수명과 유사.
   const expires = new Date(Date.now() + 365 * 86400 * 1000).toUTCString();
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
   const chunks = Math.ceil(value.length / COOKIE_MAX);
   for (let i = 0; i < chunks; i++) {
     const part = value.slice(i * COOKIE_MAX, (i + 1) * COOKIE_MAX);
-    document.cookie = `${COOKIE_PREFIX}${key}.${i}=${encodeURIComponent(part)}; expires=${expires}; path=/; SameSite=Lax`;
+    document.cookie = `${COOKIE_PREFIX}${key}.${i}=${encodeURIComponent(part)}; expires=${expires}; path=/; SameSite=Lax${secure}`;
   }
   // 전체 조각 개수도 저장 — get 시 조립 기준.
-  document.cookie = `${COOKIE_PREFIX}${key}.n=${chunks}; expires=${expires}; path=/; SameSite=Lax`;
+  document.cookie = `${COOKIE_PREFIX}${key}.n=${chunks}; expires=${expires}; path=/; SameSite=Lax${secure}`;
 }
 
 function cookieGet(key: string): string | null {
