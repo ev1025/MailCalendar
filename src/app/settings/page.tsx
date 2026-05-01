@@ -29,6 +29,7 @@ import {
   VERCEL_HOBBY_LIMITS,
   formatBytes,
 } from "@/hooks/use-usage-stats";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Theme = "system" | "light" | "dark";
 
@@ -37,17 +38,27 @@ function ApiSection({ title, children, defaultOpen = false }: { title: string; c
   return (
     <div className="border rounded-lg overflow-hidden">
       <button
-        className="flex items-center justify-between w-full px-3 sm:px-4 py-3 text-sm font-medium hover:bg-accent/50 transition-colors"
+        className="flex items-center justify-between w-full px-3 sm:px-4 py-3 text-sm font-medium hover:bg-accent/50 transition-colors tap-feedback"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
       >
         <span className="text-left">{title}</span>
-        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
+        />
       </button>
-      {open && (
-        <div className="px-3 sm:px-4 pt-3 pb-3.5 sm:pb-4 border-t bg-muted/20 flex flex-col gap-3">
-          {children}
+      {/* grid template rows 트릭 — height auto 를 transition 가능하게. */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="px-3 sm:px-4 pt-3 pb-3.5 sm:pb-4 border-t bg-muted/20 flex flex-col gap-3">
+            {children}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -267,7 +278,7 @@ function SettingsPageInner() {
       {/* 탭 */}
       <div className="flex border-b mb-6">
         <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 tap-feedback ${
             tab === "general" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
           onClick={() => setTab("general")}
@@ -275,7 +286,7 @@ function SettingsPageInner() {
           일반
         </button>
         <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 tap-feedback ${
             tab === "api" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
           onClick={() => setTab("api")}
@@ -285,7 +296,7 @@ function SettingsPageInner() {
       </div>
 
       {tab === "general" ? (
-        <div className="flex flex-col gap-4">
+        <div key="general" className="flex flex-col gap-4 animate-page-in">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -507,7 +518,7 @@ function SettingsPageInner() {
           </Card>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div key="api" className="flex flex-col gap-3 animate-page-in">
           {/* 앱 정보 */}
           <Card>
             <CardHeader>
@@ -536,7 +547,17 @@ function SettingsPageInner() {
 
             <Subsection title="실시간 사용량">
               {usageLoading && !usage ? (
-                <p className="text-[11px] text-muted-foreground">조회 중...</p>
+                <div className="flex flex-col gap-2.5">
+                  {[0, 1].map((i) => (
+                    <div key={i} className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                      <Skeleton className="h-1.5 w-full rounded-full" />
+                    </div>
+                  ))}
+                </div>
               ) : usageError ? (
                 <Note tone="warning">
                   <span className="font-medium">조회 실패: {usageError}</span>
