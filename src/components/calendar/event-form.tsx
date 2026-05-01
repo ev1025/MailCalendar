@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/popover";
 import { X } from "lucide-react";
 import TimePicker from "@/components/ui/time-picker";
-import NumberWheel from "@/components/ui/number-wheel";
 import ColorPickerPanel from "@/components/ui/color-picker";
 import WeatherIcon from "./weather-icon";
 import DatePicker from "@/components/ui/date-picker";
@@ -100,6 +99,47 @@ function formatRepeatEnd(startDate: string, repeat: RepeatType, count: number): 
   return `${y}.${m}.${day}(${KO_WEEKDAYS[d.getDay()]})`;
 }
 
+/** 8자리 숫자 → "YYYY-MM-DD" 부분 포맷. 4자리부터 "-" 자동 삽입. */
+function formatDigitsAsDate(digits: string): string {
+  const d = digits.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 4) return d;
+  if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`;
+  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
+}
+
+/** 8자리 (YYYYMMDD) → Date | null. 잘못된 날짜 (예: 13월) 거부. */
+function parseDigitsToDate(digits: string): Date | null {
+  if (!/^\d{8}$/.test(digits)) return null;
+  const y = parseInt(digits.slice(0, 4), 10);
+  const m = parseInt(digits.slice(4, 6), 10);
+  const dd = parseInt(digits.slice(6, 8), 10);
+  if (m < 1 || m > 12 || dd < 1 || dd > 31) return null;
+  const date = new Date(y, m - 1, dd);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== dd) return null;
+  return date;
+}
+
+/** 시작일·반복 타입·종료일 → 반복 횟수. 사이클에 안 맞으면 floor. */
+function computeCountFromEnd(startDate: string, repeat: RepeatType, endDate: Date): number {
+  if (!startDate || repeat === "none") return 1;
+  const start = new Date(startDate + "T00:00:00");
+  if (Number.isNaN(start.getTime()) || endDate <= start) return 1;
+  if (repeat === "weekly") {
+    const days = Math.round((endDate.getTime() - start.getTime()) / 86400000);
+    return Math.max(1, Math.floor(days / 7));
+  }
+  if (repeat === "monthly") {
+    return Math.max(
+      1,
+      (endDate.getFullYear() - start.getFullYear()) * 12 + (endDate.getMonth() - start.getMonth()),
+    );
+  }
+  if (repeat === "yearly") {
+    return Math.max(1, endDate.getFullYear() - start.getFullYear());
+  }
+  return 1;
+}
+
 interface EventFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -139,6 +179,10 @@ export default function EventForm({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [repeat, setRepeat] = useState<RepeatType>("none");
   const [repeatCount, setRepeatCount] = useState(-1);
+  // 직접 입력 모드 — 사용자가 8자리 숫자로 종료일 직접 입력 시. 계산된 count 가
+  // repeatCount 에 기록되고 모드는 자동 해제. 입력 중에는 customDigits 가 visual.
+  const [customDateMode, setCustomDateMode] = useState(false);
+  const [customDigits, setCustomDigits] = useState("");
   const [showEndDate, setShowEndDate] = useState(false);
   const [showEndTime, setShowEndTime] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -319,12 +363,16 @@ export default function EventForm({
           </div>
 
 
-          {/* 반복 — Select 는 컨텐츠 크기, NumberWheel 옆에 종료일 자동 계산 표시. */}
-          <div className="flex flex-col gap-1.5">
-            <Label className={FORM_LABEL}>반복</Label>
-            <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          {/* 반복 / 반복 횟수 — 두 컬럼 라벨. 반복 None 일 땐 횟수 컬럼 숨김. */}
+          <div className={`grid gap-2 ${repeat !== "none" ? "grid-cols-[auto_1fr]" : "grid-cols-1"}`}>
+            <div className="flex flex-col gap-1.5">
+              <Label className={FORM_LABEL}>반복</Label>
               <Select value={repeat} onValueChange={(v) => {
-                if (v) setRepeat(v as RepeatType);
+                if (v) {
+                  setRepeat(v as RepeatType);
+                  // 반복 타입 변경 시 직접 입력 모드 해제 (계산된 날짜가 의미 없어짐).
+                  if (customDateMode) setCustomDateMode(false);
+                }
               }}>
                 <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
                   {REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
@@ -337,19 +385,84 @@ export default function EventForm({
                   ))}
                 </SelectContent>
               </Select>
-              {repeat !== "none" && (
-                <>
-                  <NumberWheel value={repeatCount} onChange={setRepeatCount} min={1} max={52} allowInfinity />
-                  {/* 종료일 — start + (repeatCount × 주기). repeatCount=1 이면 다음 1회 = 마지막.
-                      -1 (무한) 이면 표시 안 함. startDate 비어있으면 표시 안 함. */}
-                  {repeatCount !== -1 && startDate && (
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      종료: {formatRepeatEnd(startDate, repeat, repeatCount)}
-                    </span>
-                  )}
-                </>
-              )}
             </div>
+            {repeat !== "none" && (
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <Label className={FORM_LABEL}>반복 횟수</Label>
+                <Select
+                  value={customDateMode ? "custom" : String(repeatCount)}
+                  onValueChange={(v) => {
+                    if (v === "custom") {
+                      setCustomDateMode(true);
+                      // 현재 종료일 기준값 prefill — 사용자가 미세 조정 편함.
+                      const endStr = formatRepeatEnd(startDate, repeat, repeatCount > 0 ? repeatCount : 1);
+                      const digits = endStr.replace(/\D/g, "").slice(0, 8);
+                      setCustomDigits(digits);
+                    } else if (v) {
+                      setCustomDateMode(false);
+                      setRepeatCount(parseInt(v, 10));
+                    }
+                  }}
+                >
+                  <SelectTrigger className={`${FORM_INPUT_COMPACT} w-full min-w-0`}>
+                    <span className="truncate">
+                      {customDateMode
+                        ? "직접 입력"
+                        : repeatCount === -1
+                          ? "계속"
+                          : startDate
+                            ? `${repeatCount}회 - ${formatRepeatEnd(startDate, repeat, repeatCount)}`
+                            : `${repeatCount}회`}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent className="min-w-[14rem]">
+                    <SelectItem value="custom">직접 입력</SelectItem>
+                    <SelectItem value="-1">계속</SelectItem>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        {i}회{startDate ? ` - ${formatRepeatEnd(startDate, repeat, i)}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {customDateMode && (
+                  /* 8자리 숫자 입력 — TimePicker 처럼 4/6 자리에서 "-" 자동 삽입.
+                     완전 입력 (8자리) 시 onBlur 또는 Enter 로 확정. */
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoFocus
+                    value={formatDigitsAsDate(customDigits)}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+                      setCustomDigits(digits);
+                    }}
+                    onBlur={() => {
+                      const parsed = parseDigitsToDate(customDigits);
+                      if (parsed && startDate) {
+                        const count = computeCountFromEnd(startDate, repeat, parsed);
+                        setRepeatCount(count);
+                        setCustomDateMode(false);
+                      } else {
+                        // 미완성·잘못된 입력 → 모드 해제 + 직전 값 유지.
+                        setCustomDateMode(false);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLInputElement).blur();
+                      }
+                      if (e.key === "Escape") {
+                        setCustomDateMode(false);
+                      }
+                    }}
+                    placeholder="YYYY-MM-DD"
+                    className={`${FORM_INPUT_COMPACT} w-full min-w-0 tabular-nums`}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* 태그 */}
