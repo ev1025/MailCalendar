@@ -344,7 +344,8 @@ export default function FixedExpenseForm({
               <DatePicker
                 value={anchorDate || todayYmd()}
                 onChange={setAnchorDate}
-                className={FORM_INPUT_COMPACT}
+                // YYYY-MM-DD 표시 + 캘린더 아이콘이 답답하지 않게 충분히 확보.
+                className={`${FORM_INPUT_COMPACT} w-[10rem]`}
               />
             </FormField>
           )}

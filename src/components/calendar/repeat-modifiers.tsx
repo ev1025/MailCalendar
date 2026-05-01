@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,12 @@ import { KO_WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 
 /** 매주 N주마다 인라인 토글 — "종료 설정" 패턴.
  *  interval=1 일 땐 "+ 격주" 점선 버튼, 누르면 그 자리에서 [숫자 input] 주마다 로 변환.
- *  X 로 매주(interval=1) 로 복귀. */
+ *  X 로 매주(interval=1) 로 복귀.
+ *
+ *  편집 UX:
+ *   - 포커스 시 기존 값 자동 select → 바로 새 숫자 타이핑하면 교체.
+ *   - 빈 칸 허용 (편집 중에 잠시 비울 수 있음). 블러 시 비어있거나 1 이하면
+ *     자동으로 "2" (격주) 로 보정. */
 export function WeeklyIntervalButton({
   interval,
   onChange,
@@ -21,6 +27,12 @@ export function WeeklyIntervalButton({
   onChange: (n: number) => void;
 }) {
   const isActive = interval > 1;
+  const [draft, setDraft] = useState(String(interval));
+  // 외부에서 interval 이 바뀌면 draft 동기화 (예: X 눌러 1 로 가는 transition).
+  useEffect(() => {
+    setDraft(String(interval));
+  }, [interval]);
+
   if (!isActive) {
     return (
       <button
@@ -37,12 +49,21 @@ export function WeeklyIntervalButton({
       <input
         type="text"
         inputMode="numeric"
-        value={interval}
+        value={draft}
+        onFocus={(e) => e.currentTarget.select()}
         onChange={(e) => {
           const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
-          if (digits === "") return;
+          setDraft(digits);
+          // 유효한 값이면 즉시 반영. 빈 칸이거나 1 이하면 onBlur 에서 보정.
           const n = parseInt(digits, 10);
-          if (n >= 2) onChange(n);
+          if (!Number.isNaN(n) && n >= 2) onChange(n);
+        }}
+        onBlur={() => {
+          const n = parseInt(draft, 10);
+          if (Number.isNaN(n) || n < 2) {
+            setDraft("2");
+            onChange(2);
+          }
         }}
         className={`${FORM_INPUT_COMPACT} w-12 rounded-lg border border-input bg-transparent px-2 text-center tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
       />

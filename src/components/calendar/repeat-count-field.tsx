@@ -96,10 +96,16 @@ export default function RepeatCountField({
         tapStartRef.current.cancelled = true;
       }
     },
-    onTouchEnd: () => {
+    onTouchEnd: (e: React.TouchEvent) => {
       const valid = tapStartRef.current && !tapStartRef.current.cancelled;
       tapStartRef.current = null;
-      if (valid) handleSelectCount(n);
+      if (valid) {
+        // 합성 click/mousedown 차단 — handleSelectCount 가 setOpen(false) 로
+        // 드롭다운을 닫은 뒤 ~300ms 늦게 발화하는 ghost click 이 그 자리의
+        // 다른 element(예: 아래 태그 입력창) 를 활성화시키는 문제 방지.
+        e.preventDefault();
+        handleSelectCount(n);
+      }
     },
     onMouseDown: (e: React.MouseEvent) => {
       e.preventDefault();
@@ -132,9 +138,10 @@ export default function RepeatCountField({
               const m = String(result.corrected.getMonth() + 1).padStart(2, "0");
               const d = String(result.corrected.getDate()).padStart(2, "0");
               const wd = KO_WEEKDAYS[result.corrected.getDay()];
-              toast.error(
-                `${result.reason} — ${result.corrected.getFullYear()}-${m}-${d}(${wd}) 로 교정`,
-              );
+              // 가독성 — 사유(제목) / 교정값(설명) 두 줄로 분리.
+              toast.error(result.reason, {
+                description: `${result.corrected.getFullYear()}-${m}-${d}(${wd}) 로 교정`,
+              });
             }
             const count = computeCountFromEnd(startDate, repeat, result.corrected, { weeklyInterval });
             setRepeatCount(count);
