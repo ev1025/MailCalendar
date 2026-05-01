@@ -6,8 +6,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogActionsBar,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   src: string | null;
@@ -128,11 +128,14 @@ export default function AvatarCropDialog({ src, open, onOpenChange, onConfirm }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent
+        showBackButton={false}
+        className="max-w-[calc(100%-3rem)] sm:max-w-sm p-0 gap-0 overflow-hidden"
+      >
+        <div className="px-5 pt-5 pb-4 flex flex-col gap-3 items-center">
         <DialogHeader>
-          <DialogTitle>프로필 이미지 편집</DialogTitle>
+          <DialogTitle className="text-base font-semibold">프로필 이미지 편집</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-3 items-center">
           {/* 디바이스별로 다른 인터랙션 안내 — 모바일/데스크탑 사용자 모두 즉시 인지. */}
           <p className="text-xs text-muted-foreground text-center break-keep leading-relaxed">
             <span className="md:hidden">
@@ -167,15 +170,12 @@ export default function AvatarCropDialog({ src, open, onOpenChange, onConfirm }:
               />
             )}
           </div>
-          <div className="flex gap-2 w-full">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              취소
-            </Button>
-            <Button onClick={handleConfirm} className="flex-1">
-              등록
-            </Button>
-          </div>
         </div>
+        <DialogActionsBar
+          onCancel={() => onOpenChange(false)}
+          onConfirm={handleConfirm}
+          confirmLabel="등록"
+        />
       </DialogContent>
     </Dialog>
   );

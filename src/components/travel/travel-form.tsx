@@ -66,6 +66,9 @@ export default function TravelForm({
   const [placeQuery, setPlaceQuery] = useState("");
   const [placeResults, setPlaceResults] = useState<PlaceInfo[]>([]);
   const [placeLoading, setPlaceLoading] = useState(false);
+  // 검색 input 포커스 상태 — 다른 input/요소로 포커스 이동 시 드롭다운 자동 숨김.
+  // onBlur 즉시가 아닌 150ms 지연 — 드롭다운 항목 클릭이 먼저 처리되도록.
+  const [placeFocused, setPlaceFocused] = useState(false);
   // 카드를 눌러 펼친 위치 인덱스들 (여러 개 동시 펼침 가능)
   const [expandedPlaces, setExpandedPlaces] = useState<Set<number>>(new Set());
   // 미선택 상태(빈 문자열) — 사용자가 분류를 직접 골라야 저장 가능
@@ -332,10 +335,15 @@ export default function TravelForm({
               <Input
                 value={placeQuery}
                 onChange={(e) => setPlaceQuery(e.target.value)}
+                onFocus={() => setPlaceFocused(true)}
+                onBlur={() => {
+                  // dropdown 항목 클릭 처리 후 닫히도록 지연.
+                  setTimeout(() => setPlaceFocused(false), 150);
+                }}
                 placeholder="장소명·지역 (예: 대전역, 애월 카페)"
                 className="pl-9 h-9"
               />
-              {placeQuery.trim() && (placeLoading || placeResults.length > 0) && (
+              {placeFocused && placeQuery.trim() && (placeLoading || placeResults.length > 0) && (
                 <div className="absolute left-0 right-0 top-full mt-1 z-30 max-h-60 overflow-y-auto rounded-md border bg-popover shadow-lg">
                   {placeLoading ? (
                     <p className="p-3 text-xs text-muted-foreground text-center">검색 중…</p>
@@ -345,6 +353,8 @@ export default function TravelForm({
                         <li key={i}>
                           <button
                             type="button"
+                            // onMouseDown preventDefault — 입력창 blur 보다 click 이 먼저 처리되게.
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => {
                               // 중복(같은 lat/lng) 방지
                               if (!places.some((x) => x.lat === p.lat && x.lng === p.lng)) {

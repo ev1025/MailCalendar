@@ -6,8 +6,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogActionsBar,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 export type RepeatScope = "one" | "following" | "all";
 
@@ -41,16 +41,18 @@ export default function RepeatScopeDialog({ open, onOpenChange, action, onConfir
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>반복 일정 {action}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-2.5">
-          {/* 컨텍스트 안내 — font-medium 으로 위계 살짝 끌어올림. */}
+      <DialogContent
+        showBackButton={false}
+        className="max-w-[calc(100%-3rem)] sm:max-w-sm p-0 gap-0 overflow-hidden"
+      >
+        <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold">반복 일정 {action}</DialogTitle>
+          </DialogHeader>
           <p className="text-[13px] text-foreground/75 leading-relaxed break-keep">
             이 일정은 반복 시리즈의 일부입니다. 어떻게 {action}할까요?
           </p>
-          <div className="flex flex-col gap-1.5 mt-1">
+          <div className="flex flex-col gap-1.5">
             {OPTIONS.map((opt) => (
               <label
                 key={opt.value}
@@ -72,20 +74,14 @@ export default function RepeatScopeDialog({ open, onOpenChange, action, onConfir
               </label>
             ))}
           </div>
-          <div className="flex gap-2 justify-end pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
-              취소
-            </Button>
-            <Button
-              type="button"
-              onClick={submit}
-              disabled={busy}
-              variant={action === "삭제" ? "destructive" : "default"}
-            >
-              {busy ? "처리 중..." : action}
-            </Button>
-          </div>
         </div>
+        <DialogActionsBar
+          onCancel={() => onOpenChange(false)}
+          onConfirm={submit}
+          confirmLabel={action}
+          destructive={action === "삭제"}
+          busy={busy}
+        />
       </DialogContent>
     </Dialog>
   );

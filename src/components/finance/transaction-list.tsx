@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import DeleteRecordDescription from "@/components/ui/delete-record-description";
 import type { Expense } from "@/types";
@@ -139,61 +138,68 @@ export default function TransactionList({
         open={isFixedSourced}
         onOpenChange={(o) => { if (!o) setDeletingTx(null); }}
       >
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>고정비 거래 처리</DialogTitle>
-          </DialogHeader>
-          {deletingTx && (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground/90">
-                  {deletingTx.title || deletingTx.description || "이 거래"}
-                </span>
-                는 고정비에서 자동 등록된 거래입니다. 어떻게 처리할까요?
-              </p>
-              <div className="flex flex-col gap-2 mt-1">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (deletingTx) await onDelete(deletingTx.id);
-                    setDeletingTx(null);
-                  }}
-                  className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
-                >
-                  <Trash2 className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">이번 달 거래만 삭제</p>
-                    <p className="text-xs text-muted-foreground">
-                      고정비 자체는 유지. 다음 달엔 다시 자동 등록됩니다.
-                    </p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (deletingTx?.fixed_expense_id && onEditFixed) {
-                      onEditFixed(deletingTx.fixed_expense_id);
-                    }
-                    setDeletingTx(null);
-                  }}
-                  className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
-                >
-                  <Pencil className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">고정비 자체 수정</p>
-                    <p className="text-xs text-muted-foreground">
-                      금액·결제일·반복 기간을 바꾸려면 여기서.
-                    </p>
-                  </div>
-                </button>
-              </div>
-              <div className="flex justify-end pt-1">
-                <Button type="button" variant="outline" onClick={() => setDeletingTx(null)}>
-                  취소
-                </Button>
-              </div>
-            </div>
-          )}
+        <DialogContent
+          showBackButton={false}
+          className="max-w-[calc(100%-3rem)] sm:max-w-sm p-0 gap-0 overflow-hidden"
+        >
+          <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold">고정비 거래 처리</DialogTitle>
+            </DialogHeader>
+            {deletingTx && (
+              <>
+                <p className="text-[13px] text-foreground/75 leading-relaxed break-keep">
+                  <span className="font-semibold text-foreground">
+                    {deletingTx.title || deletingTx.description || "이 거래"}
+                  </span>
+                  는 고정비에서 자동 등록된 거래입니다. 어떻게 처리할까요?
+                </p>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (deletingTx) await onDelete(deletingTx.id);
+                      setDeletingTx(null);
+                    }}
+                    className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-destructive/5 tap-feedback"
+                  >
+                    <Trash2 className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-destructive">이번 달 거래만 삭제</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        고정비 자체는 유지. 다음 달엔 다시 자동 등록.
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (deletingTx?.fixed_expense_id && onEditFixed) {
+                        onEditFixed(deletingTx.fixed_expense_id);
+                      }
+                      setDeletingTx(null);
+                    }}
+                    className="flex items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent/50 tap-feedback"
+                  >
+                    <Pencil className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">고정비 자체 수정</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        금액·결제일·반복 기간 변경.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setDeletingTx(null)}
+            className="h-11 border-t text-sm font-medium text-muted-foreground hover:bg-accent/40 transition-colors"
+          >
+            취소
+          </button>
         </DialogContent>
       </Dialog>
 

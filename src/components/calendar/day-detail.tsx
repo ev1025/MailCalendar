@@ -196,7 +196,7 @@ export default function DayDetail({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent showBackButton={false} className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center justify-between gap-2 min-w-0">
             <DialogTitle className="text-sm md:text-base truncate min-w-0">

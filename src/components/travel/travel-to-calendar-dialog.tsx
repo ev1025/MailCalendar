@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogActionsBar,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -85,11 +86,14 @@ export default function TravelToCalendarDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>달력에 추가</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
+      <DialogContent
+        showBackButton={false}
+        className="max-w-[calc(100%-3rem)] sm:max-w-md p-0 gap-0 overflow-hidden"
+      >
+        <div className="px-5 pt-5 pb-4 flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold">달력에 추가</DialogTitle>
+          </DialogHeader>
           {/* 제목 + 지역 (이모지 제거, 연한 회색) */}
           <div className="flex items-baseline gap-2">
             <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color || "#3B82F6" }} />
@@ -188,13 +192,13 @@ export default function TravelToCalendarDialog({
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>취소</Button>
-            <Button onClick={handleSubmit} disabled={saving}>
-              {saving ? "추가 중..." : "캘린더에 추가"}
-            </Button>
-          </div>
         </div>
+        <DialogActionsBar
+          onCancel={() => onOpenChange(false)}
+          onConfirm={handleSubmit}
+          confirmLabel="캘린더에 추가"
+          busy={saving}
+        />
       </DialogContent>
     </Dialog>
   );

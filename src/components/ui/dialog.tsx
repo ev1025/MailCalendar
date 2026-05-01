@@ -319,6 +319,67 @@ function DialogActions({ children, className }: { children: React.ReactNode; cla
   )
 }
 
+/**
+ * iOS 스타일 풀너비 1:1 푸터 — 취소 / 확인 두 버튼이 가로 절반씩 차지.
+ *
+ * 사용 조건:
+ *  - DialogContent 에 `p-0 gap-0 overflow-hidden` 적용 필요 (flush 하단 정렬용)
+ *  - 본문은 별도 padding wrapper (예: <div className="p-5">) 로 감쌈
+ *  - 2개 버튼만 (취소 + 1개 confirm). 3+ 버튼이면 DialogActions 사용.
+ *
+ * destructive 옵션 → 확인 버튼이 빨강. confirmTone="primary" 기본.
+ *
+ * 사용 예:
+ *   <DialogActionsBar
+ *     onCancel={() => onOpenChange(false)}
+ *     onConfirm={submit}
+ *     confirmLabel="저장"
+ *     busy={saving}
+ *   />
+ */
+function DialogActionsBar({
+  onCancel,
+  onConfirm,
+  cancelLabel = "취소",
+  confirmLabel = "확인",
+  destructive = false,
+  busy = false,
+  confirmDisabled = false,
+}: {
+  onCancel: () => void
+  onConfirm: () => void
+  cancelLabel?: string
+  confirmLabel?: string
+  destructive?: boolean
+  busy?: boolean
+  /** confirm 버튼만 비활성 (예: 입력 미충족). 취소는 항상 가능. */
+  confirmDisabled?: boolean
+}) {
+  return (
+    <div data-slot="dialog-actions-bar" className="grid grid-cols-2 border-t divide-x">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={busy}
+        className="h-11 text-sm font-medium text-muted-foreground hover:bg-accent/40 disabled:opacity-50 transition-colors focus-visible:outline-none"
+      >
+        {cancelLabel}
+      </button>
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={busy || confirmDisabled}
+        className={cn(
+          "h-11 text-sm font-semibold transition-colors disabled:opacity-50 focus-visible:outline-none",
+          destructive ? "text-destructive hover:bg-destructive/10" : "text-primary hover:bg-primary/10"
+        )}
+      >
+        {busy ? "처리 중…" : confirmLabel}
+      </button>
+    </div>
+  )
+}
+
 export {
   Dialog,
   DialogClose,
@@ -334,4 +395,5 @@ export {
   DialogSection,
   DialogField,
   DialogActions,
+  DialogActionsBar,
 }

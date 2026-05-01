@@ -58,7 +58,7 @@ export default function EventDetail({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) setShowDeleteChoice(false); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent showBackButton={false} className="sm:max-w-md">
         {!showDeleteChoice ? (
           <>
             <DialogHeader>

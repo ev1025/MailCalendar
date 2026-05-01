@@ -6,8 +6,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogActionsBar,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
@@ -61,9 +61,13 @@ export default function PasswordChangeDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent
+        showBackButton={false}
+        className="max-w-[calc(100%-3rem)] sm:max-w-sm p-0 gap-0 overflow-hidden"
+      >
+        <div className="px-5 pt-5 pb-4 flex flex-col gap-3.5">
         <DialogHeader>
-          <DialogTitle>비밀번호 변경</DialogTitle>
+          <DialogTitle className="text-base font-semibold">비밀번호 변경</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
@@ -120,27 +124,15 @@ export default function PasswordChangeDialog({ open, onOpenChange }: Props) {
           </div>
 
           {error && <p className="text-xs text-destructive">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              disabled={saving}
-            >
-              취소
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSubmit}
-              disabled={saving || !newPw || !confirmPw}
-            >
-              {saving ? "변경 중..." : "변경"}
-            </Button>
-          </div>
         </div>
+        </div>
+        <DialogActionsBar
+          onCancel={() => onOpenChange(false)}
+          onConfirm={handleSubmit}
+          confirmLabel="변경"
+          busy={saving}
+          confirmDisabled={!newPw || !confirmPw || newPw !== confirmPw}
+        />
       </DialogContent>
     </Dialog>
   );

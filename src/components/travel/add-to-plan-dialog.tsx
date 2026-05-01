@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogActionsBar,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,9 +189,13 @@ export default function AddToPlanDialog({ open, onOpenChange, travelItem, onDone
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        showBackButton={false}
+        className="max-w-[calc(100%-3rem)] sm:max-w-md p-0 gap-0 overflow-hidden"
+      >
+        <div className="px-5 pt-5 pb-4 flex flex-col gap-3.5">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="text-base font-semibold flex items-center gap-2">
             <Route className="h-4 w-4" /> 여행 계획에 추가
           </DialogTitle>
         </DialogHeader>
@@ -301,22 +306,14 @@ export default function AddToPlanDialog({ open, onOpenChange, travelItem, onDone
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            취소
-          </Button>
-          <Button
-            type="button"
-            onClick={handleConfirm}
-            disabled={saving || (mode === "pick" && !selectedPlanId)}
-          >
-            {saving ? "추가 중…" : "추가"}
-          </Button>
         </div>
+        <DialogActionsBar
+          onCancel={() => onOpenChange(false)}
+          onConfirm={handleConfirm}
+          confirmLabel="추가"
+          busy={saving}
+          confirmDisabled={mode === "pick" && !selectedPlanId}
+        />
       </DialogContent>
     </Dialog>
   );
