@@ -81,7 +81,6 @@ export default function FixedExpenseForm({
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
-  const [dayOfMonth, setDayOfMonth] = useState("1");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -97,8 +96,8 @@ export default function FixedExpenseForm({
   const [weeklyInterval, setWeeklyInterval] = useState(1);
   // 매월 — null=같은 일자(default), 값=N째주 W요일.
   const [monthlyNth, setMonthlyNth] = useState<{ week: number; weekday: number } | null>(null);
-  // 매주/매년 시작일 — anchor_date. 매월(default)·매월+nth 모드에선 자동 계산되어 미사용.
-  const [anchorDate, setAnchorDate] = useState<string>("");
+  // 시작일 — 모든 반복 모드에서 통일된 첫 발화일 입력. day_of_month 는 anchorDate 에서 파생.
+  const [anchorDate, setAnchorDate] = useState<string>(todayYmd());
 
   useEffect(() => {
     if (!open) return;
@@ -108,7 +107,6 @@ export default function FixedExpenseForm({
       setAmount(String(fixed.amount));
       setCategoryId(fixed.category_id);
       setDescription(fixed.description || "");
-      setDayOfMonth(String(fixed.day_of_month));
       setPaymentMethod(fixed.payment_method || "");
       setWeeklyInterval(fixed.weekly_interval ?? 1);
       setMonthlyNth(
@@ -116,7 +114,19 @@ export default function FixedExpenseForm({
           ? { week: fixed.monthly_nth_week, weekday: fixed.monthly_nth_weekday }
           : null,
       );
-      setAnchorDate(fixed.anchor_date || "");
+      // 시작일 복원 — anchor_date 우선, 없으면 이번달 day_of_month 로 합성 (구 데이터 호환).
+      if (fixed.anchor_date) {
+        setAnchorDate(fixed.anchor_date);
+      } else {
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = today.getMonth();
+        const lastDay = new Date(y, m + 1, 0).getDate();
+        const day = Math.min(fixed.day_of_month, lastDay);
+        setAnchorDate(
+          `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+        );
+      }
 
       // DB 의 repeat_kind + repeat_months → UI 상태 매핑.
       const rm = fixed.repeat_months ?? -1;
@@ -143,13 +153,12 @@ export default function FixedExpenseForm({
       setAmount("");
       setCategoryId("");
       setDescription("");
-      setDayOfMonth("1");
       setPaymentMethod("");
       setRepeat("infinite");
       setRepeatCount(1);
       setWeeklyInterval(1);
       setMonthlyNth(null);
-      setAnchorDate("");
+      setAnchorDate(todayYmd());
     }
     setCustomDigits("");
     setRepeatCountOpen(false);
@@ -157,35 +166,16 @@ export default function FixedExpenseForm({
 
   const filteredCategories = categories.filter((c) => c.type === type);
 
-  // 반복 종류·옵션에 따라 RepeatCountField 가 사용할 startDate(=첫 발화일) 계산.
-  // 이게 곧 anchor_date 로도 저장됨.
-  const computeAnchor = (): string => {
-    if (repeat === "weekly" || repeat === "yearly") {
-      return anchorDate || todayYmd();
-    }
+  // 반복 종류·옵션에 따른 첫 발화일 계산 — RepeatCountField 의 startDate 로 사용.
+  // 매월+nth: anchorDate 의 month 기준 N주차 W요일. 그 외: anchorDate 그대로.
+  const repeatStartDate = (() => {
     if (repeat === "monthly" && monthlyNth) {
-      // 이번 달의 N째주 W요일 → 시작일.
-      const today = new Date();
-      const y = today.getFullYear();
-      const m = today.getMonth();
-      // N째주 W요일이 이번 달에서 오늘 이전이면 다음 달로 넘김.
-      const tryThis = nthWeekday(y, m, monthlyNth.weekday, monthlyNth.week);
-      const target = tryThis < today ? nthWeekday(y, m + 1, monthlyNth.weekday, monthlyNth.week) : tryThis;
-      return ymd(target);
+      const a = new Date(anchorDate + "T00:00:00");
+      if (Number.isNaN(a.getTime())) return anchorDate;
+      return ymd(nthWeekday(a.getFullYear(), a.getMonth(), monthlyNth.weekday, monthlyNth.week));
     }
-    // 매월 default — 이번 달의 day_of_month, 이미 지난 일자면 다음 달.
-    const day = parseInt(dayOfMonth, 10) || 1;
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = today.getMonth();
-    const lastThis = new Date(y, m + 1, 0).getDate();
-    if (today.getDate() <= day) {
-      return ymd(new Date(y, m, Math.min(day, lastThis)));
-    }
-    const lastNext = new Date(y, m + 2, 0).getDate();
-    return ymd(new Date(y, m + 1, Math.min(day, lastNext)));
-  };
-  const repeatStartDate = computeAnchor();
+    return anchorDate;
+  })();
 
   // RepeatCountField 가 받는 RepeatType ('weekly'/'monthly'/'yearly'/'none').
   const repeatTypeForField =
@@ -209,9 +199,9 @@ export default function FixedExpenseForm({
       repeatKind = repeat;
     }
 
-    const anchor = repeat === "none" || repeat === "infinite" || repeat === "monthly"
-      ? null // monthly default 는 hook 이 day_of_month 로 계산 (anchor_date 미저장).
-      : repeatStartDate;
+    // day_of_month 는 anchorDate 에서 파생 (구 컬럼 호환). anchor_date 는 항상 저장.
+    const anchorObj = new Date(anchorDate + "T00:00:00");
+    const dayOfMonth = Number.isNaN(anchorObj.getTime()) ? 1 : anchorObj.getDate();
 
     const { error } = await onSave(
       {
@@ -219,7 +209,7 @@ export default function FixedExpenseForm({
         amount: parseInt(amount, 10),
         category_id: categoryId,
         description: description.trim() || null,
-        day_of_month: parseInt(dayOfMonth, 10) || 1,
+        day_of_month: dayOfMonth,
         type,
         payment_method: paymentMethod || "계좌이체",
         repeat_months: repeatMonths,
@@ -227,7 +217,8 @@ export default function FixedExpenseForm({
         weekly_interval: repeatKind === "weekly" ? weeklyInterval : null,
         monthly_nth_week: repeatKind === "monthly" && monthlyNth ? monthlyNth.week : null,
         monthly_nth_weekday: repeatKind === "monthly" && monthlyNth ? monthlyNth.weekday : null,
-        anchor_date: repeatKind === "monthly" && monthlyNth ? repeatStartDate : anchor,
+        // monthly+nth: 실제 첫 N주차 W요일을 anchor 로 저장. 외엔 사용자가 고른 anchorDate.
+        anchor_date: repeatKind === "monthly" && monthlyNth ? repeatStartDate : anchorDate,
       },
       repeatMonths,
     );
@@ -242,16 +233,6 @@ export default function FixedExpenseForm({
     }
     onOpenChange(false);
   };
-
-  // day_of_month 입력은 매월(default) 모드 + 없음/계속/infinite 에서만 의미 있음.
-  // 매주/매년/매월+nth 에서는 anchor_date 가 결정 → 결제일 입력 숨김.
-  const showDayOfMonth =
-    repeat === "none" ||
-    repeat === "infinite" ||
-    (repeat === "monthly" && !monthlyNth);
-
-  // 매주/매년 시작일 입력. 매월+nth 는 N주차 정보로 자동 계산되므로 별도 입력 불필요.
-  const showAnchorDate = repeat === "weekly" || repeat === "yearly";
 
   return (
     <FormPage
@@ -307,7 +288,7 @@ export default function FixedExpenseForm({
           </button>
         </div>
 
-        {/* 금액 + 결제일/시작일 + 반복 — 한 행. 시작일·반복 dropdown 은 컨텐츠 폭. */}
+        {/* 금액 + 시작일 + 반복 — 한 행. 시작일·반복 dropdown 은 컨텐츠 폭(약간 여백). */}
         <div className="flex items-start gap-3 flex-wrap">
           <FormField label="금액" required>
             <Input
@@ -320,35 +301,14 @@ export default function FixedExpenseForm({
               className={`${FORM_INPUT_PRIMARY} w-[8.5rem] tabular-nums`}
             />
           </FormField>
-          {showDayOfMonth && (
-            <FormField label="결제일">
-              <Input
-                type="number"
-                inputMode="numeric"
-                min="1"
-                max="31"
-                value={dayOfMonth}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "") { setDayOfMonth(""); return; }
-                  const n = parseInt(v, 10);
-                  if (isNaN(n)) return;
-                  setDayOfMonth(String(Math.min(31, Math.max(1, n))));
-                }}
-                className={`${FORM_INPUT_PRIMARY} w-[4rem] text-center tabular-nums`}
-              />
-            </FormField>
-          )}
-          {showAnchorDate && (
-            <FormField label="시작일" className="w-fit">
-              <DatePicker
-                value={anchorDate || todayYmd()}
-                onChange={setAnchorDate}
-                // 컨텐츠 폭에 맞춰 — 트리거 내부의 "YYYY.MM.DD" 만 보일 정도.
-                className={`${FORM_INPUT_COMPACT} w-fit`}
-              />
-            </FormField>
-          )}
+          <FormField label="시작일" className="w-fit">
+            <DatePicker
+              value={anchorDate}
+              onChange={setAnchorDate}
+              // 컨텐츠 폭 + 양쪽 살짝 여백 (px-3) — "2026-05-09" 가 답답하지 않게.
+              className={`${FORM_INPUT_COMPACT} w-fit px-3`}
+            />
+          </FormField>
           <div className="flex flex-col gap-1.5 w-fit">
             <Label className={FORM_LABEL}>반복</Label>
             <Select
@@ -361,18 +321,17 @@ export default function FixedExpenseForm({
                 // 모드 전환 시 격주·N주차 초기화.
                 if (v !== "weekly") setWeeklyInterval(1);
                 if (v !== "monthly") setMonthlyNth(null);
-                // weekly/yearly 진입 시 anchor 기본값 = today.
-                if ((v === "weekly" || v === "yearly") && !anchorDate) {
-                  setAnchorDate(todayYmd());
-                }
               }}
             >
-              <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
+              <SelectTrigger
+                hideIcon
+                className={`${FORM_INPUT_COMPACT} w-fit min-w-[3rem] px-1.5`}
+              >
                 {FX_REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
               </SelectTrigger>
-              <SelectContent className="min-w-[4.5rem]">
+              <SelectContent align="start" className="w-fit min-w-fit">
                 {FX_REPEAT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
+                  <SelectItem key={opt.value} value={opt.value} hideIndicator>
                     {opt.label}
                   </SelectItem>
                 ))}
@@ -415,7 +374,7 @@ export default function FixedExpenseForm({
             </div>
           </div>
         )}
-        {showDayOfMonth && (
+        {(repeat === "infinite" || repeat === "monthly") && !monthlyNth && (
           <p className="text-[11px] text-muted-foreground -mt-2 leading-snug">
             29~31일은 해당 일자가 없는 달(2월 등)엔 월말에 자동 반영돼요.
           </p>

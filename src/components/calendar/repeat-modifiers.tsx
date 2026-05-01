@@ -133,7 +133,7 @@ export function MonthlyNthButton({
         </SelectTrigger>
         {/* align=start — 트리거 좌단과 popup 좌단 정렬. popup 이 더 넓을 때
             가운데 정렬되면 좌우로 들쭉날쭉해 보이는 문제 해결. */}
-        <SelectContent align="start">
+        <SelectContent align="start" className="w-fit min-w-fit">
           {[1, 2, 3, 4, 5].map((n) => (
             <SelectItem key={n} value={String(n)} hideIndicator>
               {n}째주
@@ -154,7 +154,7 @@ export function MonthlyNthButton({
         >
           {KO_WEEKDAYS[value.weekday]}
         </SelectTrigger>
-        <SelectContent align="start">
+        <SelectContent align="start" className="w-fit min-w-fit">
           {KO_WEEKDAYS.map((w, i) => (
             <SelectItem key={i} value={String(i)} hideIndicator>
               {w}요일
