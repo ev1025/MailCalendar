@@ -219,6 +219,8 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [openFilter, setOpenFilter] = useState<"category" | "tag" | null>(null);
   const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
+  // 필터 토글 — 가본곳/분류/태그 필터 행의 노출 여부. 기본 false (숨김).
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TravelItem | null>(null);
@@ -413,18 +415,38 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
     // 데스크톱에서 테이블이 화면 끝까지 뻗어 제목 열이 과하게 길어지는 걸 막기 위해
     // md+ 에서 최대 너비 제한 + 가운데 정렬. 모바일은 w-full 로 그대로.
     <div className="flex flex-col gap-3 w-full md:max-w-5xl md:mx-auto">
-      {/* 상단 통합 행 (md+): [검색 │ 추가 │ 가본곳 포함 │ 분류 │ 태그] 한 줄.
-          모바일은 좁아서 검색+추가 / 필터 두 줄로 자동 wrap. */}
-      <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
+      {/* 상단 toolbar — [검색 | 필터 토글 | + 추가]. 필터 토글 active 시 아래에 sub-filter 행 노출. */}
+      <div className="flex items-center gap-2">
         <SearchInput value={search} onChange={setSearch} className="flex-1 md:flex-none md:w-56" />
+        {/* 필터 토글 — active 하위 필터 개수 badge 표시 (가본곳 OFF / 분류 / 태그 합계). */}
+        {(() => {
+          const activeCount =
+            (showVisited ? 0 : 1) + filterCategories.length + filterTags.length;
+          const isActive = filterOpen || activeCount > 0;
+          return (
+            <button
+              type="button"
+              onClick={() => setFilterOpen((o) => !o)}
+              className={`flex items-center gap-1 shrink-0 rounded-md border px-2.5 h-8 text-[11px] transition-colors ${
+                isActive
+                  ? "border-primary text-primary bg-primary/10"
+                  : "text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              <Filter className="h-3 w-3" />
+              필터{activeCount > 0 && ` (${activeCount})`}
+            </button>
+          );
+        })()}
         <Button size="sm" className="h-8 shrink-0" onClick={() => { setEditing(null); setFormOpen(true); }}>
           <Plus className="mr-1 h-3.5 w-3.5" />
           추가
         </Button>
-        {/* 모바일에선 다음 행으로 — 빈 가로 spacer 한 번에 줄바꿈 트리거 */}
-        <div className="basis-full md:hidden" />
-        {/* 필터 그룹 — md+ 에서는 같은 행 우측 끝, 모바일은 다음 행 우측 정렬. */}
-        <div className="flex items-center gap-2 flex-wrap justify-end w-full md:w-auto md:ml-auto md:flex-nowrap">
+      </div>
+
+      {/* sub-filter 행 — 필터 토글 active 시에만 노출. 가본곳 포함 / 분류 / 태그. */}
+      {filterOpen && (
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => updateShowVisited(!showVisited)}
@@ -492,7 +514,7 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
             </div>
           )}
         </div>
-      </div>
+      )}
       {/* 필터 패널 — 분류/태그 모두 같은 자리에서 교체 (바깥 클릭 시 자동 닫힘) */}
       <FilterPanel
         open={openFilter === "category" && allCategories.length > 0}

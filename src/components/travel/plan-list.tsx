@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Trash2, Copy, CalendarPlus, CalendarMinus, Plus, Check } from "lucide-react";
+import { Trash2, Copy, CalendarPlus, CalendarMinus, Plus, Check, Filter } from "lucide-react";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import SearchInput from "@/components/ui/search-input";
 import { Button } from "@/components/ui/button";
@@ -139,6 +139,8 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
       sessionStorage.setItem("travel_plan_show_visited", String(v));
     }
   };
+  // 필터 토글 — sub-filter(가본 곳 포함) 행의 노출. 기본 false (숨김, 영속 안 함).
+  const [filterOpen, setFilterOpen] = useState(false);
   // 사용자 드래그 정렬 — localStorage 영속. usePersistentState 가 lazy 초기 + 쓰기 동시 처리.
   const [customOrder, setCustomOrder] = usePersistentState<string[]>(ORDER_KEY, []);
   // "달력에 추가" 확인 다이얼로그 — 등록될 일정 수를 미리 안내.
@@ -366,33 +368,60 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
           가 책임지고 sticky 자체는 padding 없음 (이전엔 p-3 가 중복 적용돼 다른
           페이지보다 12~24px 더 들어갔음). 스크롤 시 가시성을 위한 backdrop 만 유지. */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur pb-3">
-        <div className="flex items-center gap-2">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="계획 제목·날짜 검색"
-          />
-          {/* 가본 곳 포함 — active 면 종료일 < 오늘 인 계획도 표시. */}
-          <button
-            type="button"
-            onClick={() => updateShowVisited(!showVisited)}
-            className={`flex items-center gap-1 shrink-0 rounded-md border px-2.5 h-8 text-[11px] transition-colors ${
-              showVisited
-                ? "border-primary text-primary bg-primary/10"
-                : "text-muted-foreground hover:bg-accent"
-            }`}
-          >
-            <Check className="h-3 w-3" />
-            가본 곳 포함
-          </button>
-          <Button
-            size="sm"
-            className="h-8 shrink-0"
-            onClick={() => setNewOpen(true)}
-          >
-            <Plus className="mr-1 h-3.5 w-3.5" />
-            추가
-          </Button>
+        <div className="flex flex-col gap-2">
+          {/* toolbar — [검색 | 필터 | + 추가] */}
+          <div className="flex items-center gap-2">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="계획 제목·날짜 검색"
+            />
+            {/* 필터 토글 — active sub-filter 개수 badge (가본곳 OFF 1, ON 0). */}
+            {(() => {
+              const activeCount = showVisited ? 0 : 1;
+              const isActive = filterOpen || activeCount > 0;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen((o) => !o)}
+                  className={`flex items-center gap-1 shrink-0 rounded-md border px-2.5 h-8 text-[11px] transition-colors ${
+                    isActive
+                      ? "border-primary text-primary bg-primary/10"
+                      : "text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <Filter className="h-3 w-3" />
+                  필터{activeCount > 0 && ` (${activeCount})`}
+                </button>
+              );
+            })()}
+            <Button
+              size="sm"
+              className="h-8 shrink-0"
+              onClick={() => setNewOpen(true)}
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              추가
+            </Button>
+          </div>
+
+          {/* sub-filter 행 — 필터 토글 active 시에만 노출. 가본 곳 포함 (종료일 < 오늘 클램프). */}
+          {filterOpen && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => updateShowVisited(!showVisited)}
+                className={`flex items-center gap-1 shrink-0 rounded-md border px-2.5 h-8 text-[11px] transition-colors ${
+                  showVisited
+                    ? "border-primary text-primary bg-primary/10"
+                    : "text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                <Check className="h-3 w-3" />
+                가본 곳 포함
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
