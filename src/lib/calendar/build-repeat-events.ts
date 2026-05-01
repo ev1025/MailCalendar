@@ -56,8 +56,12 @@ export function buildRepeatEvents(
           monthlyNth.week,
         );
       } else {
-        next = new Date(start);
-        next.setMonth(start.getMonth() + i);
+        // day-of-month 모드 — setMonth 오버플로우(1/31 → 2/31 → 3/3) 회피.
+        // 그 달 말일이 anchor day 보다 작으면 말일로 클램프 (1/31 → 2/28).
+        const targetDay = start.getDate();
+        const t = new Date(start.getFullYear(), start.getMonth() + i, 1);
+        const lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+        next = new Date(t.getFullYear(), t.getMonth(), Math.min(targetDay, lastDay));
       }
     } else {
       next = new Date(start);

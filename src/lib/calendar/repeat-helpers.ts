@@ -32,8 +32,12 @@ export function formatRepeatEnd(
       const target = new Date(start.getFullYear(), start.getMonth() + count, 1);
       d = nthWeekdayOfMonth(target.getFullYear(), target.getMonth(), nth.weekday, nth.week);
     } else {
-      d = new Date(start);
-      d.setMonth(start.getMonth() + count);
+      // day-of-month 모드 — setMonth 오버플로우(예: 1/31 + 1 → 2/31 → 3/3) 회피.
+      // 그 달 말일이 anchor day 보다 작으면 말일로 클램프 (1/31 → 2/28).
+      const targetDay = start.getDate();
+      const t = new Date(start.getFullYear(), start.getMonth() + count, 1);
+      const lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+      d = new Date(t.getFullYear(), t.getMonth(), Math.min(targetDay, lastDay));
     }
   } else {
     d = new Date(start);
@@ -139,8 +143,13 @@ export function correctRepeatEnd(
 
   while (corrected <= start) {
     if (repeat === "weekly") corrected.setDate(corrected.getDate() + 7 * interval);
-    else if (repeat === "monthly") corrected.setMonth(corrected.getMonth() + 1);
-    else corrected.setFullYear(corrected.getFullYear() + 1);
+    else if (repeat === "monthly") {
+      // setMonth 오버플로우 회피 — day-of-month 클램프.
+      const targetDay = corrected.getDate();
+      const t = new Date(corrected.getFullYear(), corrected.getMonth() + 1, 1);
+      const lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+      corrected = new Date(t.getFullYear(), t.getMonth(), Math.min(targetDay, lastDay));
+    } else corrected.setFullYear(corrected.getFullYear() + 1);
     if (!reason) reason = "종료일이 시작일보다 빠름";
   }
 

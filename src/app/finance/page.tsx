@@ -14,6 +14,7 @@ import TransactionList from "@/components/finance/transaction-list";
 import TransactionForm from "@/components/finance/transaction-form";
 import CategoryChart from "@/components/finance/category-chart";
 import FixedExpenseManager from "@/components/finance/fixed-expense-manager";
+import IncomeManager from "@/components/finance/income-manager";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -52,6 +53,7 @@ function FinancePageInner() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [fixedOpen, setFixedOpen] = useState(false);
+  const [incomeOpen, setIncomeOpen] = useState(false);
   /** 카드 +수입 / +지출 클릭 시 폼 type 미리 세팅용. 신규 작성 시에만 의미. */
   const [formDefaultType, setFormDefaultType] = useState<"income" | "expense">("expense");
   /** 고정비 거래 클릭 시 "이 달만 / 전체 고정비" 분기 다이얼로그 대상. */
@@ -231,6 +233,7 @@ function FinancePageInner() {
               totalExpense={baseTotalExpense}
               totalFixed={totalFixed}
               onOpenFixed={() => setFixedOpen(true)}
+              onOpenIncome={() => setIncomeOpen(true)}
               onAddTransaction={(t) => {
                 setEditing(null);
                 setFormDefaultType(t);
@@ -364,6 +367,17 @@ function FinancePageInner() {
         onAddCategory={addCategory}
         onDeleteCategory={deleteCategory}
         onUpdateCategoryColor={updateCategoryColor}
+      />
+      <IncomeManager
+        open={incomeOpen}
+        onOpenChange={setIncomeOpen}
+        transactions={allTransactions}
+        categories={categories}
+        onAdd={async (data) => await addTransaction(data)}
+        onUpdate={async (id, updates) => await updateTransaction(id, updates)}
+        onDelete={async (id) => {
+          await deleteTransaction(id);
+        }}
       />
       <FixedExpenseManager
         open={fixedOpen}
