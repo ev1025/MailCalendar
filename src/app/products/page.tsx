@@ -724,31 +724,56 @@ function ProductsPageInner() {
         >
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="text-base font-semibold">
-              {fixedProduct ? `${fixedProduct.name} 고정비 추가` : "고정비 추가"}
+              고정비 추가
             </DialogTitle>
+            {fixedProduct && (
+              <p className="text-[13px] text-foreground/75 mt-1 break-keep">
+                <span className="font-medium text-foreground/90">{fixedProduct.name}</span>
+                {fixedProduct.monthly_cost ? (
+                  <> · 월 <span className="tabular-nums">{new Intl.NumberFormat("ko-KR").format(fixedProduct.monthly_cost)}원</span></>
+                ) : (
+                  <span className="text-warning"> · ⚠ 가격 미설정</span>
+                )}
+              </p>
+            )}
           </DialogHeader>
-          <div className="px-5 pb-4">
-            {/* 결제일 + 반복 한 행 — 라벨 인라인. */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground shrink-0">결제일</span>
-              <Input
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={31}
-                value={fixedDay}
-                onChange={(e) => setFixedDay(e.target.value)}
-                className={`${FORM_INPUT_COMPACT} w-16 text-center shrink-0`}
-              />
-              <span className="text-xs text-muted-foreground shrink-0">반복</span>
-              <NumberWheel
-                value={fixedRepeat}
-                onChange={setFixedRepeat}
-                min={1}
-                max={120}
-                allowInfinity
-              />
-              <span className="text-xs text-muted-foreground shrink-0">개월</span>
+          <div className="px-5 pb-4 flex flex-col gap-3">
+            {/* 가격 미설정 사전 경고 — submit 후 toast 가 아닌 입력 시점에 표시. */}
+            {fixedProduct && (!fixedProduct.monthly_cost || fixedProduct.monthly_cost <= 0) && (
+              <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning-bg/60 px-2.5 py-2 text-[11px] text-warning leading-relaxed">
+                <span aria-hidden>⚠</span>
+                <span>이 제품에 가격이 설정되어 있지 않습니다. 제품 폼에서 월 가격을 먼저 입력해주세요.</span>
+              </div>
+            )}
+            {/* 결제일 + 반복 — 라벨을 위로 끌어올려 명확화. */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="fixed-day" className="text-xs font-semibold text-foreground/85">결제일</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="fixed-day"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={31}
+                  value={fixedDay}
+                  onChange={(e) => setFixedDay(e.target.value)}
+                  className={`${FORM_INPUT_COMPACT} w-20 text-center shrink-0`}
+                />
+                <span className="text-xs text-muted-foreground">일</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold text-foreground/85">반복 기간</span>
+              <div className="flex items-center gap-2">
+                <NumberWheel
+                  value={fixedRepeat}
+                  onChange={setFixedRepeat}
+                  min={1}
+                  max={120}
+                  allowInfinity
+                />
+                <span className="text-xs text-muted-foreground">개월</span>
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 border-t divide-x">
@@ -808,7 +833,7 @@ function ProductsPageInner() {
                 setFixedSaving(false);
                 setFixedProduct(null);
               }}
-              disabled={fixedSaving}
+              disabled={fixedSaving || !fixedProduct?.monthly_cost || fixedProduct.monthly_cost <= 0}
               className="h-11 rounded-none font-semibold text-primary"
             >
               {fixedSaving ? "추가 중..." : "추가"}
