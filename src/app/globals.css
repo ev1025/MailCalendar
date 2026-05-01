@@ -144,15 +144,26 @@
     letter-spacing: -0.025em;
   }
 
+  /* 부드러운 스크롤 — 앵커 이동·programmatic 스크롤 시 자연스럽게.
+     prefers-reduced-motion 에선 자동으로 instant 처리되어 접근성 OK. */
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* IE 10+ */
+  }
+
+  /* 키보드 포커스 링 — 마우스 hover 와 분리. 키보드 사용자만 명확한 포커스 표시. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: calc(var(--radius) * 0.5);
+    transition: outline-offset 120ms ease;
+  }
 
   /* 스크롤바 전역 숨김 — 스크롤 동작은 유지. macOS 의 기본 동작과 동일.
      Webkit(Chrome/Safari/Edge), Firefox, IE/Edge legacy 모두 커버. */
   ::-webkit-scrollbar {
     display: none;
-  }
-  html {
-    scrollbar-width: none;       /* Firefox */
-    -ms-overflow-style: none;    /* IE 10+ */
   }
 
   /* 휠 피커 스크롤바 숨김 */
@@ -189,6 +200,87 @@
     * {
       -webkit-tap-highlight-color: transparent;
     }
+  }
+
+  /* 접근성: 시스템에서 모션 줄임 설정 시 모든 transition/animation 제거.
+     사용자 의지보다 시스템 설정 우선. Tailwind 의 motion-safe/reduce 와 호환. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* === 전역 애니메이션 키프레임 === */
+
+/* 페이지 진입 — 살짝 위로 밀려 올라오며 fade-in. 6px → 8px 사이의 미세 이동.
+   route 전환 / 탭 전환 / 데이터 로딩 직후 같은 곳에 .animate-page-in 으로 적용. */
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-page-in {
+  animation: pageIn 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 카드 진입 — 페이지 전환보다 약하게. 리스트 아이템 새로 추가될 때. */
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-card-in {
+  animation: cardIn 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 아코디언 펼침 — height auto 는 transition 안 되니 grid template rows 트릭. */
+@keyframes accordionDown {
+  from {
+    grid-template-rows: 0fr;
+  }
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+@keyframes accordionUp {
+  from {
+    grid-template-rows: 1fr;
+  }
+  to {
+    grid-template-rows: 0fr;
+  }
+}
+
+/* 버튼 누름 피드백 — 활성화 시 0.97 로 살짝 줄어듦. 모바일 터치에서 즉각 반응. */
+.tap-feedback {
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+.tap-feedback:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* 카드 hover lift — 데스크탑에서 카드 위에 마우스 올리면 살짝 떠오름. */
+@media (hover: hover) {
+  .card-hover-lift {
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .card-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px -4px oklch(0 0 0 / 0.08);
   }
 }
 
