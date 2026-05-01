@@ -23,6 +23,7 @@ import DayDetail from "@/components/calendar/day-detail";
 import RepeatScopeDialog, { type RepeatScope } from "@/components/calendar/repeat-scope-dialog";
 import { useAppUsers } from "@/lib/current-user";
 import { getHolidayMap } from "@/lib/holidays";
+import { buildRepeatEvents } from "@/lib/calendar/build-repeat-events";
 import type { CalendarEvent } from "@/types";
 
 export default function CalendarPage() {
@@ -119,50 +120,13 @@ function CalendarPageInner() {
       return await updateEvent(editing.id, data);
     }
 
-    // 반복 일정: 원본 + 추가분을 한 번에 bulk insert (series_id로 묶음)
+    // 반복 일정 — 원본 + 추가분을 series_id 로 묶어 일괄 insert.
     if (repeatCount && (repeatCount > 1 || repeatCount === -1) && data.repeat) {
-      const start = new Date(data.start_date + "T00:00:00");
-      const end = data.end_date ? new Date(data.end_date + "T00:00:00") : null;
-      const duration = end ? (end.getTime() - start.getTime()) : 0;
-
-      // 무한(-1): weekly 260회(5년), monthly 120회(10년), yearly 30회(30년)
-      let count = repeatCount;
-      if (count === -1) {
-        count = data.repeat === "weekly" ? 260 : data.repeat === "monthly" ? 120 : 30;
-      }
-
-      const fmt = (d: Date) =>
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-      // 시리즈 ID 생성 — 모든 반복 일정을 묶어 수정/삭제할 때 사용
-      const seriesId =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `series_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-      const batch: (typeof data & { series_id?: string | null })[] = [
-        { ...data, series_id: seriesId },
-      ];
-      for (let i = 1; i < count; i++) {
-        const next = new Date(start);
-        if (data.repeat === "weekly") next.setDate(start.getDate() + 7 * i);
-        else if (data.repeat === "monthly") next.setMonth(start.getMonth() + i);
-        else next.setFullYear(start.getFullYear() + i);
-
-        const nextEnd = duration > 0 ? new Date(next.getTime() + duration) : null;
-        batch.push({
-          ...data,
-          start_date: fmt(next),
-          end_date: nextEnd ? fmt(nextEnd) : null,
-          repeat: null,
-          series_id: seriesId,
-        });
-      }
-
+      const batch = buildRepeatEvents(data, repeatCount);
       return await addEventsBulk(batch);
     }
 
-    // 단일 저장
+    // 단일 저장.
     return await addEvent(data);
   };
 
