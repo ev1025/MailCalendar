@@ -205,11 +205,20 @@ export default function TagInput({
   // listener 라 preventDefault 가 안 먹혀 같은 핸들러가 2번 호출됨. lastTap 기록
   // 후 350ms 이내 호출은 무시해 단일 발화 보장.
   const lastTapRef = useRef(0);
+  // 시트 내부 탭 직후 viewport resize 로 인한 false outside-click detect 차단용.
+  // 내부 액션 발화 후 500ms 내 onOpenChange(false) 가 들어오면 무시 → 시트 유지.
+  const justTappedInsideRef = useRef(0);
   const tap = (fn: () => void) => {
     const now = performance.now();
     if (now - lastTapRef.current < 350) return;
     lastTapRef.current = now;
+    justTappedInsideRef.current = now;
     fn();
+    // 액션 후 input 포커스 유지 — 키보드가 잠시 내려갔다 올라오는 깜빡임 회피.
+    if (inputRef.current && document.activeElement !== inputRef.current) {
+      // setTimeout 0 으로 다음 tick 에 포커스 (현재 tick 의 blur 처리 후).
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
   };
   // 데스크탑(md 이상)에서는 바텀시트 대신 트리거 아래 Popover 로 렌더
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -564,7 +573,19 @@ export default function TagInput({
           {/* modal=false + hideOverlay → 외부 input/textarea 터치 시 시트 자동 닫힘 +
               터치한 요소 즉시 포커스. overlay 가 있으면 첫 터치는 overlay 가 먹어
               두 번 탭해야 하던 문제 해결. */}
-          <Sheet open={open} onOpenChange={setOpen} modal={false}>
+          <Sheet
+            open={open}
+            onOpenChange={(o) => {
+              // 내부 X / 검색결과 탭 직후 500ms 안에 들어오는 close 요청은 무시 —
+              // 키보드 dismiss 로 인한 viewport resize 가 outside-click 으로
+              // 잘못 detect 되어 시트가 닫히는 false-positive 차단.
+              if (!o && performance.now() - justTappedInsideRef.current < 500) {
+                return;
+              }
+              setOpen(o);
+            }}
+            modal={false}
+          >
             <SheetContent
               side="bottom"
               hideOverlay

@@ -151,8 +151,13 @@ function RepeatCountField({
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
+  // 항목 탭 vs 스크롤 구분 — touchstart 에서 y 기록, touchmove 시 8px 초과면
+  // cancel. touchend 에서 cancel 안 됐으면 액션 발화.
+  const tapStartRef = useRef<{ y: number; cancelled: boolean } | null>(null);
+  // touchend → 합성 mousedown 이중 발화 방지.
+  const lastTapRef = useRef(0);
 
-  // input 표시값 — repeatCount 가 양수면 그 날짜를, 그 외엔 customDigits 의 포맷.
+  // input 표시값.
   const displayValue = (() => {
     if (customDigits.length > 0) return formatDigitsAsDate(customDigits);
     if (repeatCount > 0 && startDate) {
@@ -172,17 +177,39 @@ function RepeatCountField({
   }, [open, repeatCount]);
 
   const handleSelectCount = (n: number) => {
+    const now = performance.now();
+    if (now - lastTapRef.current < 350) return; // 이중 발화 방지
+    lastTapRef.current = now;
     setRepeatCount(n);
     if (n > 0 && startDate) {
-      // 선택한 회차의 종료일을 customDigits 에 prefill — input 에 보임.
       const end = formatRepeatEnd(startDate, repeat, n);
       setCustomDigits(end.replace(/\D/g, "").slice(0, 8));
     } else {
-      // "계속" 선택 시 input 비움.
       setCustomDigits("");
     }
     setOpen(false);
   };
+
+  // 항목 버튼용 핸들러 묶음 — 스크롤 시 선택되지 않게.
+  const itemHandlers = (n: number) => ({
+    onTouchStart: (e: React.TouchEvent) => {
+      tapStartRef.current = { y: e.touches[0].clientY, cancelled: false };
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      if (tapStartRef.current && Math.abs(e.touches[0].clientY - tapStartRef.current.y) > 8) {
+        tapStartRef.current.cancelled = true;
+      }
+    },
+    onTouchEnd: () => {
+      const valid = tapStartRef.current && !tapStartRef.current.cancelled;
+      tapStartRef.current = null;
+      if (valid) handleSelectCount(n);
+    },
+    onMouseDown: (e: React.MouseEvent) => {
+      e.preventDefault(); // input blur 차단 (desktop)
+      handleSelectCount(n);
+    },
+  });
 
   return (
     <div className="relative w-fit">
@@ -201,41 +228,42 @@ function RepeatCountField({
               setRepeatCount(count);
               setOpen(false);
             }
-          } else if (digits.length === 0) {
-            // 비우면 직전 선택 해제 (계속 모드 디폴트로).
-            // repeatCount 는 유지 — 사용자가 placeholder 보고 다시 선택 가능.
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setOpen(false);
+          // Backspace 를 명시 처리 — 포맷팅된 dash 때문에 onChange 만으로는
+          // 1 keystroke 에 2 char 가 사라지는 것처럼 보이는 문제 회피.
+          // 커서가 끝에 있고 selection 없으면 raw digit 1개만 제거.
+          if (e.key === "Backspace") {
+            const el = e.currentTarget;
+            if (
+              el.selectionStart === el.value.length &&
+              el.selectionEnd === el.value.length &&
+              customDigits.length > 0
+            ) {
+              e.preventDefault();
+              setCustomDigits(customDigits.slice(0, -1));
+            }
           }
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => {
-          // 드롭다운 항목 클릭이 먼저 처리되도록 지연 후 닫기.
-          setTimeout(() => setOpen(false), 150);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
+          // 드롭다운 항목 mousedown/touchend 가 먼저 처리되도록 지연.
+          setTimeout(() => setOpen(false), 200);
         }}
         placeholder="직접 입력"
-        // 입력 텍스트 길이에 맞춰 너비 — placeholder 도 표시되게 min 보장.
-        style={{ width: `${Math.max(displayValue.length, 9) + 1.5}ch` }}
-        className={`${FORM_INPUT_COMPACT} tabular-nums px-2`}
+        className={`${FORM_INPUT_COMPACT} h-9 w-44 rounded-lg border border-input bg-transparent px-2.5 tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
       />
       {open && (
         <div
           ref={listRef}
-          className="absolute left-0 top-full mt-1 z-30 max-h-[7.5rem] overflow-y-auto rounded-md border bg-popover shadow-lg w-fit min-w-full"
+          className="absolute left-0 top-full mt-1 z-30 w-44 max-h-[7.5rem] overflow-y-auto rounded-lg border bg-popover shadow-lg overscroll-contain"
         >
           <button
             type="button"
             data-count="-1"
-            // mousedown 에서 처리 — input blur 보다 먼저 (모바일 클릭 누락 방지).
-            onMouseDown={(e) => {
-              e.preventDefault();
-              handleSelectCount(-1);
-            }}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              handleSelectCount(-1);
-            }}
+            {...itemHandlers(-1)}
             className={`w-full text-left px-3 py-1.5 text-xs whitespace-nowrap hover:bg-accent transition-colors ${
               repeatCount === -1 ? "bg-accent font-medium" : ""
             }`}
@@ -247,14 +275,7 @@ function RepeatCountField({
               key={i}
               type="button"
               data-count={i}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSelectCount(i);
-              }}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                handleSelectCount(i);
-              }}
+              {...itemHandlers(i)}
               className={`w-full text-left px-3 py-1.5 text-xs whitespace-nowrap hover:bg-accent transition-colors tabular-nums ${
                 repeatCount === i ? "bg-accent font-medium" : ""
               }`}
