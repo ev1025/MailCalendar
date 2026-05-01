@@ -577,7 +577,8 @@ function ProductsPageInner() {
                             onDragEnd={(e) => handleDragEnd(e, groupKey)}
                           >
                             <table className="w-full text-xs" style={{ tableLayout: "auto" }}>
-                              {/* thead 제거 — 4컬럼: [드래그바] [순위] [제품·브랜드] [최저가].
+                              {/* 4컬럼: [드래그바] [순위] [제품·브랜드] [최저가].
+                                  시각적 thead 는 디자인상 표시 안 함 — 스크린리더용으로만 sr-only.
                                   드래그바는 탭=메뉴(고정비 추가/삭제), 드래그=정렬. */}
                               <colgroup>
                                 <col style={{ width: "1.75rem" }} />
@@ -585,6 +586,14 @@ function ProductsPageInner() {
                                 <col />
                                 <col style={{ width: "1%" }} />
                               </colgroup>
+                              <thead className="sr-only">
+                                <tr>
+                                  <th scope="col">메뉴</th>
+                                  <th scope="col">순위</th>
+                                  <th scope="col">제품 정보</th>
+                                  <th scope="col">최저가</th>
+                                </tr>
+                              </thead>
                               <SortableContext
                                 items={list.map((p) => p.id)}
                                 strategy={verticalListSortingStrategy}

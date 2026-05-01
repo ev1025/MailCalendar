@@ -156,7 +156,7 @@ export default function SettingsPage() {
 function SettingsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState<"general" | "api">("general");
+  const [tab, setTab] = useState<"general" | "account" | "api">("general");
   const [theme, setTheme] = useState<Theme>("system");
   const currentLocation = useWeatherLocation();
   const [locQuery, setLocQuery] = useState("");
@@ -284,6 +284,14 @@ function SettingsPageInner() {
           onClick={() => setTab("general")}
         >
           일반
+        </button>
+        <button
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 tap-feedback ${
+            tab === "account" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => setTab("account")}
+        >
+          계정
         </button>
         <button
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 tap-feedback ${
@@ -477,7 +485,10 @@ function SettingsPageInner() {
             )}
           </Card>
 
-          {/* 계정 — 비밀번호 변경 + 프로필 삭제 (이전엔 /profile 에 있던 액션) */}
+        </div>
+      ) : tab === "account" ? (
+        <div key="account" className="flex flex-col gap-4 stagger-list">
+          {/* 계정 — 비밀번호 변경 + 로그아웃 + 프로필 삭제 */}
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">

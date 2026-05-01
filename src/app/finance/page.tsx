@@ -14,6 +14,7 @@ import TransactionList from "@/components/finance/transaction-list";
 import TransactionForm from "@/components/finance/transaction-form";
 import CategoryChart from "@/components/finance/category-chart";
 import FixedExpenseManager from "@/components/finance/fixed-expense-manager";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -297,15 +298,41 @@ function FinancePageInner() {
           </div>
 
           {txLoading ? (
-            <div className="py-12" aria-hidden />
+            // 빈 div 대신 거래 행 모양 skeleton 3개 — 콘텐츠 형태가 미리 보여 jank 줄임.
+            <div className="flex flex-col gap-2 py-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <Skeleton className="h-3.5 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              ))}
+            </div>
           ) : filteredTransactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
               <p className="text-sm text-muted-foreground">
                 {categoryFilter || !includeFixed
                   ? "조건에 맞는 내역이 없습니다"
                   : "이 달의 내역이 없습니다"}
               </p>
-              {!categoryFilter && includeFixed && (
+              {/* 다음 행동 유도 — 필터 활성 시 해제 버튼, 비활성 시 입력 안내. */}
+              {(categoryFilter || !includeFixed) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (categoryFilter) setCategoryFilter(null);
+                    if (!includeFixed) setIncludeFixed(true);
+                  }}
+                  className="text-xs text-info hover:underline"
+                >
+                  필터 해제하기
+                </button>
+              ) : (
                 <p className="text-xs text-muted-foreground/70 break-keep">
                   위 카드의 + 아이콘으로 수입·지출을 기록해보세요
                 </p>
