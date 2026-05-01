@@ -16,9 +16,9 @@ import { KO_WEEKDAYS } from "@/lib/calendar/repeat-helpers";
  *  X 로 매주(interval=1) 로 복귀.
  *
  *  편집 UX:
- *   - 포커스 시 기존 값 자동 select → 바로 새 숫자 타이핑하면 교체.
- *   - 빈 칸 허용 (편집 중에 잠시 비울 수 있음). 블러 시 비어있거나 1 이하면
- *     자동으로 "2" (격주) 로 보정. */
+ *   - 포커스 시 input 을 비움 → 기존 값 select() 호출 없이 자연스럽게 교체 가능
+ *     (Android 의 텍스트 선택 툴바 회피).
+ *   - 블러 시 비어있거나 1 이하면 직전 interval (또는 2) 로 복원. */
 export function WeeklyIntervalButton({
   interval,
   onChange,
@@ -50,7 +50,7 @@ export function WeeklyIntervalButton({
         type="text"
         inputMode="numeric"
         value={draft}
-        onFocus={(e) => e.currentTarget.select()}
+        onFocus={() => setDraft("")}
         onChange={(e) => {
           const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
           setDraft(digits);
@@ -61,8 +61,10 @@ export function WeeklyIntervalButton({
         onBlur={() => {
           const n = parseInt(draft, 10);
           if (Number.isNaN(n) || n < 2) {
-            setDraft("2");
-            onChange(2);
+            // 빈 칸 / 1 이하 → 직전 interval 로 복원 (없으면 2 = 격주).
+            const fallback = interval >= 2 ? interval : 2;
+            setDraft(String(fallback));
+            if (interval < 2) onChange(fallback);
           }
         }}
         className={`${FORM_INPUT_COMPACT} w-12 rounded-lg border border-input bg-transparent px-2 text-center tabular-nums outline-none focus:border-ring transition-colors dark:bg-input/30`}
