@@ -6,6 +6,16 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* 시멘틱 색상 토큰 — 의미별로 분리해서 raw text-blue-500 같은 직접 색 대체.
+     hint: 도움말/설명 (가장 옅음), secondary: 부수 라벨 (중간), warning/info/success: 상태. */
+  --color-hint: var(--hint);
+  --color-secondary-text: var(--secondary-text);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
@@ -87,6 +97,15 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* 시멘틱 — 라이트 모드. */
+  --hint: oklch(0.65 0 0);                    /* foreground 와 muted 사이 톤 */
+  --secondary-text: oklch(0.45 0 0);
+  --warning: oklch(0.65 0.16 60);             /* amber-600 근사 */
+  --warning-bg: oklch(0.97 0.04 80);          /* amber-50 근사 */
+  --info: oklch(0.55 0.18 248);               /* blue-600 근사 */
+  --info-bg: oklch(0.97 0.02 240);
+  --success: oklch(0.55 0.16 155);            /* emerald-600 근사 */
+  --success-bg: oklch(0.96 0.04 155);
 }
 
 .dark {
@@ -124,6 +143,15 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  /* 시멘틱 — 다크 모드. 라이트보다 한 단계 밝게. */
+  --hint: oklch(0.6 0 0);
+  --secondary-text: oklch(0.78 0 0);
+  --warning: oklch(0.78 0.18 70);
+  --warning-bg: oklch(0.32 0.06 70);
+  --info: oklch(0.7 0.18 248);
+  --info-bg: oklch(0.3 0.04 240);
+  --success: oklch(0.72 0.16 162);
+  --success-bg: oklch(0.3 0.05 160);
 }
 
 @layer base {
@@ -153,6 +181,18 @@
 
   h1, h2, h3 {
     letter-spacing: -0.025em;
+  }
+
+  /* 한글 받침 단어 중간 줄바꿈 방지 — "프로필" 이 "프로|필" 같이 안 끊김.
+     영문/공백 기준 줄바꿈은 유지. button/label 같은 짧은 텍스트에 특히 효과. */
+  body {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  /* 코드/이메일/긴 영문 키 등은 keep-all 이 오히려 어색 — 명시적 break-all 적용 가능. */
+  code, .break-anywhere {
+    word-break: normal;
+    overflow-wrap: anywhere;
   }
 
   /* 부드러운 스크롤 — 앵커 이동·programmatic 스크롤 시 자연스럽게.

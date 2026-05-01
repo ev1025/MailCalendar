@@ -86,11 +86,11 @@ function Subsection({ title, hint, children }: { title: string; hint?: string; c
   );
 }
 
-/** 정보/경고 박스. */
+/** 정보/경고 박스 — 시멘틱 토큰 사용 (라이트/다크 자동 분기). */
 function Note({ tone = "info", children }: { tone?: "info" | "warning"; children: React.ReactNode }) {
   const cls =
     tone === "warning"
-      ? "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-900"
+      ? "bg-warning-bg text-warning border-warning/30"
       : "bg-background text-muted-foreground border-border";
   return (
     <div className={`flex items-start gap-1.5 text-[11px] rounded-md border px-2.5 py-2 leading-relaxed ${cls}`}>
@@ -109,7 +109,7 @@ function LinkFooter({ href, label }: { href: string; label: string }) {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 text-blue-600 hover:underline"
+        className="flex items-center gap-1 text-info hover:underline"
       >
         {label} <ExternalLink className="h-3 w-3" />
       </a>
@@ -595,11 +595,11 @@ function SettingsPageInner() {
               <button
                 onClick={refetchUsage}
                 disabled={usageLoading}
-                className="text-blue-600 hover:underline disabled:opacity-50"
+                className="text-info hover:underline disabled:opacity-50"
               >
                 새로고침
               </button>
-              <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline">
+              <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-info hover:underline">
                 대시보드 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
