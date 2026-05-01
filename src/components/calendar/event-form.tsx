@@ -644,8 +644,8 @@ export default function EventForm({
           </div>
 
 
-          {/* 반복 / 반복 횟수 — 두 컬럼 라벨. 반복 None 일 땐 횟수 컬럼 숨김. */}
-          <div className={`grid gap-2 ${repeat !== "none" ? "grid-cols-[auto_1fr]" : "grid-cols-1"}`}>
+          {/* 반복 / 반복 횟수 — 두 컬럼 모두 컨텐츠 크기에 맞춤 (잉여 공간 없음). */}
+          <div className="flex items-start gap-3 flex-wrap">
             <div className="flex flex-col gap-1.5">
               <Label className={FORM_LABEL}>반복</Label>
               <Select value={repeat} onValueChange={(v) => {
