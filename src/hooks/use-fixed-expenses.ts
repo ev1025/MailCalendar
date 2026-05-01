@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { ExpenseCategory } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
+import { generateRepeatDates } from "@/lib/calendar/repeat-helpers";
 
 export interface FixedExpense {
   id: string;
@@ -20,6 +21,13 @@ export interface FixedExpense {
   product_id?: string | null;
   /** 반복 등록 개월 수. 1=이번달만, -1=계속(120), N=N개월. 폼에서 그대로 표시. */
   repeat_months?: number | null;
+  /** 반복 종류. NULL=monthly(default day_of_month) 호환. */
+  repeat_kind?: "weekly" | "monthly" | "yearly" | null;
+  weekly_interval?: number | null;
+  monthly_nth_week?: number | null;
+  monthly_nth_weekday?: number | null;
+  /** 첫 발화일 (YYYY-MM-DD). weekly/yearly/monthly-nth 에서 필수. */
+  anchor_date?: string | null;
   created_at: string;
   category?: ExpenseCategory;
 }
@@ -82,10 +90,32 @@ export function useFixedExpenses() {
       .select("*, category:expense_categories(*)")
       .single();
     if (r1.error) {
-      // repeat_months 컬럼 없는 구 DB 폴백.
-      const { title, repeat_months, ...rest } = insertPayload as typeof insertPayload & { repeat_months?: number };
+      // 신규 컬럼(repeat_kind/weekly_interval/monthly_nth_*/anchor_date) 미지원 구 DB 폴백 —
+      // 모두 제거 후 재시도. 이렇게 하면 SQL 미실행 환경에서도 매월 default 모드는 동작.
+      const {
+        title,
+        repeat_months,
+        repeat_kind,
+        weekly_interval,
+        monthly_nth_week,
+        monthly_nth_weekday,
+        anchor_date,
+        ...rest
+      } = insertPayload as typeof insertPayload & {
+        repeat_months?: number;
+        repeat_kind?: unknown;
+        weekly_interval?: unknown;
+        monthly_nth_week?: unknown;
+        monthly_nth_weekday?: unknown;
+        anchor_date?: unknown;
+      };
       void title;
       void repeat_months;
+      void repeat_kind;
+      void weekly_interval;
+      void monthly_nth_week;
+      void monthly_nth_weekday;
+      void anchor_date;
       const retry = await supabase
         .from("fixed_expenses")
         .insert(rest)
@@ -105,36 +135,52 @@ export function useFixedExpenses() {
     }
 
     // ── ② expense bulk INSERT — fire-and-forget. caller 가 await 하지 않으면 폼이 즉시 닫힘 ──
-    const fixedExpenseId = inserted?.id; // 출처 추적용 FK
+    const fixedExpenseId = inserted?.id;
     const bulkDone = (async () => {
-      const months = repeatMonths === -1 ? 120 : Math.max(1, repeatMonths);
-      const today = new Date();
-      const baseYear = today.getFullYear();
-      const baseMonth = today.getMonth() + 1; // 1-indexed
-      const txs: Record<string, unknown>[] = [];
-      for (let i = 0; i < months; i++) {
-        const t = new Date(baseYear, baseMonth - 1 + i, 1);
-        const yi = t.getFullYear();
-        const mi = t.getMonth() + 1;
-        const lastDay = new Date(yi, mi, 0).getDate();
-        const day = Math.min(item.day_of_month, lastDay);
-        const date = `${yi}-${String(mi).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        txs.push({
-          title: item.title,
-          amount: item.amount,
-          category_id: item.category_id,
-          description: item.description,
-          date,
-          type: item.type,
-          payment_method: item.payment_method,
-          user_id: userId,
-          fixed_expense_id: fixedExpenseId,
-        });
+      // 총 발화 횟수 — repeatMonths 의 기존 의미(=총 개월수)를 일반화: weekly/yearly 도
+      // "총 발화 N회" 로 해석. repeatMonths=12 + weekly = 12회 발화(약 3개월).
+      const count = repeatMonths === -1 ? 120 : Math.max(1, repeatMonths);
+
+      // 발화일 생성 — repeat_kind 분기. anchor_date 없으면 today + day_of_month(매월 default).
+      const kind = item.repeat_kind ?? "monthly";
+      let anchor = item.anchor_date;
+      if (!anchor) {
+        const today = new Date();
+        if (kind === "monthly" && !item.monthly_nth_week) {
+          // day_of_month 모드 — 이번 달의 day_of_month 가 anchor.
+          const y = today.getFullYear();
+          const m = today.getMonth();
+          const lastDay = new Date(y, m + 1, 0).getDate();
+          const day = Math.min(item.day_of_month, lastDay);
+          anchor = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        } else {
+          // weekly/yearly/monthly-nth — anchor 없으면 today.
+          anchor = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        }
       }
+      const dates = generateRepeatDates(anchor, count, {
+        kind,
+        weeklyInterval: item.weekly_interval ?? 1,
+        monthlyNth:
+          item.monthly_nth_week && item.monthly_nth_weekday !== null && item.monthly_nth_weekday !== undefined
+            ? { week: item.monthly_nth_week, weekday: item.monthly_nth_weekday }
+            : null,
+      });
+
+      const txs: Record<string, unknown>[] = dates.map((date) => ({
+        title: item.title,
+        amount: item.amount,
+        category_id: item.category_id,
+        description: item.description,
+        date,
+        type: item.type,
+        payment_method: item.payment_method,
+        user_id: userId,
+        fixed_expense_id: fixedExpenseId,
+      }));
       if (txs.length === 0) return;
       const ins = await supabase.from("expenses").insert(txs);
       if (ins.error) {
-        // user_id/title/fixed_expense_id 미지원 구 DB 폴백 — 모두 제거 후 재시도.
         const fallback = txs.map((t) => {
           const { title, user_id, fixed_expense_id, ...rest } = t as {
             title?: unknown;
@@ -160,10 +206,31 @@ export function useFixedExpenses() {
       .update(updates)
       .eq("id", id);
     if (error) {
-      // title / repeat_months 미지원 구 DB 폴백
-      const { title, repeat_months, ...rest } = updates as typeof updates & { repeat_months?: number };
+      // 신규 컬럼 미지원 구 DB 폴백 — 모두 제거 후 재시도.
+      const {
+        title,
+        repeat_months,
+        repeat_kind,
+        weekly_interval,
+        monthly_nth_week,
+        monthly_nth_weekday,
+        anchor_date,
+        ...rest
+      } = updates as typeof updates & {
+        repeat_months?: number;
+        repeat_kind?: unknown;
+        weekly_interval?: unknown;
+        monthly_nth_week?: unknown;
+        monthly_nth_weekday?: unknown;
+        anchor_date?: unknown;
+      };
       void title;
       void repeat_months;
+      void repeat_kind;
+      void weekly_interval;
+      void monthly_nth_week;
+      void monthly_nth_weekday;
+      void anchor_date;
       const retry = await supabase
         .from("fixed_expenses")
         .update(rest)

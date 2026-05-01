@@ -147,6 +147,56 @@ export function correctRepeatEnd(
   return reason ? { corrected, reason } : { corrected, reason: "" };
 }
 
+/** anchor_date 기준 N개의 발화일 반환 — 가계부 고정비 bulk insert 에서 사용.
+ *  buildRepeatEvents 와 동일한 룰을 따르되 날짜만 반환. */
+export function generateRepeatDates(
+  anchorDate: string,
+  count: number,
+  opts: {
+    kind: "weekly" | "monthly" | "yearly";
+    weeklyInterval?: number;
+    monthlyNth?: { week: number; weekday: number } | null;
+  },
+): string[] {
+  const start = new Date(anchorDate + "T00:00:00");
+  if (Number.isNaN(start.getTime()) || count <= 0) return [];
+  const interval = opts.weeklyInterval ?? 1;
+  const nth = opts.monthlyNth ?? null;
+  const dates: string[] = [];
+
+  for (let i = 0; i < count; i++) {
+    let next: Date;
+    if (opts.kind === "weekly") {
+      next = new Date(start);
+      next.setDate(start.getDate() + 7 * interval * i);
+    } else if (opts.kind === "monthly") {
+      if (nth) {
+        const target = new Date(start.getFullYear(), start.getMonth() + i, 1);
+        next = nthWeekdayOfMonth(
+          target.getFullYear(),
+          target.getMonth(),
+          nth.weekday,
+          nth.week,
+        );
+      } else {
+        // day_of_month 모드 — 그 달 말일이 anchor day 보다 작으면 말일로 클램프.
+        const targetDay = start.getDate();
+        const t = new Date(start.getFullYear(), start.getMonth() + i, 1);
+        const lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+        next = new Date(t.getFullYear(), t.getMonth(), Math.min(targetDay, lastDay));
+      }
+    } else {
+      next = new Date(start);
+      next.setFullYear(start.getFullYear() + i);
+    }
+    const y = next.getFullYear();
+    const m = String(next.getMonth() + 1).padStart(2, "0");
+    const day = String(next.getDate()).padStart(2, "0");
+    dates.push(`${y}-${m}-${day}`);
+  }
+  return dates;
+}
+
 /** 시작일·반복 타입·종료일 → 반복 횟수. weeklyInterval 적용. */
 export function computeCountFromEnd(
   startDate: string,

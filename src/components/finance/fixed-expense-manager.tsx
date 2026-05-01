@@ -158,15 +158,7 @@ export default function FixedExpenseManager({
   };
 
   const handleSave = async (
-    data: {
-      title: string | null;
-      amount: number;
-      category_id: string;
-      description: string | null;
-      day_of_month: number;
-      type: "income" | "expense";
-      payment_method: string;
-    },
+    data: Omit<FixedExpense, "id" | "created_at" | "category" | "is_active">,
     repeatMonths?: number,
   ) => {
     if (editing && onUpdate) {
