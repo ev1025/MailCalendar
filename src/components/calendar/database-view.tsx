@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { ArrowUp, ArrowDown, Filter, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import FilterPanel from "@/components/ui/filter-panel";
@@ -34,6 +34,13 @@ function parseDay(dateStr: string) {
   };
 }
 
+// 정렬 비교 함수 — 컴포넌트 외부로 끌어올려 useMemo 종속성에서 안정 보장.
+function cmpByField(a: CalendarEvent, b: CalendarEvent, field: SortField): number {
+  if (field === "date") return a.start_date.localeCompare(b.start_date);
+  if (field === "title") return a.title.localeCompare(b.title);
+  return (a.tag || "").localeCompare(b.tag || "");
+}
+
 export default function DatabaseView({
   events,
   weatherMap,
@@ -60,7 +67,18 @@ export default function DatabaseView({
   const resizeStartW = useRef(0);
 
 
-  const allTags = [...new Set(events.map((e) => e.tag).filter(Boolean).flatMap((t) => t!.split(",")))] as string[];
+  // 이벤트 수 200+ 시 매 렌더마다 O(n) 처리 — events 변경 시에만 재계산.
+  const allTags = useMemo<string[]>(
+    () => [
+      ...new Set(
+        events
+          .map((e) => e.tag)
+          .filter(Boolean)
+          .flatMap((t) => t!.split(",")),
+      ),
+    ],
+    [events],
+  );
 
   // 3단계 사이클 + 다중 정렬
   // 미선택 → 오름차순 추가 → 내림차순 → 정렬 해제(리스트에서 제거)
@@ -130,32 +148,34 @@ export default function DatabaseView({
   }, [colWidths]);
 
 
-  const cmpByField = (a: CalendarEvent, b: CalendarEvent, field: SortField): number => {
-    if (field === "date") return a.start_date.localeCompare(b.start_date);
-    if (field === "title") return a.title.localeCompare(b.title);
-    return (a.tag || "").localeCompare(b.tag || "");
-  };
-
-  const filtered = events
-    .filter((ev) => {
-      // 태그 AND: 선택한 태그를 모두 가진 일정만 통과
-      if (filterTags.length > 0) {
-        if (!ev.tag) return false;
-        const evTags = ev.tag.split(",");
-        if (!filterTags.every((ft) => evTags.includes(ft))) return false;
-      }
-      if (!search.trim()) return true;
-      const q = search.trim().toLowerCase();
-      return ev.title.toLowerCase().includes(q) || (ev.description || "").toLowerCase().includes(q) || (ev.tag || "").toLowerCase().includes(q);
-    })
-    .sort((a, b) => {
-      for (const k of sortKeys) {
-        const cmp = cmpByField(a, b, k.field) * (k.dir === "asc" ? 1 : -1);
-        if (cmp !== 0) return cmp;
-      }
-      // 정렬 키 없으면 기본 날짜 오름차순
-      return sortKeys.length === 0 ? a.start_date.localeCompare(b.start_date) : 0;
-    });
+  // events·필터·정렬 입력이 안 바뀌면 결과 재사용 — 컬럼 폭 드래그 등 다른
+  // state 변경 시 불필요한 filter/sort 회피 (200+ 이벤트 시 체감 차이).
+  const filtered = useMemo(
+    () =>
+      events
+        .filter((ev) => {
+          if (filterTags.length > 0) {
+            if (!ev.tag) return false;
+            const evTags = ev.tag.split(",");
+            if (!filterTags.every((ft) => evTags.includes(ft))) return false;
+          }
+          if (!search.trim()) return true;
+          const q = search.trim().toLowerCase();
+          return (
+            ev.title.toLowerCase().includes(q) ||
+            (ev.description || "").toLowerCase().includes(q) ||
+            (ev.tag || "").toLowerCase().includes(q)
+          );
+        })
+        .sort((a, b) => {
+          for (const k of sortKeys) {
+            const cmp = cmpByField(a, b, k.field) * (k.dir === "asc" ? 1 : -1);
+            if (cmp !== 0) return cmp;
+          }
+          return sortKeys.length === 0 ? a.start_date.localeCompare(b.start_date) : 0;
+        }),
+    [events, filterTags, search, sortKeys],
+  );
 
   const columns = [
     { label: "날짜", field: "date" as SortField },
