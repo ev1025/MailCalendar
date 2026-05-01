@@ -319,15 +319,6 @@ export default function CalendarView({
               }`}
             >
               {d}
-              {/* a11y: 색상 외 시각 마커 — 색맹 사용자도 주말 인지 가능. */}
-              {(i === 0 || i === 6) && (
-                <span
-                  className={`ml-0.5 inline-block h-1 w-1 rounded-full align-middle ${
-                    i === 0 ? "bg-red-500" : "bg-blue-500"
-                  }`}
-                  aria-hidden="true"
-                />
-              )}
             </div>
           ))}
         </div>
