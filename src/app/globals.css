@@ -145,20 +145,14 @@
   }
 
 
-  /* 스크롤바 깔끔하게 */
+  /* 스크롤바 전역 숨김 — 스크롤 동작은 유지. macOS 의 기본 동작과 동일.
+     Webkit(Chrome/Safari/Edge), Firefox, IE/Edge legacy 모두 커버. */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    display: none;
   }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: oklch(0.8 0 0);
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.6 0 0);
+  html {
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* IE 10+ */
   }
 
   /* 휠 피커 스크롤바 숨김 */
