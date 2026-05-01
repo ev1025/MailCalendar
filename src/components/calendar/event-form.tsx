@@ -78,11 +78,27 @@ function ColorPickerPopover({ color, onChange, isCustom }: { color: string; onCh
 }
 
 const REPEAT_OPTIONS: { value: RepeatType; label: string }[] = [
-  { value: "none", label: "반복 안 함" },
+  { value: "none", label: "없음" },
   { value: "weekly", label: "매주" },
   { value: "monthly", label: "매월" },
   { value: "yearly", label: "매년" },
 ];
+
+const KO_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+/** 반복 일정 마지막 발화일 — start + (count × 주기). count=1 → 다음 1회가 마지막. */
+function formatRepeatEnd(startDate: string, repeat: RepeatType, count: number): string {
+  if (!startDate || repeat === "none" || count <= 0) return "";
+  const d = new Date(startDate + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return "";
+  if (repeat === "weekly") d.setDate(d.getDate() + 7 * count);
+  else if (repeat === "monthly") d.setMonth(d.getMonth() + count);
+  else if (repeat === "yearly") d.setFullYear(d.getFullYear() + count);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day}(${KO_WEEKDAYS[d.getDay()]})`;
+}
 
 interface EventFormProps {
   open: boolean;
@@ -303,17 +319,17 @@ export default function EventForm({
           </div>
 
 
-          {/* 반복 — Select 는 컨텐츠 크기에 맞게 축소 */}
+          {/* 반복 — Select 는 컨텐츠 크기, NumberWheel 옆에 종료일 자동 계산 표시. */}
           <div className="flex flex-col gap-1.5">
             <Label className={FORM_LABEL}>반복</Label>
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-wrap">
               <Select value={repeat} onValueChange={(v) => {
                 if (v) setRepeat(v as RepeatType);
               }}>
-                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-[7rem]`}>
-                  {REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "반복 안 함"}
+                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
+                  {REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
                 </SelectTrigger>
-                <SelectContent className="min-w-[7rem]">
+                <SelectContent className="min-w-[5rem]">
                   {REPEAT_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
@@ -323,9 +339,14 @@ export default function EventForm({
               </Select>
               {repeat !== "none" && (
                 <>
-                  <span className="text-xs text-muted-foreground">+</span>
                   <NumberWheel value={repeatCount} onChange={setRepeatCount} min={1} max={52} allowInfinity />
-                  <span className="text-xs text-muted-foreground">회 반복</span>
+                  {/* 종료일 — start + (repeatCount × 주기). repeatCount=1 이면 다음 1회 = 마지막.
+                      -1 (무한) 이면 표시 안 함. startDate 비어있으면 표시 안 함. */}
+                  {repeatCount !== -1 && startDate && (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      종료: {formatRepeatEnd(startDate, repeat, repeatCount)}
+                    </span>
+                  )}
                 </>
               )}
             </div>

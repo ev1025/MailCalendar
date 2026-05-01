@@ -480,9 +480,13 @@ export default function TagInput({
                   <span
                     role="button"
                     tabIndex={-1}
-                    // mousedown 에서 액션 실행 + preventDefault → input blur 회피, 즉시 처리.
-                    // click 은 viewport resize 후 발화돼 다른 요소 선택되는 누락 발생 →
-                    // mousedown 으로 옮기면 그 전에 끝남.
+                    // iOS Safari — mousedown 은 touchend 후 합성되어 늦음 → focus 이미 변경됨.
+                    // touchstart preventDefault → 합성 mouse/click 모두 발화 안 함 → blur 회피.
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleTag(name);
+                    }}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -627,7 +631,24 @@ export default function TagInput({
                           <span
                             role="button"
                             tabIndex={-1}
-                            onClick={(e) => { e.stopPropagation(); toggleTag(name); }}
+                            // iOS Safari — mousedown 은 touchend 후 합성되어 늦음 (focus 이미 변경됨).
+                            // touchstart 에서 직접 처리 + preventDefault → 합성 mouse/click 이벤트
+                            // 자체가 발화 안 함 → blur·키보드 dismiss·시트 외부클릭 모두 회피.
+                            // onMouseDown 은 desktop 폴백 (터치 없는 환경).
+                            onTouchStart={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleTag(name);
+                            }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleTag(name);
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
                             className="ml-0.5 opacity-60 hover:opacity-100 cursor-pointer"
                             aria-label={`${name} 제거`}
                           >
@@ -696,9 +717,13 @@ export default function TagInput({
                       <div
                         key={t.id}
                         className="flex items-center justify-between px-2 py-2 hover:bg-accent rounded cursor-pointer"
-                        // mousedown 단계에서 preventDefault → input focus 유지(키보드 닫힘 방지) +
-                        // 액션 즉시 실행. onClick 은 후속 stopPropagation 으로 viewport 변화
-                        // 후 다른 요소가 선택되는 이중 발화 차단.
+                        // iOS Safari — touchstart 에서 처리 + preventDefault 로 합성 mouse/click 차단.
+                        // 그 결과 click 이 viewport resize 후 다른 행에 발화하는 이중 발화 자체가 사라짐.
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          toggleTag(t.name);
+                          setNewTagName("");
+                        }}
                         onMouseDown={(e) => {
                           e.preventDefault();
                           toggleTag(t.name);
