@@ -94,7 +94,6 @@ export default function MonthlySummary({
   const isUp = delta >= 0;
   const deltaColor = isUp ? "text-finance-gain" : "text-finance-loss";
   const deltaSign = isUp ? "+" : "-";
-  const prevSign = prevNet >= 0 ? "+" : "-";
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-3 md:h-full">
@@ -136,11 +135,6 @@ export default function MonthlySummary({
           label="전월 대비"
           color={deltaColor}
           value={`${deltaSign}${formatWon(Math.abs(delta))}`}
-          sub={
-            <span className="text-muted-foreground">
-              전월 {prevSign}{formatWon(Math.abs(prevNet))}
-            </span>
-          }
         />
         <Cell
           label="이번달 지출"
