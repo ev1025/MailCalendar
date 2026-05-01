@@ -693,3 +693,12 @@ CREATE INDEX IF NOT EXISTS idx_calendar_events_plan ON calendar_events(plan_id);
 -- 수정 폼 진입 시 사용자가 등록할 때 골랐던 값을 그대로 보여주기 위해 필요.
 ALTER TABLE fixed_expenses
   ADD COLUMN IF NOT EXISTS repeat_months INTEGER DEFAULT -1;
+
+-- =============================================
+-- D-day (커플 디데이) — 각자 row 에 저장, 공유 상대 fallback 표시
+-- =============================================
+-- 양쪽 다 설정하면 본인 우선. 한쪽만 설정하면 양쪽 모두에게 그 값이 보임.
+ALTER TABLE app_users
+  ADD COLUMN IF NOT EXISTS dday_enabled BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS dday_date DATE,
+  ADD COLUMN IF NOT EXISTS dday_time TIME;
