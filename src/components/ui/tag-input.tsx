@@ -108,12 +108,19 @@ function loadTagOrder(key?: string): string[] {
   try {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+  } catch (e) {
+    console.warn(`[tag-input] parse failed for "${key}":`, e);
+    return [];
+  }
 }
 
 function saveTagOrder(key: string, ids: string[]) {
   if (typeof window === "undefined") return;
-  try { localStorage.setItem(key, JSON.stringify(ids)); } catch {}
+  try {
+    localStorage.setItem(key, JSON.stringify(ids));
+  } catch (e) {
+    console.warn(`[tag-input] write failed for "${key}":`, e);
+  }
 }
 
 const TAG_COLORS = [

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import PromptDialog from "@/components/ui/prompt-dialog";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { useTravelPlans } from "@/hooks/use-travel-plans";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
 import { buildCalendarEvents } from "@/lib/travel/calendar-sync";
@@ -31,23 +32,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 const ORDER_KEY = "travel_plan_custom_order";
-
-function loadCustomOrder(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(ORDER_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCustomOrder(ids: string[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
-  } catch {}
-}
 
 interface Props {
   onSelectPlan: (id: string) => void;
@@ -142,7 +126,8 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
   const [newOpen, setNewOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [customOrder, setCustomOrder] = useState<string[]>([]);
+  // 사용자 드래그 정렬 — localStorage 영속. usePersistentState 가 lazy 초기 + 쓰기 동시 처리.
+  const [customOrder, setCustomOrder] = usePersistentState<string[]>(ORDER_KEY, []);
   // "달력에 추가" 확인 다이얼로그 — 등록될 일정 수를 미리 안내.
   const [addToCalState, setAddToCalState] = useState<
     | { plan: TravelPlan; tasks: { count: number; events: Record<string, unknown>[] } }
@@ -150,9 +135,7 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
   >(null);
   const [addToCalLoading, setAddToCalLoading] = useState(false);
 
-  useEffect(() => {
-    setCustomOrder(loadCustomOrder());
-  }, []);
+  // (useEffect 로 customOrder 초기 로드하던 코드는 usePersistentState 가 lazy 처리해 제거)
 
   // 데스크탑(마우스) 와 모바일(터치) 의 활성화 조건 분리:
   //  - MouseSensor: 5px 움직이면 드래그 (퀵)
@@ -349,7 +332,6 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
     const next = [...reordered, ...preserved];
     for (const id of ids) if (!next.includes(id)) next.push(id);
     setCustomOrder(next);
-    saveCustomOrder(next);
   };
 
   return (

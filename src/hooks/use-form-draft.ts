@@ -39,8 +39,9 @@ export function useFormDraft<T>(
         localStorage.setItem(storageKey, JSON.stringify(v));
         setHasDraft(true);
       }
-    } catch {
-      /* 쿼터 초과 등 무시 */
+    } catch (e) {
+      // 쿼터 초과 / 시리얼라이즈 실패 — 무음 실패는 디버깅 어려움. 콘솔 경고로 흔적 남김.
+      console.warn(`[useFormDraft] write failed for "${storageKey}":`, e);
     }
   };
 
@@ -77,7 +78,8 @@ export function useFormDraft<T>(
     try {
       const raw = localStorage.getItem(storageKey);
       return raw ? (JSON.parse(raw) as T) : null;
-    } catch {
+    } catch (e) {
+      console.warn(`[useFormDraft] parse failed for "${storageKey}":`, e);
       return null;
     }
   };
