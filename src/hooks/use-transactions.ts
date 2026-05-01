@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Expense, ExpenseCategory } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
@@ -221,28 +221,32 @@ export function useTransactions(startDate: string, endDate?: string) {
     return { error: null };
   };
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const balance = totalIncome - totalExpense;
-
-  const expenseByCategory = transactions
-    .filter((t) => t.type === "expense" && t.category)
-    .reduce(
-      (acc, t) => {
-        const catName = t.category!.name;
-        const catColor = t.category!.color;
-        if (!acc[catName]) acc[catName] = { amount: 0, color: catColor };
-        acc[catName].amount += t.amount;
-        return acc;
-      },
-      {} as Record<string, { amount: number; color: string }>
-    );
+  // 집계는 transactions 가 변할 때만 재계산. 매 렌더 O(n) 회피.
+  // 단일 반복으로 income/expense/by-category 한 번에 산출.
+  const stats = useMemo(() => {
+    let totalIncome = 0;
+    let totalExpense = 0;
+    const expenseByCategory: Record<string, { amount: number; color: string }> = {};
+    for (const t of transactions) {
+      if (t.type === "income") {
+        totalIncome += t.amount;
+      } else {
+        totalExpense += t.amount;
+        if (t.category) {
+          const { name, color } = t.category;
+          if (!expenseByCategory[name]) expenseByCategory[name] = { amount: 0, color };
+          expenseByCategory[name].amount += t.amount;
+        }
+      }
+    }
+    return {
+      totalIncome,
+      totalExpense,
+      balance: totalIncome - totalExpense,
+      expenseByCategory,
+    };
+  }, [transactions]);
+  const { totalIncome, totalExpense, balance, expenseByCategory } = stats;
 
   return {
     transactions,
