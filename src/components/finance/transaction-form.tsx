@@ -157,6 +157,7 @@ export default function TransactionForm({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="10000"
+            aria-invalid={amount !== "" && (Number.isNaN(parseInt(amount, 10)) || parseInt(amount, 10) < 0)}
             className={FORM_INPUT_PRIMARY}
           />
         </FormField>

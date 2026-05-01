@@ -78,8 +78,9 @@ function Subsection({ title, hint, children }: { title: string; hint?: string; c
   return (
     <div className="flex flex-col gap-2 pl-3 border-l-2 border-primary/20">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">{title}</p>
-        {hint && <span className="text-[11px] text-muted-foreground/70">{hint}</span>}
+        {/* font-bold + tracking-wider 로 일반 라벨(font-medium)과 위계 차별화. */}
+        <p className="text-[11px] font-bold uppercase tracking-wider text-foreground/80">{title}</p>
+        {hint && <span className="text-[10px] text-muted-foreground/60 font-medium">{hint}</span>}
       </div>
       <div className="flex flex-col gap-1.5">{children}</div>
     </div>

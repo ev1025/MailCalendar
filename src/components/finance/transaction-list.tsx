@@ -56,7 +56,7 @@ export default function TransactionList({
     <div className="flex flex-col gap-6">
       {sortedDates.map((date) => (
         <div key={date}>
-          <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground tabular-nums">
             {format(new Date(date + "T00:00:00"), "M월 d일 (EEEE)", {
               locale: ko,
             })}

@@ -41,7 +41,8 @@ export default function MonthlySummary({
     setDraft(String(monthlyIncome));
   }, [monthlyIncome]);
 
-  // 카드 우상단 액션 버튼 — 컴팩트 사이즈 (h-7).
+  // 카드 우상단 액션 버튼 — 모바일 h-9 (44px 근접 hit area), 데스크탑 h-8.
+  // 색상은 muted-foreground (보임) → foreground (호버) 로 actionable 명시.
   const ActionBtn = ({
     icon,
     onClick,
@@ -56,7 +57,7 @@ export default function MonthlySummary({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="-mr-0.5 -my-1 flex h-7 w-7 items-center justify-center rounded text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors shrink-0"
+      className="-mr-1 -my-1 flex h-9 w-9 md:h-8 md:w-8 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 tap-feedback"
     >
       {icon}
     </button>

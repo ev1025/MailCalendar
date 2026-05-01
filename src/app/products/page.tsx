@@ -130,16 +130,17 @@ const ProductRow = memo(function ProductRow({
           ]}
         />
       </td>
-      {/* 순위 배지 — 1·2·3 위는 메달 색. */}
+      {/* 순위 배지 — 1·2·3 위는 메달 색. h-5 w-5 로 가독성 향상. */}
       <td className="text-center px-1 py-1.5 whitespace-nowrap w-8">
         <span
-          className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
+          aria-label={`${idx + 1}위`}
+          className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
             idx === 0
-              ? "bg-yellow-100 text-yellow-700"
+              ? "bg-yellow-100 text-yellow-700 ring-1 ring-yellow-300"
               : idx === 1
-                ? "bg-gray-100 text-gray-700"
+                ? "bg-gray-100 text-gray-700 ring-1 ring-gray-300"
                 : idx === 2
-                  ? "bg-orange-100 text-orange-700"
+                  ? "bg-orange-100 text-orange-700 ring-1 ring-orange-300"
                   : "text-muted-foreground"
           }`}
         >
