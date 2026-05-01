@@ -69,11 +69,14 @@ export default function MonthlySummary({
     value,
     color,
     action,
+    sub,
   }: {
     label: string;
     value: React.ReactNode;
     color?: string;
     action?: React.ReactNode;
+    /** 메인 value 아래 작은 글씨로 한 줄 부가정보. */
+    sub?: React.ReactNode;
   }) => (
     // 데스크탑: 가로 2컬럼(좌 스코어카드 / 우 차트) 레이아웃에서 차트 높이에 맞추도록
     // h-full + justify-between. 폰트/패딩도 md+ 에서 키워 시각적 무게 확보.
@@ -84,11 +87,24 @@ export default function MonthlySummary({
         </span>
         {action}
       </div>
-      <div className={`text-sm md:text-xl font-semibold truncate tabular-nums ${color || "text-foreground"}`}>
-        {value}
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <div className={`text-sm md:text-xl font-semibold truncate tabular-nums ${color || "text-foreground"}`}>
+          {value}
+        </div>
+        {sub && (
+          <div className="text-[10px] md:text-xs truncate tabular-nums">{sub}</div>
+        )}
       </div>
     </div>
   );
+
+  // 잔액 = 월급 + 이번달 수입 − 이번달 지출.
+  // 양수면 "흑자", 음수면 "적자" 라벨 + 부호 색상.
+  const balance = monthlyIncome + totalIncome - totalExpense;
+  const isSurplus = balance >= 0;
+  const balanceLabel = isSurplus ? "흑자" : "적자";
+  const balanceColor = isSurplus ? "text-finance-gain" : "text-finance-loss";
+  const balanceSign = isSurplus ? "+" : "-";
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-3 md:h-full">
@@ -160,6 +176,11 @@ export default function MonthlySummary({
             ) : undefined
           }
           value={`+${formatWon(totalIncome)}`}
+          sub={
+            <span className={balanceColor}>
+              {balanceLabel} {balanceSign}{formatWon(Math.abs(balance))}
+            </span>
+          }
         />
         <Cell
           label="이번달 지출"
