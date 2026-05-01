@@ -316,10 +316,16 @@ CREATE POLICY "Read cache" ON weather_cache
   FOR SELECT TO anon, authenticated USING (true);
 
 -- ────────────────────────────────
--- 10. supplements — 레거시. 정책만 정리 (테이블 자체는 schema.sql 의 DROP TABLE 로 제거됨)
+-- 10. supplements — 레거시 (이미 DROP TABLE 됨). 테이블이 남아있는 환경 대비.
+--     to_regclass 로 존재 여부 체크 후에만 정책 정리.
 -- ────────────────────────────────
-DROP POLICY IF EXISTS "Allow all" ON supplements;
-DROP POLICY IF EXISTS "Authenticated" ON supplements;
+DO $$
+BEGIN
+  IF to_regclass('public.supplements') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Allow all" ON supplements';
+    EXECUTE 'DROP POLICY IF EXISTS "Authenticated" ON supplements';
+  END IF;
+END $$;
 
 -- ────────────────────────────────
 -- 확인용
