@@ -23,6 +23,12 @@ import {
   searchLocation,
   type GeoResult,
 } from "@/hooks/use-weather-location";
+import {
+  useUsageStats,
+  SUPABASE_FREE_LIMITS,
+  VERCEL_HOBBY_LIMITS,
+  formatBytes,
+} from "@/hooks/use-usage-stats";
 
 type Theme = "system" | "light" | "dark";
 
@@ -38,6 +44,34 @@ function ApiSection({ title, children, defaultOpen = false }: { title: string; c
         {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
       </button>
       {open && <div className="px-4 pb-4 pt-1 border-t">{children}</div>}
+    </div>
+  );
+}
+
+/** API 탭의 카테고리 헤더 — Supabase Auth 사이드바의 "CONFIGURATION" 라벨 스타일. */
+function CategoryHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 px-1 pt-3 pb-1 first:pt-0">
+      {children}
+    </div>
+  );
+}
+
+/** 사용량 진행률 바. 50% 미만 녹색 / 50–80 노랑 / 80+ 빨강. */
+function UsageBar({ label, value, limit, valueText }: { label: string; value: number; limit: number; valueText: string }) {
+  const pct = Math.min(100, Math.round((value / Math.max(limit, 1)) * 1000) / 10);
+  const color = pct >= 80 ? "bg-red-500" : pct >= 50 ? "bg-amber-500" : "bg-emerald-500";
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium tabular-nums">
+          {valueText} <span className="text-muted-foreground">/ {formatBytes(limit)} ({pct}%)</span>
+        </span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
     </div>
   );
 }
@@ -65,6 +99,9 @@ function SettingsPageInner() {
   // 계정 — 비밀번호 변경 / 프로필 삭제 (이전엔 /profile 에 있던 것)
   const { deleteUser } = useAppUsers();
   const currentUser = useCurrentUser();
+
+  // 사용량 통계 (DB / Storage). API 탭 첫 진입 시 fetch.
+  const { stats: usage, loading: usageLoading, error: usageError, refetch: refetchUsage } = useUsageStats();
 
   // D-day — 설정 토글 + 기준 date/time. localStorage 영속.
   // 토글은 즉시 반영, date/time 은 draft → "적용" 버튼 클릭 시 commit.
@@ -430,29 +467,110 @@ function SettingsPageInner() {
             </CardContent>
           </Card>
 
-          {/* 데이터베이스 */}
-          <ApiSection title="데이터베이스 — Supabase">
-            <div className="flex flex-col gap-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">서비스</span>
-                <span>Supabase (PostgreSQL)</span>
-              </div>
+          {/* === 인프라 (호스팅 + DB) === */}
+          <CategoryHeader>인프라</CategoryHeader>
+
+          {/* 데이터베이스 — 사용량 추적 포함 */}
+          <ApiSection title="데이터베이스 — Supabase" defaultOpen>
+            <div className="flex flex-col gap-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">요금제</span>
-                <Badge variant="secondary" className="text-xs">무료 티어</Badge>
+                <Badge variant="secondary" className="text-xs">Free</Badge>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">만료</span>
-                <Badge variant="secondary" className="text-xs">만료 없음</Badge>
+
+              {/* 사용량 진행률 — DB / Storage */}
+              <div className="flex flex-col gap-2.5 pt-1">
+                {usageLoading && !usage ? (
+                  <p className="text-xs text-muted-foreground">사용량 조회 중...</p>
+                ) : usageError ? (
+                  <p className="text-xs text-red-600">
+                    조회 실패: {usageError}
+                    <span className="block text-muted-foreground mt-0.5">
+                      Supabase SQL Editor 에 supabase-usage-stats.sql 실행 필요
+                    </span>
+                  </p>
+                ) : usage ? (
+                  <>
+                    <UsageBar
+                      label="DB 용량"
+                      value={usage.dbSizeBytes}
+                      limit={SUPABASE_FREE_LIMITS.dbBytes}
+                      valueText={formatBytes(usage.dbSizeBytes)}
+                    />
+                    <UsageBar
+                      label={`Storage (파일 ${usage.storageObjectCount}개)`}
+                      value={usage.storageSizeBytes}
+                      limit={SUPABASE_FREE_LIMITS.storageBytes}
+                      valueText={formatBytes(usage.storageSizeBytes)}
+                    />
+                  </>
+                ) : null}
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                <span>관리 사이트</span>
-                <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                  supabase.com <ExternalLink className="h-3 w-3" />
+
+              {/* 직접 추적 불가 — 한도만 표시 */}
+              <div className="flex flex-col gap-1 pt-1 border-t">
+                <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/70 pt-2">
+                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>아래는 앱에서 직접 조회 불가 — Supabase 대시보드에서 확인</span>
+                </p>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Egress (월별 외부 전송)</span>
+                  <span className="text-muted-foreground/70">한도 {formatBytes(SUPABASE_FREE_LIMITS.egressBytesPerMonth)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Edge 함수 호출</span>
+                  <span className="text-muted-foreground/70">한도 {SUPABASE_FREE_LIMITS.edgeFunctionInvocationsPerMonth.toLocaleString()}/월</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  onClick={refetchUsage}
+                  disabled={usageLoading}
+                  className="text-[11px] text-blue-600 hover:underline disabled:opacity-50"
+                >
+                  새로고침
+                </button>
+                <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
+                  대시보드 <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
             </div>
           </ApiSection>
+
+          {/* 호스팅 — Vercel */}
+          <ApiSection title="호스팅 — Vercel">
+            <div className="flex flex-col gap-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">요금제</span>
+                <Badge variant="secondary" className="text-xs">Hobby</Badge>
+              </div>
+
+              <div className="flex flex-col gap-1 pt-1 border-t">
+                <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground/70 pt-2">
+                  <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>앱 내 직접 추적 불가 — Vercel 대시보드 Usage 탭에서 확인</span>
+                </p>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">대역폭</span>
+                  <span className="text-muted-foreground/70">한도 {formatBytes(VERCEL_HOBBY_LIMITS.bandwidthBytesPerMonth)}/월</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">빌드 시간</span>
+                  <span className="text-muted-foreground/70">한도 {VERCEL_HOBBY_LIMITS.buildMinutesPerMonth.toLocaleString()}분/월</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
+                  대시보드 <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            </div>
+          </ApiSection>
+
+          {/* === 정보 (날씨·공휴일) === */}
+          <CategoryHeader>정보</CategoryHeader>
 
           {/* 날씨 API */}
           <ApiSection title="날씨 API">
@@ -549,6 +667,9 @@ function SettingsPageInner() {
               </div>
             </div>
           </ApiSection>
+
+          {/* === 지도·경로 (위치·길찾기) === */}
+          <CategoryHeader>지도·경로</CategoryHeader>
 
           {/* 여행 계획 — 수단별 라우팅 아키텍처 한눈에 */}
           <ApiSection title="여행 계획 경로 — 수단별 API 매핑">
@@ -726,25 +847,6 @@ function SettingsPageInner() {
             </div>
           </ApiSection>
 
-          {/* 호스팅 */}
-          <ApiSection title="호스팅 — Vercel">
-            <div className="flex flex-col gap-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">요금제</span>
-                <Badge variant="secondary" className="text-xs">Hobby (무료)</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">만료</span>
-                <Badge variant="secondary" className="text-xs">만료 없음</Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                <span>관리 사이트</span>
-                <a href="https://vercel.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
-                  vercel.com <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            </div>
-          </ApiSection>
         </div>
       )}
     </div>
