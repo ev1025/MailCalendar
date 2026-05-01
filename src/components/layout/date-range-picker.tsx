@@ -195,8 +195,8 @@ export default function DateRangePicker({ startDate, endDate, onChange }: Props)
   };
 
   return (
-    <div className="flex items-center gap-0.5">
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goPrev}>
+    <div className="flex items-center gap-0.5" role="group" aria-label="기간 선택">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goPrev} aria-label="이전 기간">
         <ChevronLeft className="h-4 w-4" />
       </Button>
 
@@ -210,7 +210,10 @@ export default function DateRangePicker({ startDate, endDate, onChange }: Props)
           }
         }}
       >
-        <PopoverTrigger className="rounded-md px-1.5 py-1 text-lg font-bold hover:bg-accent transition-colors cursor-pointer tabular-nums">
+        <PopoverTrigger
+          aria-label={`기간: ${formatRangeLabel(startDate, endDate)} (눌러서 변경)`}
+          className="rounded-md px-1.5 py-1 text-lg font-bold hover:bg-accent transition-colors cursor-pointer tabular-nums"
+        >
           {formatRangeLabel(startDate, endDate)}
         </PopoverTrigger>
         <PopoverContent className="w-[280px] p-3" align="center" side="bottom">
@@ -376,7 +379,7 @@ export default function DateRangePicker({ startDate, endDate, onChange }: Props)
         </PopoverContent>
       </Popover>
 
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goNext}>
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goNext} aria-label="다음 기간">
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>

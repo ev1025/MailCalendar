@@ -420,16 +420,23 @@ function SettingsPageInner() {
                   type="button"
                   role="switch"
                   aria-checked={dday.enabled}
+                  aria-label="D-day 표시 켜기"
                   onClick={() => updateDday({ enabled: !dday.enabled })}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    dday.enabled ? "bg-primary" : "bg-muted-foreground/30"
-                  }`}
+                  /* 외곽 hit area 11x11 (44px) — WCAG 권장 터치 타깃.
+                     안의 트랙은 작아 보이게 inset 으로 그림 (시각/터치 분리). */
+                  className="relative inline-flex h-11 w-11 items-center justify-center"
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                      dday.enabled ? "translate-x-4" : "translate-x-0.5"
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      dday.enabled ? "bg-primary" : "bg-muted-foreground/30"
                     }`}
-                  />
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        dday.enabled ? "translate-x-4" : "translate-x-0.5"
+                      }`}
+                    />
+                  </span>
                 </button>
               </div>
             </CardHeader>
