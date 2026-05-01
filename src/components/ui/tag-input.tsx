@@ -208,6 +208,15 @@ export default function TagInput({
   // 시트 내부 탭 직후 viewport resize 로 인한 false outside-click detect 차단용.
   // 내부 액션 발화 후 500ms 내 onOpenChange(false) 가 들어오면 무시 → 시트 유지.
   const justTappedInsideRef = useRef(0);
+  // 키보드 가드 — 키보드 올라온 상태에서 비-allow-list 영역을 탭했을 때
+  // 키보드 dismiss 후 합성 click 이 그 자리의 다른 element 를 활성화하던 문제.
+  // 가드 발화 시 Date.now()+500 기록 → document-level click capture 가
+  // 윈도우 내 click 을 cancelable 하면 모두 차단.
+  const blockClickUntilRef = useRef(0);
+  // 시트 본문 wrapper 의 DOM ref — native non-passive touchstart 리스너 부착용.
+  // React 의 onTouchStartCapture 는 passive=true 라 preventDefault 가 no-op.
+  // SheetContent 자체는 ref forward 안 되어 wrapper div 를 둠.
+  const sheetBodyRef = useRef<HTMLDivElement>(null);
   const tap = (fn: () => void) => {
     const now = performance.now();
     if (now - lastTapRef.current < 350) return;
@@ -222,6 +231,47 @@ export default function TagInput({
   };
   // 데스크탑(md 이상)에서는 바텀시트 대신 트리거 아래 Popover 로 렌더
   const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  // ── 키보드 가드 (모바일 바텀시트 한정) ──
+  // 키보드 올라온 상태에서 input/textarea/X 칩/+ 추가 외 영역을 탭하면
+  // 키보드만 내리고 클릭은 차단. native non-passive 리스너 + document click capture
+  // 두 단계로 보강 — preventDefault 가 효과 있는 환경에선 합성 click 이 발생 안 함.
+  useEffect(() => {
+    if (!open || isDesktop) return;
+    const el = sheetBodyRef.current;
+    if (!el) return;
+
+    const isAllowedTarget = (target: HTMLElement | null) =>
+      !!target?.closest(
+        'input, textarea, [data-tag-action="x-chip"], [data-tag-action="add-new"]',
+      );
+
+    // 1) Native non-passive touchstart — preventDefault 로 합성 click 차단 시도.
+    const onTouchStart = (e: TouchEvent) => {
+      if (document.activeElement !== inputRef.current) return;
+      if (isAllowedTarget(e.target as HTMLElement | null)) return;
+      e.preventDefault();
+      inputRef.current?.blur();
+      blockClickUntilRef.current = Date.now() + 500;
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: false, capture: true });
+
+    // 2) Document-level click capture — preventDefault 가 안 먹힌 환경 폴백.
+    //    키보드 dismiss 후 layout shift 로 새 element 가 받게 되는 click 도 잡음.
+    const onClickCapture = (e: MouseEvent) => {
+      if (Date.now() >= blockClickUntilRef.current) return;
+      if (isAllowedTarget(e.target as HTMLElement | null)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    };
+    document.addEventListener("click", onClickCapture, true);
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart, true);
+      document.removeEventListener("click", onClickCapture, true);
+    };
+  }, [open, isDesktop]);
 
   // 모바일 바텀시트 single-instance — 분류/태그 동시에 두 개 열리지 않도록
   // (새로 열리는 시트가 이전 활성 시트를 자동으로 닫음)
@@ -609,27 +659,10 @@ export default function TagInput({
               showCloseButton={false}
               initialFocus={false}
               finalFocus={false}
-              // ── 키보드 가드 ──
-              // 키보드 올라온 상태에서는 (1) 칩 X 제거, (2) "+ N 추가" 버튼,
-              // (3) input/textarea 자체 외에는 어떤 탭도 액션을 발화시키지 않음 —
-              // 키보드만 내려가도록. touchstart 캡처 단계에서 preventDefault 하면
-              // 합성 mousedown/click 이 아예 안 발생해 자식 핸들러가 트리거 안 됨.
-              onTouchStartCapture={(e) => {
-                if (document.activeElement !== inputRef.current) return;
-                const target = e.target as HTMLElement | null;
-                if (!target) return;
-                if (
-                  target.closest(
-                    'input, textarea, [data-tag-action="x-chip"], [data-tag-action="add-new"]',
-                  )
-                ) {
-                  return;
-                }
-                e.preventDefault();
-                inputRef.current?.blur();
-              }}
             >
-              {renderBody()}
+              <div ref={sheetBodyRef} className="flex flex-col h-full min-h-0">
+                {renderBody()}
+              </div>
             </SheetContent>
           </Sheet>
         </>
