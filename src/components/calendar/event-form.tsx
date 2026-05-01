@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -179,10 +179,13 @@ export default function EventForm({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [repeat, setRepeat] = useState<RepeatType>("none");
   const [repeatCount, setRepeatCount] = useState(-1);
-  // 직접 입력 모드 — 사용자가 8자리 숫자로 종료일 직접 입력 시. 계산된 count 가
-  // repeatCount 에 기록되고 모드는 자동 해제. 입력 중에는 customDigits 가 visual.
-  const [customDateMode, setCustomDateMode] = useState(false);
+  // 반복 횟수 커스텀 드롭다운 상태 — 빌트인 Select 대신 Popover 기반.
+  // 직접 입력 input 이 popover 내부에 있어야 + 8자리 즉시 커밋 + 동일값 재클릭
+  // 가능하게 하려면 Select 의 제약을 벗어나야 함.
+  const [repeatCountOpen, setRepeatCountOpen] = useState(false);
   const [customDigits, setCustomDigits] = useState("");
+  // 직접 입력 input ref — popover 열릴 때 자동 포커스용.
+  const customInputRef = useRef<HTMLInputElement>(null);
   const [showEndDate, setShowEndDate] = useState(false);
   const [showEndTime, setShowEndTime] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -370,8 +373,9 @@ export default function EventForm({
               <Select value={repeat} onValueChange={(v) => {
                 if (v) {
                   setRepeat(v as RepeatType);
-                  // 반복 타입 변경 시 직접 입력 모드 해제 (계산된 날짜가 의미 없어짐).
-                  if (customDateMode) setCustomDateMode(false);
+                  // 반복 타입 변경 시 직접 입력 popover 도 닫힘 + customDigits 초기화.
+                  setRepeatCountOpen(false);
+                  setCustomDigits("");
                 }
               }}>
                 <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
@@ -389,78 +393,91 @@ export default function EventForm({
             {repeat !== "none" && (
               <div className="flex flex-col gap-1.5 min-w-0">
                 <Label className={FORM_LABEL}>반복 횟수</Label>
-                <Select
-                  value={customDateMode ? "custom" : String(repeatCount)}
-                  onValueChange={(v) => {
-                    if (v === "custom") {
-                      setCustomDateMode(true);
-                      // 현재 종료일 기준값 prefill — 사용자가 미세 조정 편함.
-                      const endStr = formatRepeatEnd(startDate, repeat, repeatCount > 0 ? repeatCount : 1);
-                      const digits = endStr.replace(/\D/g, "").slice(0, 8);
-                      setCustomDigits(digits);
-                    } else if (v) {
-                      setCustomDateMode(false);
-                      setRepeatCount(parseInt(v, 10));
+                <Popover
+                  open={repeatCountOpen}
+                  onOpenChange={(o) => {
+                    setRepeatCountOpen(o);
+                    // 열릴 때마다 input 초기화 — 이전 값이 prefill 되지 않게.
+                    if (o) {
+                      setCustomDigits("");
+                      // popover 마운트 직후 input 포커스.
+                      setTimeout(() => customInputRef.current?.focus(), 0);
                     }
                   }}
                 >
-                  <SelectTrigger className={`${FORM_INPUT_COMPACT} w-full min-w-0`}>
-                    <span className="truncate">
-                      {customDateMode
-                        ? "직접 입력"
-                        : repeatCount === -1
-                          ? "계속"
-                          : startDate
-                            ? `${repeatCount}회 - ${formatRepeatEnd(startDate, repeat, repeatCount)}`
-                            : `${repeatCount}회`}
+                  <PopoverTrigger
+                    className={`${FORM_INPUT_COMPACT} w-fit min-w-[5rem] inline-flex items-center cursor-pointer`}
+                  >
+                    <span className="truncate text-left">
+                      {repeatCount === -1
+                        ? "계속"
+                        : startDate
+                          ? `${repeatCount}회 - ${formatRepeatEnd(startDate, repeat, repeatCount)}`
+                          : `${repeatCount}회`}
                     </span>
-                  </SelectTrigger>
-                  <SelectContent className="min-w-[14rem]">
-                    <SelectItem value="custom">직접 입력</SelectItem>
-                    <SelectItem value="-1">계속</SelectItem>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
-                      <SelectItem key={i} value={String(i)}>
-                        {i}회{startDate ? ` - ${formatRepeatEnd(startDate, repeat, i)}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {customDateMode && (
-                  /* 8자리 숫자 입력 — TimePicker 처럼 4/6 자리에서 "-" 자동 삽입.
-                     완전 입력 (8자리) 시 onBlur 또는 Enter 로 확정. */
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoFocus
-                    value={formatDigitsAsDate(customDigits)}
-                    onChange={(e) => {
-                      const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
-                      setCustomDigits(digits);
-                    }}
-                    onBlur={() => {
-                      const parsed = parseDigitsToDate(customDigits);
-                      if (parsed && startDate) {
-                        const count = computeCountFromEnd(startDate, repeat, parsed);
-                        setRepeatCount(count);
-                        setCustomDateMode(false);
-                      } else {
-                        // 미완성·잘못된 입력 → 모드 해제 + 직전 값 유지.
-                        setCustomDateMode(false);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        (e.currentTarget as HTMLInputElement).blur();
-                      }
-                      if (e.key === "Escape") {
-                        setCustomDateMode(false);
-                      }
-                    }}
-                    placeholder="YYYY-MM-DD"
-                    className={`${FORM_INPUT_COMPACT} w-full min-w-0 tabular-nums`}
-                  />
-                )}
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="w-fit p-1"
+                  >
+                    {/* 직접 입력 — popover 최상단 input. 8자리 입력 즉시 커밋 + popover 닫힘.
+                        입력값은 popover 열릴 때 매번 초기화 — 이전 값 prefill 안 함. */}
+                    <input
+                      ref={customInputRef}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatDigitsAsDate(customDigits)}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+                        setCustomDigits(digits);
+                        if (digits.length === 8) {
+                          const parsed = parseDigitsToDate(digits);
+                          if (parsed && startDate) {
+                            const count = computeCountFromEnd(startDate, repeat, parsed);
+                            setRepeatCount(count);
+                            setRepeatCountOpen(false);
+                          }
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") setRepeatCountOpen(false);
+                      }}
+                      placeholder="직접 입력 (YYYYMMDD)"
+                      className="w-full h-8 px-2 text-xs tabular-nums rounded-md border bg-transparent outline-none focus:border-ring mb-1"
+                    />
+                    {/* 옵션 리스트 — 계속이 첫 항목 (디폴트). max-h ≈ 2 버튼 (~4rem) →
+                        input + 계속 + 1회 가 한눈에 (3개), 2회부터 스크롤. */}
+                    <div className="max-h-[4rem] overflow-y-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRepeatCount(-1);
+                          setRepeatCountOpen(false);
+                        }}
+                        className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors ${
+                          repeatCount === -1 ? "bg-accent font-medium" : ""
+                        }`}
+                      >
+                        계속
+                      </button>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            setRepeatCount(i);
+                            setRepeatCountOpen(false);
+                          }}
+                          className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent transition-colors tabular-nums ${
+                            repeatCount === i ? "bg-accent font-medium" : ""
+                          }`}
+                        >
+                          {i}회{startDate ? ` - ${formatRepeatEnd(startDate, repeat, i)}` : ""}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
           </div>
