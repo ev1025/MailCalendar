@@ -10,6 +10,8 @@ import NumberWheel from "@/components/ui/number-wheel";
 import { FormField } from "@/components/ui/form-field";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
 import { FORM_INPUT_PRIMARY } from "@/lib/form-classes";
+import { translateError } from "@/lib/api-errors";
+import { toast } from "sonner";
 import type { Expense, ExpenseCategory } from "@/types";
 
 interface TransactionFormProps {
@@ -91,7 +93,9 @@ export default function TransactionForm({
       setCategoryId("");
       setDescription("");
       setDate(new Date().toISOString().split("T")[0]);
-      setPaymentMethod("");
+      // payment_method 는 DB CHECK 제약 ('카드','현금','계좌이체','자동이체','간편결제','기타') 에
+      // 빈 문자열이 통과 못 함. 기본값 "카드" — 사용자가 폼에서 다른 값으로 덮어쓰면 됨.
+      setPaymentMethod("카드");
       setInstallmentMonths(1);
     }
   }, [transaction, open, defaultType]);
@@ -101,6 +105,7 @@ export default function TransactionForm({
   const handleSubmit = async () => {
     if (!amount || !categoryId) return;
     setSaving(true);
+    // payment_method 는 빈 문자열이면 DB CHECK 가 거부하므로 fallback "카드".
     const { error } = await onSave(
       {
         title: title.trim() || null,
@@ -109,12 +114,20 @@ export default function TransactionForm({
         description: description.trim() || null,
         date,
         type,
-        payment_method: paymentMethod,
+        payment_method: paymentMethod || "카드",
       },
       isEdit ? undefined : installmentMonths
     );
     setSaving(false);
-    if (!error) onOpenChange(false);
+    if (error) {
+      // silent 실패 방지 — 사용자에게 한글 메시지 표시.
+      const raw = typeof error === "string"
+        ? error
+        : (error as { message?: string })?.message ?? null;
+      toast.error(`저장 실패: ${translateError(raw)}`);
+      return;
+    }
+    onOpenChange(false);
   };
 
   const titleLabel = type === "income" ? "수입명" : "지출명";
