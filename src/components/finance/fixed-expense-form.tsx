@@ -323,15 +323,12 @@ export default function FixedExpenseForm({
                 if (v !== "monthly") setMonthlyNth(null);
               }}
             >
-              <SelectTrigger
-                hideIcon
-                className={`${FORM_INPUT_COMPACT} w-fit min-w-[3rem] px-1.5`}
-              >
+              <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[4.5rem]`}>
                 {FX_REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
               </SelectTrigger>
-              <SelectContent align="start" className="w-fit min-w-fit">
+              <SelectContent className="min-w-[4.5rem]">
                 {FX_REPEAT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} hideIndicator>
+                  <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
                 ))}
