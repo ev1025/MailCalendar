@@ -44,8 +44,10 @@ $$;
 REVOKE EXECUTE ON FUNCTION shared_user_ids() FROM anon, authenticated, public;
 
 -- ────────────────────────────────
--- 0-3. 헬퍼 함수: 무료 플랜 사용량 조회 (Settings → API 탭에서 표시)
---      DB 용량(pg_database_size) + Storage 객체 용량/개수.
+-- 0-3. 헬퍼 함수: 사용량 통계 (DB 용량 + Storage)
+--      SECURITY INVOKER 로 만들어 lint 0029 경고 회피.
+--      anon/authenticated 는 EXECUTE 권한 없음 → /api/usage 서버 라우트의
+--      service_role 만 호출 가능 (service_role 은 모든 함수 EXECUTE 자동 보유).
 -- ────────────────────────────────
 CREATE OR REPLACE FUNCTION get_usage_stats()
 RETURNS TABLE (
@@ -54,7 +56,7 @@ RETURNS TABLE (
   storage_object_count BIGINT,
   public_table_count BIGINT
 )
-LANGUAGE SQL STABLE SECURITY DEFINER
+LANGUAGE SQL STABLE SECURITY INVOKER
 SET search_path = public, storage
 AS $$
   SELECT
@@ -65,9 +67,8 @@ AS $$
        WHERE table_schema = 'public' AND table_type = 'BASE TABLE') AS public_table_count;
 $$;
 
--- 로그인 사용자만 RPC 호출 허용.
-REVOKE EXECUTE ON FUNCTION get_usage_stats() FROM anon, public;
-GRANT EXECUTE ON FUNCTION get_usage_stats() TO authenticated;
+-- 모든 일반 사용자에게서 EXECUTE 회수 — service_role 만 호출 가능.
+REVOKE EXECUTE ON FUNCTION get_usage_stats() FROM anon, authenticated, public;
 
 -- ────────────────────────────────
 -- 1. app_users — 모두 읽기 가능(공유 대상 목록), 본인만 쓰기/수정/삭제

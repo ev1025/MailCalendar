@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 export interface UsageStats {
   dbSizeBytes: number;
@@ -31,17 +30,18 @@ export function useUsageStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetch = useCallback(async () => {
+  const fetchStats = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase.rpc("get_usage_stats");
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-    const row = Array.isArray(data) ? data[0] : data;
-    if (row) {
+    try {
+      const res = await fetch("/api/usage");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error || `HTTP ${res.status}`);
+        setLoading(false);
+        return;
+      }
+      const row = await res.json();
       setStats({
         dbSizeBytes: Number(row.db_size_bytes ?? 0),
         storageSizeBytes: Number(row.storage_size_bytes ?? 0),
@@ -49,15 +49,17 @@ export function useUsageStats() {
         publicTableCount: Number(row.public_table_count ?? 0),
         fetchedAt: Date.now(),
       });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    fetchStats();
+  }, [fetchStats]);
 
-  return { stats, loading, error, refetch: fetch };
+  return { stats, loading, error, refetch: fetchStats };
 }
 
 export function formatBytes(bytes: number): string {

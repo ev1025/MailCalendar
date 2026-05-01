@@ -486,7 +486,7 @@ function SettingsPageInner() {
                   <p className="text-xs text-red-600">
                     조회 실패: {usageError}
                     <span className="block text-muted-foreground mt-0.5">
-                      Supabase SQL Editor 에 supabase-usage-stats.sql 실행 필요
+                      Vercel 환경변수에 SUPABASE_SERVICE_ROLE_KEY 등록 필요
                     </span>
                   </p>
                 ) : usage ? (
