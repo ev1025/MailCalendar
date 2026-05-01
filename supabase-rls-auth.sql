@@ -13,16 +13,19 @@
 
 -- ────────────────────────────────
 -- 0-1. 헬퍼 함수: 현재 auth 사용자 → app_users.id
+--      SECURITY INVOKER 로 변경 (lint 0029 회피).
+--      호출자(authenticated)가 app_users SELECT 권한이 있으면 동작 — 위 1번 정책
+--      "Read all profiles" 가 그 권한 부여. 결국 본인 row 만 반환되므로 안전.
+--      ⚠️ RLS 정책에서 호출하려면 EXECUTE 권한 필수 — REVOKE 하면 안 됨.
 -- ────────────────────────────────
 CREATE OR REPLACE FUNCTION auth_app_user_id() RETURNS UUID
-LANGUAGE SQL STABLE SECURITY DEFINER
+LANGUAGE SQL STABLE SECURITY INVOKER
 SET search_path = public
 AS $$
   SELECT id FROM app_users WHERE auth_user_id = auth.uid() LIMIT 1;
 $$;
 
--- 외부 RPC(/rest/v1/rpc/auth_app_user_id) 호출 차단 — RLS 내부 호출은 영향 없음.
-REVOKE EXECUTE ON FUNCTION auth_app_user_id() FROM anon, authenticated, public;
+GRANT EXECUTE ON FUNCTION auth_app_user_id() TO authenticated;
 
 -- ────────────────────────────────
 -- 0-2. 헬퍼 함수: 나와 양방향 공유 관계인 사용자 id 들
@@ -30,7 +33,7 @@ REVOKE EXECUTE ON FUNCTION auth_app_user_id() FROM anon, authenticated, public;
 -- ────────────────────────────────
 CREATE OR REPLACE FUNCTION shared_user_ids()
 RETURNS SETOF UUID
-LANGUAGE SQL STABLE SECURITY DEFINER
+LANGUAGE SQL STABLE SECURITY INVOKER
 SET search_path = public
 AS $$
   SELECT owner_id FROM calendar_shares
@@ -40,8 +43,9 @@ AS $$
   WHERE owner_id = auth_app_user_id() AND status = 'accepted'
 $$;
 
--- 외부 RPC 호출 차단.
-REVOKE EXECUTE ON FUNCTION shared_user_ids() FROM anon, authenticated, public;
+-- SECURITY INVOKER + RLS 가 본인 share 만 노출 → RPC 노출돼도 안전.
+-- RLS 정책 내부 호출을 위해 GRANT 필요.
+GRANT EXECUTE ON FUNCTION shared_user_ids() TO authenticated;
 
 -- ────────────────────────────────
 -- 0-3. 헬퍼 함수: 사용량 통계 (DB 용량 + Storage)
