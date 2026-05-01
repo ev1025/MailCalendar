@@ -318,8 +318,10 @@ export default function CalendarView({
         </div>
 
         {/* 주 행 — 키보드/채팅창 등으로 viewport 가 축소될 때 행 높이가 너무 작아져
-            헤더와 바가 겹치는 "찌그러짐" 방지: minHeight 2.5rem 보장 + 부모는 필요 시 스크롤. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            헤더와 바가 겹치는 "찌그러짐" 방지: minHeight 2.5rem 보장 + 부모는 필요 시 스크롤.
+            마지막 주 셀의 하단 테두리 제거 — 모바일 바텀네비의 상단 테두리(border-t)와
+            나란히 두 줄로 겹쳐 보이는 미관 문제 해결. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [&>*:last-child>*]:border-b-0">
           {weeks.map((week, wi) => {
             const segs = weekSegs[wi];
             const hidden = weekHidden[wi];
