@@ -295,6 +295,22 @@
   }
 }
 
+/* 리스트 stagger 진입 — 부모에 .stagger-list 를 붙이면 자식들이 차례로 등장.
+   초기 렌더에서만 효과 (animation 1회) — 이후 추가/삭제는 React 가 처리.
+   nth-child 로 60ms 간격 delay (최대 12 항목까지). */
+.stagger-list > * {
+  animation: pageIn 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger-list > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-list > *:nth-child(2)  { animation-delay: 40ms; }
+.stagger-list > *:nth-child(3)  { animation-delay: 80ms; }
+.stagger-list > *:nth-child(4)  { animation-delay: 120ms; }
+.stagger-list > *:nth-child(5)  { animation-delay: 160ms; }
+.stagger-list > *:nth-child(6)  { animation-delay: 200ms; }
+.stagger-list > *:nth-child(7)  { animation-delay: 240ms; }
+.stagger-list > *:nth-child(8)  { animation-delay: 280ms; }
+.stagger-list > *:nth-child(n+9) { animation-delay: 320ms; }
+
 /* === TipTap 리치 에디터 스타일 === */
 .tiptap-editor {
   min-height: 60vh;

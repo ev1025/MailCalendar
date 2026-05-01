@@ -296,7 +296,7 @@ function SettingsPageInner() {
       </div>
 
       {tab === "general" ? (
-        <div key="general" className="flex flex-col gap-4 animate-page-in">
+        <div key="general" className="flex flex-col gap-4 stagger-list">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
@@ -518,7 +518,7 @@ function SettingsPageInner() {
           </Card>
         </div>
       ) : (
-        <div key="api" className="flex flex-col gap-3 animate-page-in">
+        <div key="api" className="flex flex-col gap-3 stagger-list">
           {/* 앱 정보 */}
           <Card>
             <CardHeader>
