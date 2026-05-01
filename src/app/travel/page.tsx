@@ -49,7 +49,7 @@ export default function TravelPage() {
           />
         }
       />
-      <div className="flex flex-col h-[calc(100%-3.5rem)] overflow-hidden px-2 py-2 md:h-auto md:overflow-visible md:min-h-0 md:p-6">
+      <div className="flex flex-col h-[calc(100%-3.5rem)] overflow-hidden px-2 py-2 md:h-auto md:overflow-visible md:min-h-0 md:p-6 animate-page-in">
         <TravelList
           visibleUserIds={visibleUserIds}
           onNavigateToMonth={(y, m) => {

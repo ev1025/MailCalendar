@@ -422,7 +422,7 @@ function ProductsPageInner() {
         }
       />
     <div className="flex flex-col h-[calc(100%-3.5rem)]">
-    <div className="flex-1 overflow-y-auto p-4 md:p-6">
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 animate-page-in">
       <div className="w-full md:max-w-5xl md:mx-auto">
 
       <div className="mb-4 flex flex-col gap-3">
