@@ -18,6 +18,7 @@ import ColorPickerRow from "@/components/ui/color-picker-popover";
 import NaverMap from "@/components/travel/naver-map";
 import { X, MapPin, Search as SearchIcon } from "lucide-react";
 import { toast } from "sonner";
+import { translateError } from "@/lib/api-errors";
 import { useTravelCategories, BUILTIN_TRAVEL_CATEGORIES } from "@/hooks/use-travel-categories";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import type { TravelItem, TravelCategory, TravelTag, EventTag, PlaceInfo } from "@/types";
@@ -218,9 +219,8 @@ export default function TravelForm({
     const { error } = await onSave(buildPayload());
     setSaving(false);
     if (error) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const msg = (error as any)?.message ?? String(error);
-      toast.error(`저장 실패: ${msg}`);
+      const raw = error instanceof Error ? error.message : typeof error === "string" ? error : null;
+      toast.error(`저장 실패: ${translateError(raw)}`);
       console.error("[travel-form save]", error);
       return;
     }
@@ -242,9 +242,8 @@ export default function TravelForm({
         setSaving(true);
         const { error } = await onSave(buildPayload());
         if (error) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const msg = (error as any)?.message ?? String(error);
-          toast.error(`자동 저장 실패: ${msg}`);
+          const raw = error instanceof Error ? error.message : typeof error === "string" ? error : null;
+          toast.error(`자동 저장 실패: ${translateError(raw)}`);
           console.error("[travel-form auto-save]", error);
           // 실패해도 닫기는 진행 — 드래프트 로컬에 남아있음.
         } else {

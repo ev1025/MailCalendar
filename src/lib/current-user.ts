@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSupabaseAuth } from "@/lib/auth-supabase";
+import { translateError } from "@/lib/api-errors";
 
 export interface AppUser {
   id: string;
@@ -48,24 +49,7 @@ function ensureInitialFetch() {
   return initialFetchPromise;
 }
 
-// Supabase 에러 메시지 → 한글 매핑
-function translateError(msg: string | undefined | null): string {
-  if (!msg) return "알 수 없는 오류";
-  const lower = msg.toLowerCase();
-  if (lower.includes("duplicate key") && lower.includes("name")) {
-    return "이미 사용 중인 이름입니다";
-  }
-  if (lower.includes("duplicate key")) {
-    return "이미 등록된 값입니다";
-  }
-  if (lower.includes("violates row-level security") || lower.includes("rls")) {
-    return "권한이 없습니다 (로그인 상태 확인)";
-  }
-  if (lower.includes("network") || lower.includes("failed to fetch")) {
-    return "네트워크 연결을 확인해주세요";
-  }
-  return msg;
-}
+// translateError 는 src/lib/api-errors.ts 로 이전 — import 로 사용.
 
 export function useAppUsers() {
   const { user: authUser } = useSupabaseAuth();

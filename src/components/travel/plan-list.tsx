@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
 import { buildCalendarEvents } from "@/lib/travel/calendar-sync";
 import { toast } from "sonner";
+import { translateError } from "@/lib/api-errors";
 import type { TravelPlan, TravelPlanTask } from "@/types";
 import {
   DndContext,
@@ -249,7 +250,7 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
       const retry = await supabase.from("calendar_events").insert(fallback);
       setAddToCalLoading(false);
       if (retry.error) {
-        toast.error("달력 추가 실패: " + (retry.error.message || "알 수 없는 오류"));
+        toast.error("달력 추가 실패: " + translateError(retry.error.message));
       } else {
         toast.success(`${addToCalState.tasks.count}개 일정을 달력에 추가했습니다`);
       }
@@ -311,7 +312,7 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
       .eq("plan_id", removeFromCalState.plan.id);
     setRemoveLoading(false);
     if (error) {
-      toast.error("달력에서 삭제 실패: " + (error.message || "알 수 없는 오류"));
+      toast.error("달력에서 삭제 실패: " + translateError(error.message));
     } else {
       toast.success(`${removeFromCalState.count}개 일정을 달력에서 삭제했습니다`);
     }

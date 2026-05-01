@@ -15,20 +15,8 @@ function validateEmail(email: string): string | null {
   return null;
 }
 
-function mapAuthError(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes("invalid login credentials") || m.includes("invalid credentials"))
-    return "이메일 또는 비밀번호가 올바르지 않습니다";
-  if (m.includes("already registered") || m.includes("already been registered"))
-    return "이미 가입된 이메일입니다";
-  if (m.includes("password should be at least") || m.includes("weak password"))
-    return "비밀번호는 최소 6자 이상이어야 합니다";
-  if (m.includes("email not confirmed"))
-    return "이메일 인증이 필요합니다. 받은 메일의 링크를 눌러주세요";
-  if (m.includes("rate limit") || m.includes("too many"))
-    return "요청이 너무 많습니다. 잠시 후 다시 시도하세요";
-  return msg;
-}
+// 에러 메시지 번역은 src/lib/api-errors.ts 의 translateError 통합 사용.
+import { translateError as mapAuthError } from "@/lib/api-errors";
 
 /**
  * 이메일 + 비밀번호 회원가입.
