@@ -77,18 +77,10 @@ function FinancePageInner() {
 
   // 전월 대비 카드용 — 현재 기간을 1개월 앞당긴 구간의 거래 합계.
   // 31일 같은 day 가 이전 달에 없으면 그 달 말일로 클램프해 자연스러운 "한 달 전" 의미 유지.
+  // (실제 prevNet 계산은 includeFixed/fixedSet 정의 후 — 일관성 위해 동일 필터 적용.)
   const prevStartDate = shiftMonthBack(startDate);
   const prevEndDate = shiftMonthBack(endDate);
   const { transactions: prevTransactions } = useTransactions(prevStartDate, prevEndDate);
-  const prevTotalIncome = useMemo(
-    () => prevTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
-    [prevTransactions],
-  );
-  const prevTotalExpense = useMemo(
-    () => prevTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
-    [prevTransactions],
-  );
-  const prevNet = prevTotalIncome - prevTotalExpense;
 
   const {
     fixedExpenses,
@@ -177,6 +169,17 @@ function FinancePageInner() {
         return acc;
       }, {} as Record<string, { amount: number; color: string }>);
   }, [baseTransactions]);
+
+  // 전월 net — 이번달과 동일하게 includeFixed 필터 적용 (일관성).
+  const prevNet = useMemo(() => {
+    const filtered = includeFixed
+      ? prevTransactions
+      : prevTransactions.filter((tx) => !isFromFixed(tx));
+    const inc = filtered.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const exp = filtered.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    return inc - exp;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prevTransactions, includeFixed, fixedSet]);
 
   const filteredTransactions = useMemo(() => {
     return baseTransactions.filter((tx) => {
