@@ -344,16 +344,15 @@ export default function EventForm({
                   if (v === "infinite") setRepeatCount(-1);
                 }
               }}>
-                {/* trigger 와 content panel 의 폭을 명시적으로 일치 — 둘 다 5rem.
-                    SelectContent 의 default min-w-36(144px) 이 trigger 보다 큰 floor 를
-                    만들어 mismatch 되던 문제: min-w-fit 로 floor 제거 + w-(--anchor-width)
-                    가 trigger 폭(5rem) 그대로 가져오게 함. */}
-                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-[5rem]`}>
+                {/* trigger 는 컨텐츠 폭(원래 크기), panel 은 그에 맞춰 shrink.
+                    panel 의 default min-w-36(144px) floor 제거 + item hideIndicator 로
+                    pr-8(32px check 자리) 제거 → items 가 좁은 panel 에 fit. */}
+                <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[3.5rem]`}>
                   {REPEAT_OPTIONS.find((o) => o.value === repeat)?.label || "없음"}
                 </SelectTrigger>
                 <SelectContent align="start" className="min-w-fit">
                   {REPEAT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                    <SelectItem key={opt.value} value={opt.value} hideIndicator>
                       {opt.label}
                     </SelectItem>
                   ))}
