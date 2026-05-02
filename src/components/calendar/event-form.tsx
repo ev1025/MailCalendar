@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,8 +29,7 @@ import {
   FORM_INPUT_COMPACT,
 } from "@/lib/form-classes";
 import type { CalendarEvent, EventTag, RepeatType } from "@/types";
-import RepeatCountField from "./repeat-count-field";
-import { WeeklyIntervalButton, MonthlyNthButton } from "./repeat-modifiers";
+import RepeatCountControls from "./repeat-count-controls";
 
 const COLORS = [
   "#3B82F6", "#EF4444", "#22C55E", "#F59E0B",
@@ -128,13 +127,6 @@ export default function EventForm({
   const [weeklyInterval, setWeeklyInterval] = useState(1);
   // 매월 N주차 W요일 — null=같은 일자(default).
   const [monthlyNth, setMonthlyNth] = useState<{ week: number; weekday: number } | null>(null);
-  // 반복 횟수 커스텀 드롭다운 상태 — 빌트인 Select 대신 Popover 기반.
-  // 직접 입력 input 이 popover 내부에 있어야 + 8자리 즉시 커밋 + 동일값 재클릭
-  // 가능하게 하려면 Select 의 제약을 벗어나야 함.
-  const [repeatCountOpen, setRepeatCountOpen] = useState(false);
-  const [customDigits, setCustomDigits] = useState("");
-  // 직접 입력 input ref — popover 열릴 때 자동 포커스용.
-  const customInputRef = useRef<HTMLInputElement>(null);
   const [showEndDate, setShowEndDate] = useState(false);
   const [showEndTime, setShowEndTime] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -339,8 +331,6 @@ export default function EventForm({
               <Select value={repeat} onValueChange={(v) => {
                 if (v) {
                   setRepeat(v as UIRepeat);
-                  setRepeatCountOpen(false);
-                  setCustomDigits("");
                   if (v === "infinite") setRepeatCount(-1);
                 }
               }}>
@@ -361,39 +351,16 @@ export default function EventForm({
             </div>
             {/* "infinite"(계속) / "none"(없음) 일 땐 반복 횟수 컬럼 숨김 — 의미 없음. */}
             {repeat !== "none" && repeat !== "infinite" && (
-              <>
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <Label className={FORM_LABEL}>반복 횟수</Label>
-                  <RepeatCountField
-                    startDate={startDate}
-                    repeat={repeat}
-                    repeatCount={repeatCount}
-                    setRepeatCount={setRepeatCount}
-                    customDigits={customDigits}
-                    setCustomDigits={setCustomDigits}
-                    open={repeatCountOpen}
-                    setOpen={setRepeatCountOpen}
-                    inputRef={customInputRef}
-                    weeklyInterval={weeklyInterval}
-                    monthlyNth={monthlyNth}
-                  />
-                </div>
-                {/* 매주 — 격주/3주/4주 토글 (active 시 라벨 "격주" 노출). */}
-                {repeat === "weekly" && (
-                  <WeeklyIntervalButton
-                    interval={weeklyInterval}
-                    onChange={setWeeklyInterval}
-                  />
-                )}
-                {/* 매월 — N주차 W요일 토글 (active 시 라벨 "N주" 노출). */}
-                {repeat === "monthly" && (
-                  <MonthlyNthButton
-                    startDate={startDate}
-                    value={monthlyNth}
-                    onChange={setMonthlyNth}
-                  />
-                )}
-              </>
+              <RepeatCountControls
+                startDate={startDate}
+                repeat={repeat}
+                repeatCount={repeatCount}
+                setRepeatCount={setRepeatCount}
+                weeklyInterval={weeklyInterval}
+                setWeeklyInterval={setWeeklyInterval}
+                monthlyNth={monthlyNth}
+                setMonthlyNth={setMonthlyNth}
+              />
             )}
           </div>
 

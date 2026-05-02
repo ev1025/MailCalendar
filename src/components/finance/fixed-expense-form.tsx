@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,7 @@ import TagInput from "@/components/ui/tag-input";
 import { Label } from "@/components/ui/label";
 import { FormField } from "@/components/ui/form-field";
 import DatePicker from "@/components/ui/date-picker";
-import RepeatCountField from "@/components/calendar/repeat-count-field";
-import {
-  WeeklyIntervalButton,
-  MonthlyNthButton,
-} from "@/components/calendar/repeat-modifiers";
+import RepeatCountControls from "@/components/calendar/repeat-count-controls";
 import { FORM_INPUT_PRIMARY, FORM_INPUT_COMPACT, FORM_LABEL } from "@/lib/form-classes";
 import { todayYmd, ymd, nthWeekday } from "@/lib/date-utils";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
@@ -83,9 +79,6 @@ export default function FixedExpenseForm({
   const [repeat, setRepeat] = useState<FxRepeat>("infinite");
   // 추가 반복 횟수 (RepeatCountField semantic — "1회" = 다음 발화 1번 더).
   const [repeatCount, setRepeatCount] = useState(1);
-  const [repeatCountOpen, setRepeatCountOpen] = useState(false);
-  const [customDigits, setCustomDigits] = useState("");
-  const repeatInputRef = useRef<HTMLInputElement>(null);
 
   // 매주 — 1=매주, 2=격주, 3·4=N주마다.
   const [weeklyInterval, setWeeklyInterval] = useState(1);
@@ -155,8 +148,6 @@ export default function FixedExpenseForm({
       setMonthlyNth(null);
       setAnchorDate(todayYmd());
     }
-    setCustomDigits("");
-    setRepeatCountOpen(false);
   }, [open, fixed]);
 
   const filteredCategories = categories.filter((c) => c.type === type);
@@ -311,8 +302,6 @@ export default function FixedExpenseForm({
               onValueChange={(v) => {
                 if (!v) return;
                 setRepeat(v as FxRepeat);
-                setRepeatCountOpen(false);
-                setCustomDigits("");
                 // 모드 전환 시 격주·N주차 초기화.
                 if (v !== "weekly") setWeeklyInterval(1);
                 if (v !== "monthly") setMonthlyNth(null);
@@ -332,40 +321,19 @@ export default function FixedExpenseForm({
           </div>
         </div>
 
-        {/* 반복 횟수 + 격주/N주차 — 별도 행 (없음/계속 일 땐 숨김).
-            items-end 로 input baseline 정렬 — modifier 의 자체 라벨도 sibling
-            라벨과 같은 y 에 위치. */}
+        {/* 반복 횟수 + 격주/N주차 — 별도 행 (없음/계속 일 땐 숨김). */}
         {repeat !== "none" && repeat !== "infinite" && (
           <div className="flex items-end gap-2 flex-wrap">
-            <div className="flex flex-col gap-1.5 min-w-0">
-              <Label className={FORM_LABEL}>반복 횟수</Label>
-              <RepeatCountField
-                startDate={repeatStartDate}
-                repeat={repeatTypeForField}
-                repeatCount={repeatCount}
-                setRepeatCount={setRepeatCount}
-                customDigits={customDigits}
-                setCustomDigits={setCustomDigits}
-                open={repeatCountOpen}
-                setOpen={setRepeatCountOpen}
-                inputRef={repeatInputRef}
-                weeklyInterval={weeklyInterval}
-                monthlyNth={monthlyNth}
-              />
-            </div>
-            {repeat === "weekly" && (
-              <WeeklyIntervalButton
-                interval={weeklyInterval}
-                onChange={setWeeklyInterval}
-              />
-            )}
-            {repeat === "monthly" && (
-              <MonthlyNthButton
-                startDate={repeatStartDate}
-                value={monthlyNth}
-                onChange={setMonthlyNth}
-              />
-            )}
+            <RepeatCountControls
+              startDate={repeatStartDate}
+              repeat={repeatTypeForField}
+              repeatCount={repeatCount}
+              setRepeatCount={setRepeatCount}
+              weeklyInterval={weeklyInterval}
+              setWeeklyInterval={setWeeklyInterval}
+              monthlyNth={monthlyNth}
+              setMonthlyNth={setMonthlyNth}
+            />
           </div>
         )}
         {(repeat === "infinite" || repeat === "monthly") && !monthlyNth && (
