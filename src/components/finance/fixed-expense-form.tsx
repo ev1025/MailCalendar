@@ -153,12 +153,17 @@ export default function FixedExpenseForm({
   const filteredCategories = categories.filter((c) => c.type === type);
 
   // 반복 종류·옵션에 따른 첫 발화일 계산 — RepeatCountField 의 startDate 로 사용.
-  // 매월+nth: anchorDate 의 month 기준 N주차 W요일. 그 외: anchorDate 그대로.
+  // 매월+nth: anchorDate 의 month 기준 N주차 W요일. 단, 그 일자가 anchor 이전이면
+  // 다음 달의 N주차 W요일을 사용 (사용자 의도: anchor 이후로 시작).
+  // 그 외: anchorDate 그대로.
   const repeatStartDate = (() => {
     if (repeat === "monthly" && monthlyNth) {
       const a = new Date(anchorDate + "T00:00:00");
       if (Number.isNaN(a.getTime())) return anchorDate;
-      return ymd(nthWeekday(a.getFullYear(), a.getMonth(), monthlyNth.weekday, monthlyNth.week));
+      const thisMonth = nthWeekday(a.getFullYear(), a.getMonth(), monthlyNth.weekday, monthlyNth.week);
+      if (thisMonth.getTime() >= a.getTime()) return ymd(thisMonth);
+      const nextMonth = nthWeekday(a.getFullYear(), a.getMonth() + 1, monthlyNth.weekday, monthlyNth.week);
+      return ymd(nextMonth);
     }
     return anchorDate;
   })();
