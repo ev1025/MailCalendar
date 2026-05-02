@@ -132,6 +132,8 @@ export default function FixedExpenseManager({
   }, [open, initialEditingId]);
 
   // 카테고리별 그룹화. 카테고리명 → 항목 배열. 미분류는 "(미분류)" 키.
+  // total 은 절대 합계 — 부호는 variant 컨텍스트(totalSign) 로 prefix 처리.
+  // (이전엔 income 타입에 음수를 더해 totalSign + "-" 가 결합되어 "+-..." 로 표시되던 버그.)
   const grouped = useMemo(() => {
     const g: Record<string, { color: string; items: FixedExpense[]; total: number }> = {};
     for (const fx of fixedExpenses) {
@@ -139,7 +141,7 @@ export default function FixedExpenseManager({
       const color = fx.category?.color || "#6B7280";
       if (!g[key]) g[key] = { color, items: [], total: 0 };
       g[key].items.push(fx);
-      g[key].total += fx.type === "income" ? -fx.amount : fx.amount;
+      g[key].total += fx.amount;
     }
     return g;
   }, [fixedExpenses]);

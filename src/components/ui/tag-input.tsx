@@ -615,7 +615,21 @@ export default function TagInput({
         <>
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              // 외부 input/textarea 가 포커스 중이면 먼저 blur — 키보드가 정리된
+              // 후 시트가 열리도록. 시트 열릴 때 baseHeight 가 keyboard-shrunk
+              // viewport 로 잘못 캡처되어 layout shift / 탭 좌표 어긋남을 유발.
+              if (typeof document !== "undefined") {
+                const a = document.activeElement;
+                if (a instanceof HTMLElement && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) {
+                  a.blur();
+                  // iOS 키보드 dismiss 애니메이션 (~250ms) 후 열어 viewport 안정.
+                  setTimeout(() => setOpen(true), 250);
+                  return;
+                }
+              }
+              setOpen(true);
+            }}
             className={triggerClass}
           >
             {triggerContent}
