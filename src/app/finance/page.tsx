@@ -409,6 +409,12 @@ function FinancePageInner() {
           }
           return { error: r.error };
         }}
+        // 급여 거래 "이후 모두 삭제" — FX row 비활성 + 그 달부터 미래 거래 일괄 삭제.
+        onDeleteFixedFromMonth={async (fxId, year, month) => {
+          const r = await deleteFixedWithScope(fxId, year, month);
+          if (!r.error) await refetchTransactions();
+          return { error: r.error };
+        }}
       />
       <FixedExpenseManager
         open={fixedOpen}
