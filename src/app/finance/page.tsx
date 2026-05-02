@@ -398,6 +398,17 @@ function FinancePageInner() {
         onDelete={async (id) => {
           await deleteTransaction(id);
         }}
+        // 급여 등 매월 반복 수입 — fixed_expense (type=income) 으로 영속.
+        // addFixed 가 FX row + 120개월 expense bulk 동시 처리.
+        onAddRecurring={async (item) => {
+          const r = await addFixed(item, item.repeat_months);
+          if (!r.error && r.bulkDone) {
+            r.bulkDone
+              .then(() => refetchTransactions())
+              .catch((e) => console.error("[income recurring]", e));
+          }
+          return { error: r.error };
+        }}
       />
       <FixedExpenseManager
         open={fixedOpen}

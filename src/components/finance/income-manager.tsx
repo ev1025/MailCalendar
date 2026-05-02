@@ -7,7 +7,6 @@ import FormPage from "@/components/ui/form-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -17,7 +16,7 @@ import {
 import DatePicker from "@/components/ui/date-picker";
 import { FormField } from "@/components/ui/form-field";
 import RowActionPopover from "@/components/ui/row-action-popover";
-import { FORM_INPUT_PRIMARY, FORM_INPUT_COMPACT, FORM_LABEL } from "@/lib/form-classes";
+import { FORM_INPUT_PRIMARY, FORM_INPUT_COMPACT } from "@/lib/form-classes";
 import { formatMoney } from "@/lib/format-money";
 import { todayYmd } from "@/lib/date-utils";
 import type { Expense, ExpenseCategory } from "@/types";
@@ -32,6 +31,23 @@ type IncomeData = {
   payment_method: string;
 };
 
+/** 급여 category 등록 시 호출 — fixed_expense(매월 반복 income) 으로 영속. */
+type RecurringIncomeData = {
+  title: string | null;
+  amount: number;
+  category_id: string;
+  description: string | null;
+  day_of_month: number;
+  type: "income";
+  payment_method: string;
+  repeat_months: number;
+  repeat_kind: "monthly";
+  weekly_interval: null;
+  monthly_nth_week: null;
+  monthly_nth_weekday: null;
+  anchor_date: string;
+};
+
 interface IncomeManagerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,6 +58,8 @@ interface IncomeManagerProps {
   onAdd: (data: IncomeData) => Promise<{ error: unknown }>;
   onUpdate: (id: string, updates: Partial<IncomeData>) => Promise<{ error: unknown }>;
   onDelete: (id: string) => Promise<{ error: unknown } | void>;
+  /** 급여 등 매월 반복 수입을 fixed_expenses 에 영속. 미지정 시 일반 onAdd 로 폴백. */
+  onAddRecurring?: (data: RecurringIncomeData) => Promise<{ error: unknown }>;
 }
 
 export default function IncomeManager({
@@ -52,6 +70,7 @@ export default function IncomeManager({
   onAdd,
   onUpdate,
   onDelete,
+  onAddRecurring,
 }: IncomeManagerProps) {
   // 인라인 폼 state — 별도 popup 대신 페이지 상단에서 항상 보임.
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -104,18 +123,45 @@ export default function IncomeManager({
   const handleSave = async () => {
     if (!amount || !categoryId) return;
     setSaving(true);
-    const data: IncomeData = {
-      title: title.trim() || null,
-      amount: parseInt(amount, 10),
-      category_id: categoryId,
-      description: null,
-      date,
-      type: "income",
-      payment_method: "계좌이체",
-    };
-    const result = editingId
-      ? await onUpdate(editingId, data)
-      : await onAdd(data);
+
+    // 신규 추가 + category 가 "급여" 이면 fixed_expense (매월 반복) 으로 영속.
+    // 편집 모드는 일반 거래로만 처리 (이미 저장된 row 의 모드 변경은 복잡 → 명시적 흐름 별도).
+    const isSalary =
+      !editingId && selectedCategory?.name === "급여" && !!onAddRecurring;
+
+    let result: { error: unknown };
+    if (isSalary && onAddRecurring) {
+      const dayOfMonth = parseInt(date.slice(8, 10), 10) || 1;
+      result = await onAddRecurring({
+        title: title.trim() || null,
+        amount: parseInt(amount, 10),
+        category_id: categoryId,
+        description: null,
+        day_of_month: dayOfMonth,
+        type: "income",
+        payment_method: "계좌이체",
+        repeat_months: -1, // 계속 (=120개월 bulk insert)
+        repeat_kind: "monthly",
+        weekly_interval: null,
+        monthly_nth_week: null,
+        monthly_nth_weekday: null,
+        anchor_date: date,
+      });
+    } else {
+      const data: IncomeData = {
+        title: title.trim() || null,
+        amount: parseInt(amount, 10),
+        category_id: categoryId,
+        description: null,
+        date,
+        type: "income",
+        payment_method: "계좌이체",
+      };
+      result = editingId
+        ? await onUpdate(editingId, data)
+        : await onAdd(data);
+    }
+
     setSaving(false);
     if (result.error) {
       const msg =
@@ -124,6 +170,9 @@ export default function IncomeManager({
           : "저장 실패";
       toast.error(msg);
       return;
+    }
+    if (isSalary) {
+      toast.success("매월 반복 수입으로 등록되었습니다");
     }
     // 성공 — 폼 클리어, 편집 모드 해제.
     cancelEditing();
@@ -150,19 +199,19 @@ export default function IncomeManager({
             />
           </FormField>
 
-          <FormField label="금액" required>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0"
-              className={`${FORM_INPUT_PRIMARY} w-[8.5rem] tabular-nums`}
-            />
-          </FormField>
-
+          {/* 금액 | 입금 날짜 | 종류 — 한 행. */}
           <div className="flex items-start gap-3 flex-wrap">
+            <FormField label="금액" required>
+              <Input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0"
+                className={`${FORM_INPUT_PRIMARY} w-[8.5rem] tabular-nums`}
+              />
+            </FormField>
             <FormField label="입금 날짜" className="w-fit">
               <DatePicker
                 value={date}
@@ -188,6 +237,13 @@ export default function IncomeManager({
               </Select>
             </FormField>
           </div>
+
+          {/* 급여 안내 — 매월 반복 등록됨을 알림. */}
+          {selectedCategory?.name === "급여" && !editingId && (
+            <p className="text-[11px] text-muted-foreground -mt-1 leading-snug">
+              급여 수입은 매월 같은 일자에 자동으로 반복 등록됩니다.
+            </p>
+          )}
 
           {/* 저장 / 취소(편집 시) — 폼 하단. + 추가 버튼은 별도로 두지 않음 (요청). */}
           <div className="flex items-center gap-2">
@@ -224,7 +280,6 @@ export default function IncomeManager({
           </p>
         ) : (
           <div className="flex flex-col gap-1">
-            <Label className={FORM_LABEL}>수입 목록</Label>
             <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-2 py-1 text-[11px] text-muted-foreground border-b">
               <span>종류</span>
               <span className="text-right">금액</span>
