@@ -17,6 +17,7 @@ import {
   FORM_INPUT_PRIMARY,
   FORM_INPUT_COMPACT,
 } from "@/lib/form-classes";
+import { todayYmd } from "@/lib/date-utils";
 import type { Expense, ExpenseCategory } from "@/types";
 
 interface IncomeFormProps {
@@ -35,11 +36,6 @@ interface IncomeFormProps {
     type: "income" | "expense";
     payment_method: string;
   }) => Promise<{ error: unknown }>;
-}
-
-function todayYmd(): string {
-  const t = new Date();
-  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
 }
 
 export default function IncomeForm({

@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatMoney } from "@/lib/format-money";
 
 interface CategoryChartProps {
   expenseByCategory: Record<string, { amount: number; color: string }>;
@@ -9,10 +10,6 @@ interface CategoryChartProps {
   onSelectCategory?: (name: string | null) => void;
   /** 현재 필터 활성 카테고리 — 도넛 호와 범례 행 강조. */
   activeCategory?: string | null;
-}
-
-function formatWon(amount: number) {
-  return new Intl.NumberFormat("ko-KR").format(amount) + "원";
 }
 
 export default function CategoryChart({
@@ -99,7 +96,7 @@ export default function CategoryChart({
                 textAnchor="middle"
                 className="fill-foreground text-[11px] font-bold"
               >
-                {formatWon(totalExpense)}
+                {formatMoney(totalExpense)}
               </text>
             </svg>
           </div>
@@ -129,7 +126,7 @@ export default function CategoryChart({
                     </span>
                   </div>
                   <span className="text-xs text-muted-foreground tabular-nums shrink-0 ml-2">
-                    {formatWon(slice.amount)} ({(slice.pct * 100).toFixed(0)}%)
+                    {formatMoney(slice.amount)} ({(slice.pct * 100).toFixed(0)}%)
                   </span>
                 </button>
               );

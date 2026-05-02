@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Plus } from "lucide-react";
+import { formatMoney } from "@/lib/format-money";
 
 interface MonthlySummaryProps {
   totalIncome: number;
@@ -16,10 +17,6 @@ interface MonthlySummaryProps {
   onOpenIncome?: () => void;
   /** 지출 카드 우상단 + — 거래 폼을 expense type 으로 미리 세팅한 채 열기. */
   onAddTransaction?: (type: "income" | "expense") => void;
-}
-
-function formatWon(amount: number) {
-  return new Intl.NumberFormat("ko-KR").format(amount) + "원";
 }
 
 export default function MonthlySummary({
@@ -111,7 +108,7 @@ export default function MonthlySummary({
               />
             ) : undefined
           }
-          value={`+${formatWon(totalIncome)}`}
+          value={`+${formatMoney(totalIncome)}`}
         />
         <Cell
           label="고정비"
@@ -125,7 +122,7 @@ export default function MonthlySummary({
               />
             ) : undefined
           }
-          value={`-${formatWon(totalFixed)}`}
+          value={`-${formatMoney(totalFixed)}`}
         />
       </div>
 
@@ -134,7 +131,7 @@ export default function MonthlySummary({
         <Cell
           label="전월 대비"
           color={deltaColor}
-          value={`${deltaSign}${formatWon(Math.abs(delta))}`}
+          value={`${deltaSign}${formatMoney(Math.abs(delta))}`}
         />
         <Cell
           label="이번달 지출"
@@ -148,7 +145,7 @@ export default function MonthlySummary({
               />
             ) : undefined
           }
-          value={`-${formatWon(totalExpense)}`}
+          value={`-${formatMoney(totalExpense)}`}
         />
       </div>
     </div>

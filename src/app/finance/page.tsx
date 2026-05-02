@@ -15,6 +15,7 @@ import TransactionForm from "@/components/finance/transaction-form";
 import CategoryChart from "@/components/finance/category-chart";
 import FixedExpenseManager from "@/components/finance/fixed-expense-manager";
 import IncomeManager from "@/components/finance/income-manager";
+import { shiftMonthBack } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -30,18 +31,6 @@ export default function FinancePage() {
       <FinancePageInner />
     </Suspense>
   );
-}
-
-/** YYYY-MM-DD 를 한 달 뒤로(예: 2026-05-31 → 2026-04-30) 이동.
- *  setMonth 오버플로우 회피 위해 day-of-month 클램프 적용. */
-function shiftMonthBack(ymd: string): string {
-  const d = new Date(ymd + "T00:00:00");
-  if (Number.isNaN(d.getTime())) return ymd;
-  const targetDay = d.getDate();
-  const t = new Date(d.getFullYear(), d.getMonth() - 1, 1);
-  const lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
-  const day = Math.min(targetDay, lastDay);
-  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function FinancePageInner() {

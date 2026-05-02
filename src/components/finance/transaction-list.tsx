@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import DeleteRecordDescription from "@/components/ui/delete-record-description";
+import { formatMoney } from "@/lib/format-money";
 import type { Expense } from "@/types";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -21,10 +22,6 @@ interface TransactionListProps {
   /** 고정비 출처 거래에서 "고정비 자체 수정" 선택 시 호출. 호출자는 매니저를
    *  열고 해당 fixed_expense_id 를 편집 모드로 포커스. 미지정 시 해당 옵션 미표시. */
   onEditFixed?: (fixedExpenseId: string) => void;
-}
-
-function formatWon(amount: number) {
-  return new Intl.NumberFormat("ko-KR").format(amount) + "원";
 }
 
 export default function TransactionList({
@@ -112,7 +109,7 @@ export default function TransactionList({
                     }`}
                   >
                     {tx.type === "income" ? "+" : "-"}
-                    {formatWon(tx.amount)}
+                    {formatMoney(tx.amount)}
                   </span>
                   {/* 휴지통: 연한 회색. 행 클릭으로는 편집으로 가니 삭제만 별도 버튼. */}
                   <button
@@ -223,7 +220,7 @@ export default function TransactionList({
                 },
                 {
                   label: "금액",
-                  value: `${deletingTx.type === "income" ? "+" : "-"}${formatWon(deletingTx.amount)}`,
+                  value: `${deletingTx.type === "income" ? "+" : "-"}${formatMoney(deletingTx.amount)}`,
                   valueClassName: `tabular-nums ${deletingTx.type === "income" ? "text-finance-gain" : "text-finance-loss"}`,
                 },
                 ...(deletingTx.category?.name

@@ -6,6 +6,7 @@ import FormPage from "@/components/ui/form-page";
 import { Button } from "@/components/ui/button";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import IncomeForm from "@/components/finance/income-form";
+import { formatMoney } from "@/lib/format-money";
 import type { Expense, ExpenseCategory } from "@/types";
 
 type IncomeData = {
@@ -28,10 +29,6 @@ interface IncomeManagerProps {
   onAdd: (data: IncomeData) => Promise<{ error: unknown }>;
   onUpdate: (id: string, updates: Partial<IncomeData>) => Promise<{ error: unknown }>;
   onDelete: (id: string) => Promise<{ error: unknown } | void>;
-}
-
-function formatWon(amount: number) {
-  return new Intl.NumberFormat("ko-KR").format(amount) + "원";
 }
 
 export default function IncomeManager({
@@ -132,7 +129,7 @@ export default function IncomeManager({
                     )}
                   </span>
                   <span className="text-sm font-semibold tabular-nums text-finance-gain shrink-0">
-                    +{formatWon(t.amount)}
+                    +{formatMoney(t.amount)}
                   </span>
                   <span className="text-xs text-muted-foreground tabular-nums shrink-0">
                     {t.date.slice(5).replace("-", "/")}

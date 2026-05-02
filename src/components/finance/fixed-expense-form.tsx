@@ -21,6 +21,7 @@ import {
   MonthlyNthButton,
 } from "@/components/calendar/repeat-modifiers";
 import { FORM_INPUT_PRIMARY, FORM_INPUT_COMPACT, FORM_LABEL } from "@/lib/form-classes";
+import { todayYmd, ymd, nthWeekday } from "@/lib/date-utils";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
 import type { ExpenseCategory } from "@/types";
 import type { FixedExpense } from "@/hooks/use-fixed-expenses";
@@ -55,12 +56,6 @@ interface Props {
   ) => Promise<{ error: unknown }>;
   onDeleteCategory?: (id: string) => Promise<{ error: unknown }>;
   onUpdateCategoryColor?: (id: string, color: string) => Promise<{ error: unknown }>;
-}
-
-/** 오늘 날짜를 YYYY-MM-DD 로. */
-function todayYmd(): string {
-  const t = new Date();
-  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
 }
 
 export default function FixedExpenseForm({
@@ -435,16 +430,3 @@ export default function FixedExpenseForm({
   );
 }
 
-/** 해당 (year, month) 의 N째주 W요일 Date. 없으면 마지막 W요일로 fallback. */
-function nthWeekday(year: number, month: number, weekday: number, nth: number): Date {
-  const first = new Date(year, month, 1);
-  const offset = (weekday - first.getDay() + 7) % 7;
-  const day = 1 + offset + (nth - 1) * 7;
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  if (day > lastDay) return new Date(year, month, day - 7);
-  return new Date(year, month, day);
-}
-
-function ymd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}

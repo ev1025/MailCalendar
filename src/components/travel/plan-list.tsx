@@ -405,9 +405,10 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
             </Button>
           </div>
 
-          {/* sub-filter 행 — 필터 토글 active 시에만 노출. 가본 곳 포함 (종료일 < 오늘 클램프). */}
+          {/* sub-filter 행 — 필터 토글 active 시에만 노출. 가본 곳 포함 (종료일 < 오늘 클램프).
+              우측 정렬 — 필터 버튼(toolbar 우측) 위치와 시각 연결. */}
           {filterOpen && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               <button
                 type="button"
                 onClick={() => updateShowVisited(!showVisited)}

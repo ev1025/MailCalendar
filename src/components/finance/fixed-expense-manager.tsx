@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import MonthPicker from "@/components/layout/month-picker";
 import FixedExpenseForm from "@/components/finance/fixed-expense-form";
+import { formatMoney } from "@/lib/format-money";
 import type { ExpenseCategory } from "@/types";
 import type { FixedExpense } from "@/hooks/use-fixed-expenses";
 
@@ -63,10 +64,6 @@ interface FixedExpenseManagerProps {
   ) => Promise<{ error: unknown }>;
   onDeleteCategory?: (id: string) => Promise<{ error: unknown }>;
   onUpdateCategoryColor?: (id: string, color: string) => Promise<{ error: unknown }>;
-}
-
-function formatWon(amount: number) {
-  return new Intl.NumberFormat("ko-KR").format(amount) + "원";
 }
 
 export default function FixedExpenseManager({
@@ -264,7 +261,7 @@ export default function FixedExpenseManager({
                         {group.items.length}건
                       </span>
                       <span className="text-sm font-semibold tabular-nums text-finance-loss shrink-0">
-                        -{formatWon(group.total)}
+                        -{formatMoney(group.total)}
                       </span>
                       <ChevronDown
                         className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`}
@@ -300,7 +297,7 @@ export default function FixedExpenseManager({
                               }`}
                             >
                               {fx.type === "income" ? "+" : "-"}
-                              {formatWon(fx.amount)}
+                              {formatMoney(fx.amount)}
                             </span>
                             <button
                               type="button"
@@ -356,7 +353,7 @@ export default function FixedExpenseManager({
         info={
           deletingFx ? (
             <>
-              <span className="block">매월 {deletingFx.day_of_month}일 · {formatWon(deletingFx.amount)}</span>
+              <span className="block">매월 {deletingFx.day_of_month}일 · {formatMoney(deletingFx.amount)}</span>
               {deletingFx.category?.name && (
                 <span className="block text-muted-foreground/70">{deletingFx.category.name}</span>
               )}
@@ -391,7 +388,7 @@ export default function FixedExpenseManager({
             info = (
               <>
                 <span className="block tabular-nums">
-                  {formatWon(u.oldFx.amount)} → {formatWon(u.newData.amount ?? 0)}
+                  {formatMoney(u.oldFx.amount)} → {formatMoney(u.newData.amount ?? 0)}
                 </span>
                 <span className="block tabular-nums">
                   매월 {u.oldFx.day_of_month}일 → {u.newData.day_of_month}일
@@ -403,7 +400,7 @@ export default function FixedExpenseManager({
             question = "변경된 금액을 어느 월부터 적용할까요?";
             info = (
               <span className="block tabular-nums">
-                {formatWon(u.oldFx.amount)} → {formatWon(u.newData.amount ?? 0)}
+                {formatMoney(u.oldFx.amount)} → {formatMoney(u.newData.amount ?? 0)}
               </span>
             );
           } else if (dayChanged) {
