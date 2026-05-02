@@ -222,10 +222,18 @@ export default function TagInput({
     if (now - lastTapRef.current < 350) return;
     lastTapRef.current = now;
     justTappedInsideRef.current = now;
+    // 탭 시작 시점에 input 이 포커스 중이었는지 — 검색 입력 중이라 키보드가
+    // 올라온 상태였다면 액션 후 그 상태 유지 (깜빡임 방지). 처음부터 포커스가
+    // 없었다면(시트만 열어둠) refocus 안 함 — 그래야 카테고리만 골라도
+    // 키보드가 잠깐 올라왔다 사라지는 flicker 가 없음.
+    const wasFocused =
+      !!inputRef.current && document.activeElement === inputRef.current;
     fn();
-    // 액션 후 input 포커스 유지 — 키보드가 잠시 내려갔다 올라오는 깜빡임 회피.
-    if (inputRef.current && document.activeElement !== inputRef.current) {
-      // setTimeout 0 으로 다음 tick 에 포커스 (현재 tick 의 blur 처리 후).
+    if (
+      wasFocused &&
+      inputRef.current &&
+      document.activeElement !== inputRef.current
+    ) {
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   };
