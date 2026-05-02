@@ -252,12 +252,12 @@ export function useFixedExpenses() {
   };
 
   /**
-   * 고정비 비활성화 + 매칭되는 거래(amount+description) 일괄 삭제.
-   * (year, month) 의 1일부터 미래 모두 삭제. 사용자가 임의의 시작 월을 고를 수 있도록
-   * scope 분기 제거 — 캘린더 month picker 와 동일 UX.
+   * 고정비 부분 삭제 — (year, month) 의 1일부터 미래 거래만 삭제.
+   * 그 이전 월에 잔존 거래가 있으면 fx 는 active 유지 → 매니저에서 계속 관리 가능.
+   * 잔존 거래가 없으면 fx 도 비활성화 (전체 삭제와 동등).
    *
-   * 매칭 키: amount + description. 같은 amount/desc 의 다른 거래도 영향 받을 수 있으나
-   * 일반적으로 고정비 자동 등록 외엔 충돌 적음. 정확히 따로 추적하려면 별도 fk 컬럼 필요.
+   * 매칭 키: amount + description (FK 도입 전 호환). 같은 amount/desc 의 다른 거래도
+   * 영향 받을 수 있으나 일반적으로 고정비 자동 등록 외엔 충돌 적음.
    */
   const deleteFixedWithScope = async (
     id: string,
@@ -266,14 +266,10 @@ export function useFixedExpenses() {
   ) => {
     const fx = fixedExpenses.find((f) => f.id === id);
     if (!fx) return { error: "고정비를 찾을 수 없습니다" };
-    const r1 = await supabase
-      .from("fixed_expenses")
-      .update({ is_active: false })
-      .eq("id", id);
-    if (r1.error) return { error: r1.error };
 
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
 
+    // 1) (year, month) 1일 이후 거래 삭제.
     let q = supabase
       .from("expenses")
       .delete()
@@ -283,6 +279,27 @@ export function useFixedExpenses() {
     else q = q.eq("description", fx.description);
     if (userId) q = q.eq("user_id", userId);
     await q;
+
+    // 2) 잔존 거래 확인 — startDate 이전에 매칭 거래가 남아있는지.
+    let countQ = supabase
+      .from("expenses")
+      .select("id", { count: "exact", head: true })
+      .lt("date", startDate)
+      .eq("amount", fx.amount);
+    if (fx.description === null) countQ = countQ.is("description", null);
+    else countQ = countQ.eq("description", fx.description);
+    if (userId) countQ = countQ.eq("user_id", userId);
+    const { count: remaining } = await countQ;
+
+    // 3) 잔존 거래 없으면 fx 비활성. 있으면 active 유지 → 매니저에 노출되어
+    //    사용자가 남은 월의 거래를 계속 관리 가능.
+    if (!remaining || remaining === 0) {
+      const r = await supabase
+        .from("fixed_expenses")
+        .update({ is_active: false })
+        .eq("id", id);
+      if (r.error) return { error: r.error };
+    }
 
     await fetchFixed();
     return { error: null };
