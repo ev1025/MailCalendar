@@ -253,11 +253,12 @@ export function useFixedExpenses() {
 
   /**
    * 고정비 부분 삭제 — (year, month) 의 1일부터 미래 거래만 삭제.
-   * 그 이전 월에 잔존 거래가 있으면 fx 는 active 유지 → 매니저에서 계속 관리 가능.
-   * 잔존 거래가 없으면 fx 도 비활성화 (전체 삭제와 동등).
+   * 잔존 거래 수에 따라 fx 상태를 갱신:
+   *   - 잔존 = 0 → fx.is_active = false (전체 삭제와 동등)
+   *   - 잔존 > 0 → fx.repeat_months = 잔존 수, active 유지. 즉 5월부터 계속 인
+   *     fx 를 7월부터 삭제하면 fx 가 "매월 2회" 로 자동 축소됨 (5/6월 만 남음).
    *
-   * 매칭 키: amount + description (FK 도입 전 호환). 같은 amount/desc 의 다른 거래도
-   * 영향 받을 수 있으나 일반적으로 고정비 자동 등록 외엔 충돌 적음.
+   * 매칭: fixed_expense_id 우선, 없으면 amount + description fallback (legacy 호환).
    */
   const deleteFixedWithScope = async (
     id: string,
@@ -269,36 +270,66 @@ export function useFixedExpenses() {
 
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
 
-    // 1) (year, month) 1일 이후 거래 삭제.
-    let q = supabase
+    // 1a) FK 기반 삭제 — fixed_expense_id 가 있는 거래.
+    let qFk = supabase
       .from("expenses")
       .delete()
       .gte("date", startDate)
-      .eq("amount", fx.amount);
-    if (fx.description === null) q = q.is("description", null);
-    else q = q.eq("description", fx.description);
-    if (userId) q = q.eq("user_id", userId);
-    await q;
+      .eq("fixed_expense_id", id);
+    if (userId) qFk = qFk.eq("user_id", userId);
+    await qFk;
 
-    // 2) 잔존 거래 확인 — startDate 이전에 매칭 거래가 남아있는지.
-    let countQ = supabase
+    // 1b) Legacy fallback — fixed_expense_id 없는 거래는 amount+description 매칭.
+    let qLegacy = supabase
+      .from("expenses")
+      .delete()
+      .gte("date", startDate)
+      .is("fixed_expense_id", null)
+      .eq("amount", fx.amount);
+    if (fx.description === null) qLegacy = qLegacy.is("description", null);
+    else qLegacy = qLegacy.eq("description", fx.description);
+    if (userId) qLegacy = qLegacy.eq("user_id", userId);
+    await qLegacy;
+
+    // 2) 잔존 거래 카운트 — FK 우선 + legacy 보강.
+    let countFkQ = supabase
       .from("expenses")
       .select("id", { count: "exact", head: true })
       .lt("date", startDate)
-      .eq("amount", fx.amount);
-    if (fx.description === null) countQ = countQ.is("description", null);
-    else countQ = countQ.eq("description", fx.description);
-    if (userId) countQ = countQ.eq("user_id", userId);
-    const { count: remaining } = await countQ;
+      .eq("fixed_expense_id", id);
+    if (userId) countFkQ = countFkQ.eq("user_id", userId);
+    const { count: countFk } = await countFkQ;
 
-    // 3) 잔존 거래 없으면 fx 비활성. 있으면 active 유지 → 매니저에 노출되어
-    //    사용자가 남은 월의 거래를 계속 관리 가능.
-    if (!remaining || remaining === 0) {
+    let countLegacyQ = supabase
+      .from("expenses")
+      .select("id", { count: "exact", head: true })
+      .lt("date", startDate)
+      .is("fixed_expense_id", null)
+      .eq("amount", fx.amount);
+    if (fx.description === null) countLegacyQ = countLegacyQ.is("description", null);
+    else countLegacyQ = countLegacyQ.eq("description", fx.description);
+    if (userId) countLegacyQ = countLegacyQ.eq("user_id", userId);
+    const { count: countLegacy } = await countLegacyQ;
+
+    const remaining = (countFk ?? 0) + (countLegacy ?? 0);
+
+    // 3) fx 상태 업데이트.
+    if (remaining === 0) {
       const r = await supabase
         .from("fixed_expenses")
         .update({ is_active: false })
         .eq("id", id);
       if (r.error) return { error: r.error };
+    } else {
+      // 잔존 수만큼 repeat_months 축소. 1 이면 "그 달만(없음)" 으로 표시됨.
+      const r = await supabase
+        .from("fixed_expenses")
+        .update({ repeat_months: remaining })
+        .eq("id", id);
+      if (r.error) {
+        // repeat_months 컬럼 없는 구 DB 폴백 — 컬럼 빼고 그냥 상태 유지.
+        // fx 는 active 유지 (잔존 거래가 있으니 매니저에 노출).
+      }
     }
 
     await fetchFixed();
@@ -506,13 +537,14 @@ export function useFixedExpenses() {
     const baseYear = fromYear ?? today.getFullYear();
     const baseMonth = fromMonth ?? today.getMonth() + 1;
 
-    // 대상 기간(이번달 ~ +months) 의 기존 거래를 한 번에 조회 → set 으로 dedup.
+    // 대상 기간 의 기존 거래 조회 → 날짜 set 으로 dedup. 이 fx 와 연결된 거래만
+    // (FK 우선, legacy 는 amount+description 보조 매칭).
     const startDate = `${baseYear}-${String(baseMonth).padStart(2, "0")}-01`;
     const endT = new Date(baseYear, baseMonth - 1 + months, 1);
     const endDate = `${endT.getFullYear()}-${String(endT.getMonth() + 1).padStart(2, "0")}-01`;
     let existQ = supabase
       .from("expenses")
-      .select("amount, description, date")
+      .select("amount, description, date, fixed_expense_id")
       .gte("date", startDate)
       .lt("date", endDate);
     if (userId) existQ = existQ.eq("user_id", userId);
@@ -525,11 +557,28 @@ export function useFixedExpenses() {
     if (fxRes.error || !fxRes.data)
       return { error: fxRes.error || "고정비를 찾을 수 없습니다" };
     const fx = fxRes.data;
-    const existing = existRes.data;
-    const set = new Set(
-      (existing as { amount: number; description: string | null; date: string }[] | null)?.map(
-        (t) => `${t.amount}|${t.description ?? ""}|${t.date}`,
-      ) ?? [],
+    type ExistingTx = {
+      amount: number;
+      description: string | null;
+      date: string;
+      fixed_expense_id?: string | null;
+    };
+    const existing = (existRes.data ?? []) as ExistingTx[];
+    // 이 fx 와 매칭되는 기존 거래의 날짜만 모음 (날짜 dedup 키).
+    const fxDates = new Set<string>(
+      existing
+        .filter((t) => {
+          if (t.fixed_expense_id === fxId) return true;
+          // legacy: FK 없을 때만 amount+desc 로 보조 매칭.
+          if (t.fixed_expense_id == null) {
+            if (t.amount !== fx.amount) return false;
+            const tDesc = t.description ?? null;
+            const fxDesc = fx.description ?? null;
+            return tDesc === fxDesc;
+          }
+          return false;
+        })
+        .map((t) => t.date),
     );
 
     const txsToInsert: Record<string, unknown>[] = [];
@@ -540,8 +589,8 @@ export function useFixedExpenses() {
       const lastDay = new Date(yi, mi, 0).getDate();
       const day = Math.min(fx.day_of_month, lastDay);
       const date = `${yi}-${String(mi).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const key = `${fx.amount}|${fx.description ?? ""}|${date}`;
-      if (set.has(key)) continue;
+      // 이 fx 의 동일 date 거래가 이미 있으면 skip (FK 또는 legacy amount+desc 매칭).
+      if (fxDates.has(date)) continue;
       txsToInsert.push({
         title: fx.title,
         amount: fx.amount,
