@@ -173,6 +173,9 @@ function FinancePageInner() {
 
   const filteredTransactions = useMemo(() => {
     return baseTransactions.filter((tx) => {
+      // 수입 거래는 가계부 목록에 노출하지 않음 — 수입 관리(수입 매니저) 에서만 관리.
+      // 카드 합계(수입/지출/잔액) 와 차트는 baseTotalIncome/Expense 로 별도 계산.
+      if (tx.type === "income") return false;
       if (categoryFilter && tx.category?.name !== categoryFilter) return false;
       return true;
     });
