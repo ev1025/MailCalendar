@@ -139,12 +139,17 @@ export default function IncomeForm({
           </FormField>
           <FormField label="종류" required className="w-fit">
             <Select value={categoryId} onValueChange={(v) => v && setCategoryId(v)}>
-              <SelectTrigger className={`${FORM_INPUT_COMPACT} w-fit min-w-[5rem]`}>
+              {/* hideIcon + items hideIndicator + content min-w-fit (default min-w-36 floor 제거)
+                  → trigger 와 panel 폭이 컨텐츠에 맞춰 일치 (UI 규칙 5). */}
+              <SelectTrigger
+                hideIcon
+                className={`${FORM_INPUT_COMPACT} w-fit min-w-[5rem]`}
+              >
                 {selectedCategory?.name || "선택"}
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent align="start" className="min-w-fit">
                 {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
+                  <SelectItem key={cat.id} value={cat.id} hideIndicator>
                     {cat.name}
                   </SelectItem>
                 ))}
