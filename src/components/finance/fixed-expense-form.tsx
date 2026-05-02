@@ -257,39 +257,8 @@ export default function FixedExpenseForm({
           />
         </FormField>
 
-        {/* 수입/지출 세그먼트 — forceType 지정 시 숨김 (수입/지출 전용 매니저용). */}
-        {!forceType && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={`flex-1 h-9 rounded-md text-sm font-medium transition-colors border ${
-                type === "expense"
-                  ? "border-finance-loss/30 bg-finance-loss/10 text-finance-loss"
-                  : "text-muted-foreground hover:bg-accent"
-              }`}
-              onClick={() => {
-                setType("expense");
-                setCategoryId("");
-              }}
-            >
-              지출
-            </button>
-            <button
-              type="button"
-              className={`flex-1 h-9 rounded-md text-sm font-medium transition-colors border ${
-                type === "income"
-                  ? "border-finance-gain/30 bg-finance-gain/10 text-finance-gain"
-                  : "text-muted-foreground hover:bg-accent"
-              }`}
-              onClick={() => {
-                setType("income");
-                setCategoryId("");
-              }}
-            >
-              수입
-            </button>
-          </div>
-        )}
+        {/* 수입/지출 세그먼트 제거 — 고정비/수입 매니저가 각자 forceType 으로
+            type 을 고정. 수입/지출 토글은 더 이상 폼 안에 노출되지 않음. */}
 
         {/* 금액 + 시작일 + 반복 — 한 행. 시작일·반복 dropdown 은 컨텐츠 폭(약간 여백). */}
         <div className="flex items-start gap-3 flex-wrap">

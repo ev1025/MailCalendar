@@ -352,7 +352,7 @@ export default function FixedExpenseManager({
         onAddCategory={onAddCategory}
         onDeleteCategory={onDeleteCategory}
         onUpdateCategoryColor={onUpdateCategoryColor}
-        forceType={isIncome ? "income" : undefined}
+        forceType={isIncome ? "income" : "expense"}
       />
 
       {/* 삭제 — 사용자가 시작 월(year/month) 을 자유롭게 골라 그 월부터 미래 매칭 거래
