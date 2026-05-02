@@ -64,6 +64,9 @@ interface FixedExpenseManagerProps {
   ) => Promise<{ error: unknown }>;
   onDeleteCategory?: (id: string) => Promise<{ error: unknown }>;
   onUpdateCategoryColor?: (id: string, color: string) => Promise<{ error: unknown }>;
+  /** "income" 이면 매니저 라벨/색상이 수입 컨텍스트로 전환. fixedExpenses 는 호출자에서
+   *  type='income' 만 필터해 전달하는 것을 가정. 폼은 forceType='income' 으로 렌더. */
+  variant?: "expense" | "income";
 }
 
 export default function FixedExpenseManager({
@@ -83,7 +86,18 @@ export default function FixedExpenseManager({
   onAddCategory,
   onDeleteCategory,
   onUpdateCategoryColor,
+  variant = "expense",
 }: FixedExpenseManagerProps) {
+  const isIncome = variant === "income";
+  const labels = {
+    title: isIncome ? "수입 관리" : "고정비 관리",
+    description: isIncome ? "매월 자동 반영되는 수입 항목" : "매월 자동 반영되는 고정 항목",
+    empty: isIncome ? "등록된 수입이 없습니다" : "등록된 고정비가 없습니다",
+    addBtn: isIncome ? "수입 추가" : "고정비 추가",
+    deleteAria: isIncome ? "수입 삭제" : "고정비 삭제",
+  };
+  const totalColor = isIncome ? "text-finance-gain" : "text-finance-loss";
+  const totalSign = isIncome ? "+" : "-";
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FixedExpense | null>(null);
   const [deletingFx, setDeletingFx] = useState<FixedExpense | null>(null);
@@ -221,17 +235,17 @@ export default function FixedExpenseManager({
       <FormPage
         open={open}
         onOpenChange={onOpenChange}
-        title="고정비 관리"
+        title={labels.title}
         hideFooter
       >
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted-foreground leading-relaxed break-keep">
-            매월 자동 반영되는 고정 항목. 항목 탭으로 수정 · 휴지통으로 삭제.
+            {labels.description}
           </p>
 
           {fixedExpenses.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10">
-              등록된 고정비가 없습니다
+              {labels.empty}
             </p>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -260,8 +274,8 @@ export default function FixedExpenseManager({
                       <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
                         {group.items.length}건
                       </span>
-                      <span className="text-sm font-semibold tabular-nums text-finance-loss shrink-0">
-                        -{formatMoney(group.total)}
+                      <span className={`text-sm font-semibold tabular-nums shrink-0 ${totalColor}`}>
+                        {totalSign}{formatMoney(group.total)}
                       </span>
                       <ChevronDown
                         className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? "rotate-0" : "-rotate-90"}`}
@@ -306,7 +320,7 @@ export default function FixedExpenseManager({
                                 setDeletingFx(fx);
                               }}
                               className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent transition-colors"
-                              aria-label="고정비 삭제"
+                              aria-label={labels.deleteAria}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -322,7 +336,7 @@ export default function FixedExpenseManager({
 
           <Button variant="outline" onClick={handleOpenNew}>
             <Plus className="mr-1 h-4 w-4" />
-            고정비 추가
+            {labels.addBtn}
           </Button>
         </div>
       </FormPage>
@@ -336,6 +350,7 @@ export default function FixedExpenseManager({
         onAddCategory={onAddCategory}
         onDeleteCategory={onDeleteCategory}
         onUpdateCategoryColor={onUpdateCategoryColor}
+        forceType={isIncome ? "income" : undefined}
       />
 
       {/* 삭제 — 사용자가 시작 월(year/month) 을 자유롭게 골라 그 월부터 미래 매칭 거래
@@ -347,8 +362,8 @@ export default function FixedExpenseManager({
         }}
         title={
           deletingFx
-            ? `${deletingFx.title || deletingFx.description || "고정비"} 삭제`
-            : "고정비 삭제"
+            ? `${deletingFx.title || deletingFx.description || (isIncome ? "수입" : "고정비")} 삭제`
+            : labels.deleteAria
         }
         info={
           deletingFx ? (

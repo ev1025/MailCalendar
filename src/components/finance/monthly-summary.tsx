@@ -9,11 +9,9 @@ interface MonthlySummaryProps {
   /** 고정비 합계 — 부모에서 page.tsx 의 useFixedExpenses 와 동일 인스턴스를 공유.
    *  이전엔 monthly-summary 안에서 별도 훅을 호출해 변경이 즉시 반영 안 되었음. */
   totalFixed: number;
-  /** 전월 같은 기간의 net (수입 - 지출). 전월 대비 카드 계산용. */
-  prevNet: number;
   /** 고정비 카드 우상단 ✏️ — 클릭 시 FixedExpenseManager 열기. */
   onOpenFixed?: () => void;
-  /** 수입 카드 우상단 ✏️ — 클릭 시 IncomeManager 열기. */
+  /** 수입 카드 우상단 ✏️ — 클릭 시 수입 관리 매니저 열기. */
   onOpenIncome?: () => void;
   /** 지출 카드 우상단 + — 거래 폼을 expense type 으로 미리 세팅한 채 열기. */
   onAddTransaction?: (type: "income" | "expense") => void;
@@ -23,7 +21,6 @@ export default function MonthlySummary({
   totalIncome,
   totalExpense,
   totalFixed,
-  prevNet,
   onOpenFixed,
   onOpenIncome,
   onAddTransaction,
@@ -85,12 +82,11 @@ export default function MonthlySummary({
     </div>
   );
 
-  // 이번달 net = 수입 - 지출. 전월 대비 = 이번달 net - 전월 net.
-  const thisNet = totalIncome - totalExpense;
-  const delta = thisNet - prevNet;
-  const isUp = delta >= 0;
-  const deltaColor = isUp ? "text-finance-gain" : "text-finance-loss";
-  const deltaSign = isUp ? "+" : "-";
+  // 이번달 잔액 = 수입 - 이번달 지출. 양수면 흑자(녹), 음수면 적자(빨강).
+  const balance = totalIncome - totalExpense;
+  const isUp = balance >= 0;
+  const balanceColor = isUp ? "text-finance-gain" : "text-finance-loss";
+  const balanceSign = isUp ? "+" : "-";
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-3 md:h-full">
@@ -126,12 +122,12 @@ export default function MonthlySummary({
         />
       </div>
 
-      {/* 2층: 전월 대비 | 이번달 지출 */}
+      {/* 2층: 이번달 잔액(수입-지출) | 이번달 지출 */}
       <div className="grid gap-1.5 md:gap-3 grid-cols-2 md:flex-1 md:min-h-0">
         <Cell
-          label="전월 대비"
-          color={deltaColor}
-          value={`${deltaSign}${formatMoney(Math.abs(delta))}`}
+          label="이번달 잔액"
+          color={balanceColor}
+          value={`${balanceSign}${formatMoney(Math.abs(balance))}`}
         />
         <Cell
           label="이번달 지출"

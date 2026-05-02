@@ -14,8 +14,6 @@ import TransactionList from "@/components/finance/transaction-list";
 import TransactionForm from "@/components/finance/transaction-form";
 import CategoryChart from "@/components/finance/category-chart";
 import FixedExpenseManager from "@/components/finance/fixed-expense-manager";
-import IncomeManager from "@/components/finance/income-manager";
-import { shiftMonthBack } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
@@ -75,13 +73,6 @@ function FinancePageInner() {
     refetch: refetchTransactions,
   } = useTransactions(startDate, endDate);
 
-  // 전월 대비 카드용 — 현재 기간을 1개월 앞당긴 구간의 거래 합계.
-  // 31일 같은 day 가 이전 달에 없으면 그 달 말일로 클램프해 자연스러운 "한 달 전" 의미 유지.
-  // (실제 prevNet 계산은 includeFixed/fixedSet 정의 후 — 일관성 위해 동일 필터 적용.)
-  const prevStartDate = shiftMonthBack(startDate);
-  const prevEndDate = shiftMonthBack(endDate);
-  const { transactions: prevTransactions } = useTransactions(prevStartDate, prevEndDate);
-
   const {
     fixedExpenses,
     loading: fxLoading,
@@ -94,11 +85,21 @@ function FinancePageInner() {
     applyFixedToMonth,
   } = useFixedExpenses();
 
+  // 고정 지출 (=type:expense) 만 — 수입(type:income) 도 fixed_expenses 에 영속하지만
+  // 별도 매니저(수입 관리) 로 분리되어 노출.
+  const expenseFixedExpenses = useMemo(
+    () => fixedExpenses.filter((f) => f.type !== "income"),
+    [fixedExpenses],
+  );
+  const incomeFixedExpenses = useMemo(
+    () => fixedExpenses.filter((f) => f.type === "income"),
+    [fixedExpenses],
+  );
   // monthly-summary 가 자체 훅 인스턴스를 쓰면 변경이 즉시 반영 안 되므로
   // 여기서 합계 계산해 prop 으로 내려보냄.
   const totalFixed = useMemo(
-    () => fixedExpenses.reduce((s, f) => s + f.amount, 0),
-    [fixedExpenses],
+    () => expenseFixedExpenses.reduce((s, f) => s + f.amount, 0),
+    [expenseFixedExpenses],
   );
 
   // 자동 적용 useEffect 제거 — 페이지 마운트마다 트리거되어 사용자가 수동으로
@@ -170,17 +171,6 @@ function FinancePageInner() {
       }, {} as Record<string, { amount: number; color: string }>);
   }, [baseTransactions]);
 
-  // 전월 net — 이번달과 동일하게 includeFixed 필터 적용 (일관성).
-  const prevNet = useMemo(() => {
-    const filtered = includeFixed
-      ? prevTransactions
-      : prevTransactions.filter((tx) => !isFromFixed(tx));
-    const inc = filtered.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const exp = filtered.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    return inc - exp;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prevTransactions, includeFixed, fixedSet]);
-
   const filteredTransactions = useMemo(() => {
     return baseTransactions.filter((tx) => {
       if (categoryFilter && tx.category?.name !== categoryFilter) return false;
@@ -251,7 +241,6 @@ function FinancePageInner() {
               totalIncome={baseTotalIncome}
               totalExpense={baseTotalExpense}
               totalFixed={totalFixed}
-              prevNet={prevNet}
               onOpenFixed={() => setFixedOpen(true)}
               onOpenIncome={() => setIncomeOpen(true)}
               onAddTransaction={(t) => {
@@ -388,20 +377,17 @@ function FinancePageInner() {
         onDeleteCategory={deleteCategory}
         onUpdateCategoryColor={updateCategoryColor}
       />
-      <IncomeManager
+      {/* 수입 관리 — FixedExpenseManager 의 income variant. */}
+      <FixedExpenseManager
         open={incomeOpen}
         onOpenChange={setIncomeOpen}
-        transactions={allTransactions}
+        fixedExpenses={incomeFixedExpenses}
         categories={categories}
-        onAdd={async (data) => await addTransaction(data)}
-        onUpdate={async (id, updates) => await updateTransaction(id, updates)}
-        onDelete={async (id) => {
-          await deleteTransaction(id);
-        }}
-        // 급여 등 매월 반복 수입 — fixed_expense (type=income) 으로 영속.
-        // addFixed 가 FX row + 120개월 expense bulk 동시 처리.
-        onAddRecurring={async (item) => {
-          const r = await addFixed(item, item.repeat_months);
+        defaultYear={year}
+        defaultMonth={month}
+        variant="income"
+        onAdd={async (item, repeatMonths) => {
+          const r = await addFixed(item, repeatMonths);
           if (!r.error && r.bulkDone) {
             r.bulkDone
               .then(() => refetchTransactions())
@@ -409,12 +395,34 @@ function FinancePageInner() {
           }
           return { error: r.error };
         }}
-        // 급여 거래 "이후 모두 삭제" — FX row 비활성 + 그 달부터 미래 거래 일괄 삭제.
-        onDeleteFixedFromMonth={async (fxId, year, month) => {
-          const r = await deleteFixedWithScope(fxId, year, month);
+        onUpdate={async (id, updates) => {
+          const r = await updateFixed(id, updates);
           if (!r.error) await refetchTransactions();
-          return { error: r.error };
+          return r;
         }}
+        onDelete={async (id) => {
+          const r = await deleteFixed(id);
+          if (!r.error) await refetchTransactions();
+          return r;
+        }}
+        onDeleteWithScope={async (id, y, m) => {
+          const r = await deleteFixedWithScope(id, y, m);
+          if (!r.error) await refetchTransactions();
+          return r;
+        }}
+        onUpdateWithScope={async (id, updates, y, m) => {
+          const r = await updateFixedWithScope(id, updates, y, m);
+          if (!r.error) await refetchTransactions();
+          return r;
+        }}
+        onEnsureFixedMonths={async (id, repeat, fromY, fromM) => {
+          const r = await ensureFixedMonths(id, repeat, fromY, fromM);
+          if (!r.error) await refetchTransactions();
+          return r;
+        }}
+        onAddCategory={addCategory}
+        onDeleteCategory={deleteCategory}
+        onUpdateCategoryColor={updateCategoryColor}
       />
       <FixedExpenseManager
         open={fixedOpen}
@@ -423,7 +431,7 @@ function FinancePageInner() {
           // 매니저 닫힐 때 initialEditingId 도 초기화 — 다음에 일반 진입 시 자동 편집 안 되도록.
           if (!o) setManagerInitialEditingId(undefined);
         }}
-        fixedExpenses={fixedExpenses}
+        fixedExpenses={expenseFixedExpenses}
         categories={categories}
         defaultYear={year}
         defaultMonth={month}

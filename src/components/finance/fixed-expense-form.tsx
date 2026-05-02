@@ -52,6 +52,8 @@ interface Props {
   ) => Promise<{ error: unknown }>;
   onDeleteCategory?: (id: string) => Promise<{ error: unknown }>;
   onUpdateCategoryColor?: (id: string, color: string) => Promise<{ error: unknown }>;
+  /** 'income' 으로 강제하면: 수입/지출 토글 + 결제수단 입력 숨김 + 폼 제목 "수입". */
+  forceType?: "income" | "expense";
 }
 
 export default function FixedExpenseForm({
@@ -63,11 +65,12 @@ export default function FixedExpenseForm({
   onAddCategory,
   onDeleteCategory,
   onUpdateCategoryColor,
+  forceType,
 }: Props) {
   const { methods: paymentMethods, addMethod, deleteMethod, updateMethodColor } =
     usePaymentMethods();
 
-  const [type, setType] = useState<"income" | "expense">("expense");
+  const [type, setType] = useState<"income" | "expense">(forceType ?? "expense");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -90,7 +93,7 @@ export default function FixedExpenseForm({
   useEffect(() => {
     if (!open) return;
     if (fixed) {
-      setType(fixed.type);
+      setType(forceType ?? fixed.type);
       setTitle(fixed.title || "");
       setAmount(String(fixed.amount));
       setCategoryId(fixed.category_id);
@@ -136,7 +139,7 @@ export default function FixedExpenseForm({
         setRepeatCount(rm - 1);
       }
     } else {
-      setType("expense");
+      setType(forceType ?? "expense");
       setTitle("");
       setAmount("");
       setCategoryId("");
@@ -225,59 +228,68 @@ export default function FixedExpenseForm({
     onOpenChange(false);
   };
 
+  const isIncome = forceType === "income";
+  const titleLabel = isIncome ? "수입명" : "지출명";
+  const titlePlaceholder = isIncome ? "예: 5월 급여" : "예: 넷플릭스, 월세";
+  const formTitle = isIncome
+    ? (fixed ? "수입 수정" : "새 수입")
+    : (fixed ? "고정비 수정" : "새 고정비");
+
   return (
     <FormPage
       open={open}
       onOpenChange={onOpenChange}
-      title={fixed ? "고정비 수정" : "새 고정비"}
+      title={formTitle}
       submitDisabled={!amount || !categoryId}
       saving={saving}
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col gap-4">
-        {/* 지출명 */}
-        <FormField label="지출명" htmlFor="fx-title">
+        {/* 지출명/수입명 */}
+        <FormField label={titleLabel} htmlFor="fx-title">
           <Textarea
             id="fx-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="예: 넷플릭스, 월세"
+            placeholder={titlePlaceholder}
             rows={2}
             className="min-h-0"
           />
         </FormField>
 
-        {/* 수입/지출 세그먼트 */}
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className={`flex-1 h-9 rounded-md text-sm font-medium transition-colors border ${
-              type === "expense"
-                ? "border-finance-loss/30 bg-finance-loss/10 text-finance-loss"
-                : "text-muted-foreground hover:bg-accent"
-            }`}
-            onClick={() => {
-              setType("expense");
-              setCategoryId("");
-            }}
-          >
-            지출
-          </button>
-          <button
-            type="button"
-            className={`flex-1 h-9 rounded-md text-sm font-medium transition-colors border ${
-              type === "income"
-                ? "border-finance-gain/30 bg-finance-gain/10 text-finance-gain"
-                : "text-muted-foreground hover:bg-accent"
-            }`}
-            onClick={() => {
-              setType("income");
-              setCategoryId("");
-            }}
-          >
-            수입
-          </button>
-        </div>
+        {/* 수입/지출 세그먼트 — forceType 지정 시 숨김 (수입/지출 전용 매니저용). */}
+        {!forceType && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`flex-1 h-9 rounded-md text-sm font-medium transition-colors border ${
+                type === "expense"
+                  ? "border-finance-loss/30 bg-finance-loss/10 text-finance-loss"
+                  : "text-muted-foreground hover:bg-accent"
+              }`}
+              onClick={() => {
+                setType("expense");
+                setCategoryId("");
+              }}
+            >
+              지출
+            </button>
+            <button
+              type="button"
+              className={`flex-1 h-9 rounded-md text-sm font-medium transition-colors border ${
+                type === "income"
+                  ? "border-finance-gain/30 bg-finance-gain/10 text-finance-gain"
+                  : "text-muted-foreground hover:bg-accent"
+              }`}
+              onClick={() => {
+                setType("income");
+                setCategoryId("");
+              }}
+            >
+              수입
+            </button>
+          </div>
+        )}
 
         {/* 금액 + 시작일 + 반복 — 한 행. 시작일·반복 dropdown 은 컨텐츠 폭(약간 여백). */}
         <div className="flex items-start gap-3 flex-wrap">
@@ -376,18 +388,20 @@ export default function FixedExpenseForm({
           />
         </FormField>
 
-        {/* 결제수단 */}
-        <FormField label="결제수단">
-          <TagInput
-            selectedTags={paymentMethod ? [paymentMethod] : []}
-            allTags={paymentMethods}
-            onChange={(tags) => setPaymentMethod(tags[tags.length - 1] || "")}
-            onAddTag={addMethod}
-            onDeleteTag={deleteMethod}
-            onUpdateTagColor={updateMethodColor}
-            placeholder="검색·추가"
-          />
-        </FormField>
+        {/* 결제수단 — 수입(forceType="income") 폼에선 숨김. */}
+        {!isIncome && (
+          <FormField label="결제수단">
+            <TagInput
+              selectedTags={paymentMethod ? [paymentMethod] : []}
+              allTags={paymentMethods}
+              onChange={(tags) => setPaymentMethod(tags[tags.length - 1] || "")}
+              onAddTag={addMethod}
+              onDeleteTag={deleteMethod}
+              onUpdateTagColor={updateMethodColor}
+              placeholder="검색·추가"
+            />
+          </FormField>
+        )}
 
         {/* 메모 */}
         <FormField label="메모">
