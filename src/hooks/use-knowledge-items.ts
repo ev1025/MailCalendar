@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 import type { KnowledgeItem } from "@/types";
 
 function stripHtml(html: string): string {
@@ -11,11 +12,19 @@ function stripHtml(html: string): string {
 
 export function useKnowledgeItems(folderId: string | null) {
   const userId = useCurrentUserId();
-  const [items, setItems] = useState<KnowledgeItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = useMemo(
+    () => `knowledge-items:${folderId ?? "all"}`,
+    [folderId],
+  );
+
+  const [items, setItems] = useState<KnowledgeItem[]>(
+    () => getSessionCache<KnowledgeItem[]>(cacheKey) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => getSessionCache<KnowledgeItem[]>(cacheKey) === null,
+  );
 
   const fetchItems = useCallback(async () => {
-    setLoading(true);
     let query = supabase
       .from("knowledge_items")
       .select("*")
@@ -23,9 +32,23 @@ export function useKnowledgeItems(folderId: string | null) {
       .order("updated_at", { ascending: false });
     if (folderId) query = query.eq("folder_id", folderId);
     const { data, error } = await query;
-    if (!error && data) setItems(data as KnowledgeItem[]);
+    if (!error && data) {
+      setItems(data as KnowledgeItem[]);
+      setSessionCache(cacheKey, data);
+    }
     setLoading(false);
-  }, [folderId]);
+  }, [folderId, cacheKey]);
+
+  useEffect(() => {
+    const cached = getSessionCache<KnowledgeItem[]>(cacheKey);
+    if (cached) {
+      setItems(cached);
+      setLoading(false);
+    } else {
+      setItems([]);
+      setLoading(true);
+    }
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchItems();

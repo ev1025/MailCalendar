@@ -1,29 +1,54 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 import type { ProductPurchase } from "@/types";
 
 export function useProductPurchases(productId: string | null) {
   const userId = useCurrentUserId();
-  const [purchases, setPurchases] = useState<ProductPurchase[]>([]);
+  const cacheKey = useMemo(
+    () => (productId ? `product-purchases:${productId}` : null),
+    [productId],
+  );
+
+  const [purchases, setPurchases] = useState<ProductPurchase[]>(() =>
+    cacheKey ? getSessionCache<ProductPurchase[]>(cacheKey) ?? [] : [],
+  );
   const [loading, setLoading] = useState(false);
 
   const fetchPurchases = useCallback(async () => {
-    if (!productId) {
+    if (!productId || !cacheKey) {
       setPurchases([]);
       return;
     }
-    setLoading(true);
     const { data, error } = await supabase
       .from("product_purchases")
       .select("*")
       .eq("product_id", productId)
       .order("purchased_at", { ascending: false });
-    if (!error && data) setPurchases(data as ProductPurchase[]);
+    if (!error && data) {
+      setPurchases(data as ProductPurchase[]);
+      setSessionCache(cacheKey, data);
+    }
     setLoading(false);
-  }, [productId]);
+  }, [productId, cacheKey]);
+
+  useEffect(() => {
+    if (!cacheKey) {
+      setPurchases([]);
+      return;
+    }
+    const cached = getSessionCache<ProductPurchase[]>(cacheKey);
+    if (cached) {
+      setPurchases(cached);
+      setLoading(false);
+    } else {
+      setPurchases([]);
+      setLoading(true);
+    }
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchPurchases();

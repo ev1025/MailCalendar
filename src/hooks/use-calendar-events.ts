@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { CalendarEvent } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 
 export interface SharedEvent extends CalendarEvent {
   user_id?: string | null;
@@ -23,8 +24,6 @@ export function useCalendarEvents(
   visibleUserIds: string[] = []
 ) {
   const currentUserId = useCurrentUserId();
-  const [events, setEvents] = useState<SharedEvent[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endDate =
@@ -32,8 +31,26 @@ export function useCalendarEvents(
       ? `${year + 1}-01-01`
       : `${year}-${String(month + 1).padStart(2, "0")}-01`;
 
+  // 캐시 키 — 같은 (월, 표시 사용자) 조합의 직전 결과를 즉시 hydrate.
+  // 사용자 정렬해서 안정적인 키 생성.
+  const cacheKey = useMemo(
+    () =>
+      `cal-events:${currentUserId ?? ""}:${startDate}:${endDate}:${[
+        ...visibleUserIds,
+      ]
+        .sort()
+        .join(",")}`,
+    [currentUserId, startDate, endDate, visibleUserIds],
+  );
+
+  const [events, setEvents] = useState<SharedEvent[]>(
+    () => getSessionCache<SharedEvent[]>(cacheKey) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => getSessionCache<SharedEvent[]>(cacheKey) === null,
+  );
+
   const fetchEvents = useCallback(async () => {
-    setLoading(true);
     if (!currentUserId || visibleUserIds.length === 0) {
       // 깜빡임 방지: 기존 events 유지, loading만 false로
       setLoading(false);
@@ -52,9 +69,24 @@ export function useCalendarEvents(
       .order("start_date")
       .order("sort_order")
       .order("created_at");
-    setEvents((data as SharedEvent[]) || []);
+    const rows = (data as SharedEvent[]) || [];
+    setEvents(rows);
     setLoading(false);
-  }, [startDate, endDate, visibleUserIds, currentUserId]);
+    setSessionCache(cacheKey, rows);
+  }, [cacheKey, startDate, endDate, visibleUserIds, currentUserId]);
+
+  // 키 변경 시(월 전환 등) 캐시 즉시 hydrate. fetchEvents 가 백그라운드 갱신.
+  useEffect(() => {
+    const cached = getSessionCache<SharedEvent[]>(cacheKey);
+    if (cached) {
+      setEvents(cached);
+      setLoading(false);
+    } else {
+      // 새 키 + 캐시 없음 → 빈 상태로 로딩 표시 (이전 월 잔상 방지).
+      setEvents([]);
+      setLoading(true);
+    }
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchEvents();

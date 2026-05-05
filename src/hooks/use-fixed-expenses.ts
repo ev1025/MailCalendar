@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { ExpenseCategory } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
 import { generateRepeatDates } from "@/lib/calendar/repeat-helpers";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 
 export interface FixedExpense {
   id: string;
@@ -34,11 +35,16 @@ export interface FixedExpense {
 
 export function useFixedExpenses() {
   const userId = useCurrentUserId();
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = useMemo(() => `fx:${userId ?? ""}`, [userId]);
+
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>(
+    () => getSessionCache<FixedExpense[]>(cacheKey) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => getSessionCache<FixedExpense[]>(cacheKey) === null,
+  );
 
   const fetchFixed = useCallback(async () => {
-    setLoading(true);
     let query = supabase
       .from("fixed_expenses")
       .select("*, category:expense_categories(*)")
@@ -52,12 +58,28 @@ export function useFixedExpenses() {
         .select("*, category:expense_categories(*)")
         .eq("is_active", true)
         .order("day_of_month");
-      if (fallback.data) setFixedExpenses(fallback.data);
+      if (fallback.data) {
+        setFixedExpenses(fallback.data);
+        setSessionCache(cacheKey, fallback.data);
+      }
     } else if (data) {
       setFixedExpenses(data);
+      setSessionCache(cacheKey, data);
     }
     setLoading(false);
-  }, [userId]);
+  }, [userId, cacheKey]);
+
+  // 사용자 변경 시 캐시 hydrate.
+  useEffect(() => {
+    const cached = getSessionCache<FixedExpense[]>(cacheKey);
+    if (cached) {
+      setFixedExpenses(cached);
+      setLoading(false);
+    } else {
+      setFixedExpenses([]);
+      setLoading(true);
+    }
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchFixed();

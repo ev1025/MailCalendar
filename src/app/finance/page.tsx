@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo } from "react";
+import { Suspense, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Wallet, ShoppingBag, X, Check, Repeat } from "lucide-react";
 import DateRangePicker from "@/components/layout/date-range-picker";
@@ -61,6 +61,21 @@ function FinancePageInner() {
   const [managerInitialEditingId, setManagerInitialEditingId] = useState<string | undefined>(undefined);
 
   const handleRangeChange = (s: string, e: string) => {
+    setStartDate(s);
+    setEndDate(e);
+  };
+
+  // 모바일 좌우 스와이프 — 좌측 스와이프 = 다음 달, 우측 스와이프 = 지난 달.
+  // 캘린더와 동일한 ref-기반 capture 패턴. 임계값: 가로 40px, 세로 50px 미만.
+  // 스와이프 시 startDate 기준 월의 1일부터 말일까지로 범위를 강제 정규화.
+  const swipeRef = useRef<{ x: number; y: number } | null>(null);
+  const shiftMonth = (delta: number) => {
+    const t = new Date(year, month - 1 + delta, 1);
+    const ny = t.getFullYear();
+    const nm = t.getMonth() + 1;
+    const last = new Date(ny, nm, 0).getDate();
+    const s = `${ny}-${String(nm).padStart(2, "0")}-01`;
+    const e = `${ny}-${String(nm).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
     setStartDate(s);
     setEndDate(e);
   };
@@ -227,7 +242,24 @@ function FinancePageInner() {
         }
       />
     <div className="flex flex-col h-[calc(100%-3.5rem)]">
-    <div className="flex-1 overflow-y-auto px-2 py-2 md:p-6 animate-page-in">
+    <div
+      className="flex-1 overflow-y-auto px-2 py-2 md:p-6 animate-page-in"
+      onTouchStartCapture={(e) => {
+        const t = e.touches[0];
+        swipeRef.current = { x: t.clientX, y: t.clientY };
+      }}
+      onTouchEndCapture={(e) => {
+        const start = swipeRef.current;
+        swipeRef.current = null;
+        if (!start) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - start.x;
+        const dy = t.clientY - start.y;
+        // 가로 40px 이상 & 세로 이동 50px 미만 — 수직 스크롤과 분리.
+        if (Math.abs(dx) < 40 || Math.abs(dy) > 50) return;
+        shiftMonth(dx < 0 ? 1 : -1);
+      }}
+    >
       <div className="w-full md:max-w-5xl md:mx-auto">
       <div className="mb-2 flex justify-center">
         <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleRangeChange} />

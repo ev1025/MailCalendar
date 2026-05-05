@@ -3,21 +3,30 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 import type { KnowledgeFolder } from "@/types";
+
+const KF_CACHE_KEY = "knowledge-folders";
 
 export function useKnowledgeFolders() {
   const userId = useCurrentUserId();
-  const [folders, setFolders] = useState<KnowledgeFolder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [folders, setFolders] = useState<KnowledgeFolder[]>(
+    () => getSessionCache<KnowledgeFolder[]>(KF_CACHE_KEY) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => getSessionCache<KnowledgeFolder[]>(KF_CACHE_KEY) === null,
+  );
 
   const fetchFolders = useCallback(async () => {
-    setLoading(true);
     const { data, error } = await supabase
       .from("knowledge_folders")
       .select("*")
       .order("sort_order")
       .order("name");
-    if (!error && data) setFolders(data as KnowledgeFolder[]);
+    if (!error && data) {
+      setFolders(data as KnowledgeFolder[]);
+      setSessionCache(KF_CACHE_KEY, data);
+    }
     setLoading(false);
   }, []);
 

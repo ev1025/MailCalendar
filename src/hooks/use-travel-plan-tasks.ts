@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { syncPlanCalendarEvents } from "@/lib/travel/calendar-sync";
 import { useCurrentUserId } from "@/lib/current-user";
 import { useAutoRefetch } from "@/hooks/use-auto-refetch";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 import type { TravelPlanTask } from "@/types";
 
 // 특정 plan_id 의 travel_plan_tasks CRUD.
@@ -15,8 +16,17 @@ import type { TravelPlanTask } from "@/types";
 
 export function useTravelPlanTasks(planId: string | null) {
   const userId = useCurrentUserId();
-  const [tasks, setTasks] = useState<TravelPlanTask[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = useMemo(
+    () => (planId ? `travel-plan-tasks:${planId}` : null),
+    [planId],
+  );
+
+  const [tasks, setTasks] = useState<TravelPlanTask[]>(() =>
+    cacheKey ? getSessionCache<TravelPlanTask[]>(cacheKey) ?? [] : [],
+  );
+  const [loading, setLoading] = useState(
+    () => !cacheKey || getSessionCache<TravelPlanTask[]>(cacheKey) === null,
+  );
 
   // task 변경 후 호출. 이 plan 이 calendar_events 를 가지고 있을 때만 재동기화.
   // 카드뷰의 hasCalendarEvents 표시는 plan-list 가 별도로 갱신.
@@ -26,12 +36,11 @@ export function useTravelPlanTasks(planId: string | null) {
   }, [planId, userId]);
 
   const fetchTasks = useCallback(async () => {
-    if (!planId) {
+    if (!planId || !cacheKey) {
       setTasks([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
     const { data } = await supabase
       .from("travel_plan_tasks")
       .select("*")
@@ -39,9 +48,27 @@ export function useTravelPlanTasks(planId: string | null) {
       .order("day_index", { ascending: true })
       .order("start_time", { ascending: true, nullsFirst: false })
       .order("manual_order", { ascending: true });
-    setTasks((data as TravelPlanTask[]) ?? []);
+    const rows = (data as TravelPlanTask[]) ?? [];
+    setTasks(rows);
+    setSessionCache(cacheKey, rows);
     setLoading(false);
-  }, [planId]);
+  }, [planId, cacheKey]);
+
+  useEffect(() => {
+    if (!cacheKey) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
+    const cached = getSessionCache<TravelPlanTask[]>(cacheKey);
+    if (cached) {
+      setTasks(cached);
+      setLoading(false);
+    } else {
+      setTasks([]);
+      setLoading(true);
+    }
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchTasks();

@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
 import { useAutoRefetch } from "@/hooks/use-auto-refetch";
 import { syncPlanCalendarEvents } from "@/lib/travel/calendar-sync";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 import type { TravelPlan } from "@/types";
 
 /**
@@ -16,13 +17,21 @@ import type { TravelPlan } from "@/types";
  */
 export function useTravelPlans(visibleUserIds?: string[]) {
   const userId = useCurrentUserId();
-  const [plans, setPlans] = useState<TravelPlan[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const visibleKey = visibleUserIds?.join(",") ?? "";
+  const cacheKey = useMemo(
+    () => `travel-plans:${userId ?? ""}:${visibleKey}`,
+    [userId, visibleKey],
+  );
+
+  const [plans, setPlans] = useState<TravelPlan[]>(
+    () => getSessionCache<TravelPlan[]>(cacheKey) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => getSessionCache<TravelPlan[]>(cacheKey) === null,
+  );
 
   const fetchPlans = useCallback(async () => {
-    setLoading(true);
     let query = supabase
       .from("travel_plans")
       .select("*")
@@ -39,13 +48,28 @@ export function useTravelPlans(visibleUserIds?: string[]) {
         .from("travel_plans")
         .select("*")
         .order("updated_at", { ascending: false });
-      if (fallback.data) setPlans(fallback.data);
+      if (fallback.data) {
+        setPlans(fallback.data);
+        setSessionCache(cacheKey, fallback.data);
+      }
     } else if (data) {
       setPlans(data);
+      setSessionCache(cacheKey, data);
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, visibleKey]);
+  }, [userId, visibleKey, cacheKey]);
+
+  useEffect(() => {
+    const cached = getSessionCache<TravelPlan[]>(cacheKey);
+    if (cached) {
+      setPlans(cached);
+      setLoading(false);
+    } else {
+      setPlans([]);
+      setLoading(true);
+    }
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchPlans();

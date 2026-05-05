@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Expense, ExpenseCategory } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 
 /**
  * 가계부 거래 조회 훅.
@@ -17,9 +18,6 @@ import { useCurrentUserId } from "@/lib/current-user";
  */
 export function useTransactions(startDate: string, endDate?: string) {
   const userId = useCurrentUserId();
-  const [transactions, setTransactions] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // endDate 가 주어지면 그 다음날 (exclusive 상한). 없으면 startDate 의 다음 달 1일.
   const endExclusive = (() => {
@@ -32,6 +30,23 @@ export function useTransactions(startDate: string, endDate?: string) {
     return `${d.getFullYear()}-${String(d.getMonth() + 2).padStart(2, "0")}-01`;
   })();
 
+  // 캐시 — 같은 (사용자, 기간) 의 직전 결과 즉시 hydrate → 빈 화면 깜빡임 제거.
+  const txCacheKey = useMemo(
+    () => `tx:${userId ?? ""}:${startDate}:${endExclusive}`,
+    [userId, startDate, endExclusive],
+  );
+  const catCacheKey = useMemo(() => `cat:${userId ?? ""}`, [userId]);
+
+  const [transactions, setTransactions] = useState<Expense[]>(
+    () => getSessionCache<Expense[]>(txCacheKey) ?? [],
+  );
+  const [categories, setCategories] = useState<ExpenseCategory[]>(
+    () => getSessionCache<ExpenseCategory[]>(catCacheKey) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => getSessionCache<Expense[]>(txCacheKey) === null,
+  );
+
   // 카테고리는 글로벌 시드(user_id IS NULL) + 본인 추가분만 조회.
   // 다른 사용자가 만든 커스텀 카테고리는 보이지 않음.
   const fetchCategories = useCallback(async () => {
@@ -39,11 +54,13 @@ export function useTransactions(startDate: string, endDate?: string) {
     if (userId) q = q.or(`user_id.is.null,user_id.eq.${userId}`);
     else q = q.is("user_id", null);
     const { data } = await q;
-    if (data) setCategories(data);
-  }, [userId]);
+    if (data) {
+      setCategories(data);
+      setSessionCache(catCacheKey, data);
+    }
+  }, [userId, catCacheKey]);
 
   const fetchTransactions = useCallback(async () => {
-    setLoading(true);
     let query = supabase
       .from("expenses")
       .select("*, category:expense_categories(*)")
@@ -62,12 +79,33 @@ export function useTransactions(startDate: string, endDate?: string) {
         .lt("date", endDate)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false });
-      if (fallback.data) setTransactions(fallback.data);
+      if (fallback.data) {
+        setTransactions(fallback.data);
+        setSessionCache(txCacheKey, fallback.data);
+      }
     } else if (data) {
       setTransactions(data);
+      setSessionCache(txCacheKey, data);
     }
     setLoading(false);
-  }, [startDate, endExclusive, userId]);
+  }, [startDate, endExclusive, endDate, userId, txCacheKey]);
+
+  // 키 변경 시 캐시 hydrate. 캐시 없으면 빈 상태로 로딩 표시.
+  useEffect(() => {
+    const cached = getSessionCache<Expense[]>(txCacheKey);
+    if (cached) {
+      setTransactions(cached);
+      setLoading(false);
+    } else {
+      setTransactions([]);
+      setLoading(true);
+    }
+  }, [txCacheKey]);
+
+  useEffect(() => {
+    const cached = getSessionCache<ExpenseCategory[]>(catCacheKey);
+    if (cached) setCategories(cached);
+  }, [catCacheKey]);
 
   useEffect(() => {
     fetchCategories();

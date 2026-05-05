@@ -51,8 +51,6 @@ function isForecastExpired(cachedAt: string): boolean {
 
 export function useWeather(year: number, month: number) {
   const location = useWeatherLocation();
-  const [weatherMap, setWeatherMap] = useState<Record<string, WeatherData>>({});
-  const [loading, setLoading] = useState(true);
 
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const lastDay = new Date(year, month, 0).getDate();
@@ -61,6 +59,23 @@ export function useWeather(year: number, month: number) {
   ).padStart(2, "0")}`;
 
   const locKey = `${location.lat.toFixed(3)},${location.lon.toFixed(3)}`;
+
+  // 초기 렌더 시 localStorage 캐시에서 즉시 hydrate — 빈 객체로 1차 렌더 후
+  // 캐시 로드되며 2차 렌더하던 깜빡임 제거. (useState init 은 1회만 실행되므로
+  // 첫 mount 시 prop 기준의 첫 키로만 동작 — 이후 월 변경 시는 아래 fetch effect 가 처리.)
+  const computeInitialMap = (): Record<string, WeatherData> => {
+    if (typeof window === "undefined") return {};
+    const cache = loadCache(locKey);
+    const map: Record<string, WeatherData> = {};
+    for (const [date, entry] of Object.entries(cache)) {
+      if (date >= startDate && date <= endDate) map[date] = entry.data;
+    }
+    return map;
+  };
+  const [weatherMap, setWeatherMap] = useState<Record<string, WeatherData>>(computeInitialMap);
+  const [loading, setLoading] = useState(
+    () => Object.keys(computeInitialMap()).length === 0,
+  );
 
   useEffect(() => {
     const abortController = new AbortController();

@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { TravelItem } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
 import { useAutoRefetch } from "@/hooks/use-auto-refetch";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 
 /**
  * visibleUserIds: 달력 탭에서 선택한 "볼 사용자들"
@@ -13,14 +14,23 @@ import { useAutoRefetch } from "@/hooks/use-auto-refetch";
  */
 export function useTravelItems(visibleUserIds?: string[]) {
   const userId = useCurrentUserId();
-  const [items, setItems] = useState<TravelItem[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // 의존성 안정화를 위해 join한 문자열 사용
   const visibleKey = visibleUserIds?.join(",") ?? "";
 
+  const cacheKey = useMemo(
+    () => `travel-items:${userId ?? ""}:${visibleKey}`,
+    [userId, visibleKey],
+  );
+
+  const [items, setItems] = useState<TravelItem[]>(
+    () => getSessionCache<TravelItem[]>(cacheKey) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => getSessionCache<TravelItem[]>(cacheKey) === null,
+  );
+
   const fetchItems = useCallback(async () => {
-    setLoading(true);
     let query = supabase
       .from("travel_items")
       .select("*")
@@ -38,13 +48,29 @@ export function useTravelItems(visibleUserIds?: string[]) {
         .select("*")
         .order("visited")
         .order("created_at", { ascending: false });
-      if (fallback.data) setItems(fallback.data);
+      if (fallback.data) {
+        setItems(fallback.data);
+        setSessionCache(cacheKey, fallback.data);
+      }
     } else if (data) {
       setItems(data);
+      setSessionCache(cacheKey, data);
     }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, visibleKey]);
+  }, [userId, visibleKey, cacheKey]);
+
+  // 키 변경 시 캐시 hydrate.
+  useEffect(() => {
+    const cached = getSessionCache<TravelItem[]>(cacheKey);
+    if (cached) {
+      setItems(cached);
+      setLoading(false);
+    } else {
+      setItems([]);
+      setLoading(true);
+    }
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchItems();

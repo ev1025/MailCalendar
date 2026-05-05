@@ -1,17 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Product } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
+import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 
 export function useProducts() {
   const userId = useCurrentUserId();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = useMemo(() => `products:${userId ?? ""}`, [userId]);
+
+  const [products, setProducts] = useState<Product[]>(
+    () => getSessionCache<Product[]>(cacheKey) ?? [],
+  );
+  const [loading, setLoading] = useState(
+    () => getSessionCache<Product[]>(cacheKey) === null,
+  );
 
   const fetchProducts = useCallback(async () => {
-    setLoading(true);
     let query = supabase
       .from("products")
       .select("*")
@@ -30,12 +36,27 @@ export function useProducts() {
         .order("is_active", { ascending: false })
         .order("category")
         .order("name");
-      if (fallback.data) setProducts(fallback.data as Product[]);
+      if (fallback.data) {
+        setProducts(fallback.data as Product[]);
+        setSessionCache(cacheKey, fallback.data);
+      }
     } else if (data) {
       setProducts(data as Product[]);
+      setSessionCache(cacheKey, data);
     }
     setLoading(false);
-  }, [userId]);
+  }, [userId, cacheKey]);
+
+  useEffect(() => {
+    const cached = getSessionCache<Product[]>(cacheKey);
+    if (cached) {
+      setProducts(cached);
+      setLoading(false);
+    } else {
+      setProducts([]);
+      setLoading(true);
+    }
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchProducts();
