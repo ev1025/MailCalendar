@@ -549,7 +549,7 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
                       onClick={col.field ? () => cycleSort(col.field!) : undefined}
                     >
                       {col.field ? (
-                        <div className="flex items-center font-medium pr-2">
+                        <div className="flex items-center font-medium">
                           {col.label} <SortIcon field={col.field} />
                         </div>
                       ) : null}
