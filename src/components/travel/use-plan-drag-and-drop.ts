@@ -39,11 +39,13 @@ function isDropAfter(e: DragEndEvent): boolean {
 }
 
 export function createPlanDragEndHandler({ sorted, updateTask }: Args) {
-  const resetTransport = async (taskIds: Iterable<string>) => {
-    for (const id of taskIds) {
-      await updateTask(id, TRANSPORT_RESET);
-    }
-  };
+  // Promise.all 로 병렬 처리 — 직렬 await 시 각 updateTask 의 fetch+rerender 가
+  // 누적되어 사용자 시각엔 한 단계씩 계단식으로 옮겨가는 cascade 가 보임.
+  // 병렬 처리 시 모든 update 가 거의 동시에 끝나 한 번의 시각 변화로 보임.
+  const resetTransport = (taskIds: Iterable<string>) =>
+    Promise.all(
+      Array.from(taskIds).map((id) => updateTask(id, TRANSPORT_RESET)),
+    );
 
   return async (e: DragEndEvent): Promise<void> => {
     if (!e.over || e.active.id === e.over.id) return;
@@ -67,13 +69,17 @@ export function createPlanDragEndHandler({ sorted, updateTask }: Args) {
         (t) => t.day_index === targetDay && t.id !== activeTask.id
       );
       targetDayTasks.push(activeTask);
-      await updateTask(activeTask.id, { day_index: targetDay });
+      // 모든 update 를 병렬로 — cascade 회피.
+      const updates: Promise<unknown>[] = [
+        updateTask(activeTask.id, { day_index: targetDay }),
+      ];
       for (let i = 0; i < targetDayTasks.length; i++) {
         const t = targetDayTasks[i];
         if (t.id === activeTask.id || t.manual_order !== i) {
-          await updateTask(t.id, { manual_order: i });
+          updates.push(updateTask(t.id, { manual_order: i }));
         }
       }
+      await Promise.all(updates);
       await resetTransport(affected);
       return;
     }
@@ -91,13 +97,16 @@ export function createPlanDragEndHandler({ sorted, updateTask }: Args) {
       const overIdx = targetDayTasks.findIndex((t) => t.id === overTask.id);
       const insertIdx = after ? overIdx + 1 : overIdx;
       targetDayTasks.splice(insertIdx, 0, activeTask);
-      await updateTask(activeTask.id, { day_index: overTask.day_index });
+      const updates: Promise<unknown>[] = [
+        updateTask(activeTask.id, { day_index: overTask.day_index }),
+      ];
       for (let i = 0; i < targetDayTasks.length; i++) {
         const t = targetDayTasks[i];
         if (t.id === activeTask.id || t.manual_order !== i) {
-          await updateTask(t.id, { manual_order: i });
+          updates.push(updateTask(t.id, { manual_order: i }));
         }
       }
+      await Promise.all(updates);
       affected.add(overTask.id);
       await resetTransport(affected);
       return;
@@ -110,11 +119,14 @@ export function createPlanDragEndHandler({ sorted, updateTask }: Args) {
     if (overIdx < 0) return;
     const insertIdx = after ? overIdx + 1 : overIdx;
     withoutActive.splice(insertIdx, 0, activeTask);
+    // 동일 일자 내 reorder — 모든 manual_order 업데이트를 병렬로 보내 cascade 방지.
+    const updates: Promise<unknown>[] = [];
     for (let i = 0; i < withoutActive.length; i++) {
       if (withoutActive[i].manual_order !== i) {
-        await updateTask(withoutActive[i].id, { manual_order: i });
+        updates.push(updateTask(withoutActive[i].id, { manual_order: i }));
       }
     }
+    await Promise.all(updates);
     const newActiveIdx = withoutActive.findIndex((t) => t.id === activeTask.id);
     const newNext = newActiveIdx >= 0 ? withoutActive[newActiveIdx + 1] : undefined;
     if (newNext) affected.add(newNext.id);
