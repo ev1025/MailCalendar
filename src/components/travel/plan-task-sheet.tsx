@@ -15,6 +15,7 @@ import {
 import TimePicker from "@/components/ui/time-picker";
 import TagInput from "@/components/ui/tag-input";
 import PlanPlacePicker from "@/components/travel/plan-place-picker";
+import NaverMap from "@/components/travel/naver-map";
 import { useTravelCategories, BUILTIN_TRAVEL_CATEGORIES } from "@/hooks/use-travel-categories";
 import { useEventTags } from "@/hooks/use-event-tags";
 import type { TravelPlanTask, PlaceInfo } from "@/types";
@@ -126,11 +127,12 @@ export default function PlanTaskSheet({
     if (!open) return;
     if (task) {
       setDayIndex(task.day_index);
-      // defaultStartTime 이 주어지면 stored start_time 보다 우선 — 출발지 시간 변경에
-      // 자동 동기화되도록(체인 계산이 source of truth). 첫 task(anchor)는 defaultStartTime
-      // null 이라 stored 값을 그대로 씀.
+      // 폼 입력은 DB 의 stored start_time 만 채움. 자동 계산(defaultStartTime) 값은
+      // 폼에 사용자 입력값처럼 보이지 않도록 의도적으로 무시 — input 비어 있으면
+      // 목록에선 체인 계산값이 표시되지만 폼에 들어가는 순간 "사용자 입력값" 으로
+      // 굳어버리는 문제 회피.
       const stored = task.start_time ? task.start_time.slice(0, 5) : "";
-      setStartTime(defaultStartTime ?? stored);
+      setStartTime(stored);
       setStayMinutes(String(task.stay_minutes || ""));
       setPlaceName(task.place_name);
       setPlaceAddress(task.place_address);
@@ -378,6 +380,14 @@ export default function PlanTaskSheet({
                 autoFocus={editingPlace}
                 placeholder="장소명·지역 (예: 성산일출봉)"
               />
+            )}
+
+            {/* 선택된 장소의 지도 — travel-form 과 동일 NaverMap 재사용.
+                NaverMap 자체가 모바일 두손가락 핀치줌 / 데스크탑 Alt+휠 줌 지원. */}
+            {placeName && placeLat != null && placeLng != null && !editingPlace && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <NaverMap lat={placeLat} lng={placeLng} height={200} zoom={16} />
+              </div>
             )}
           </div>
 
