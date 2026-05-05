@@ -92,6 +92,50 @@ export function useCalendarEvents(
     fetchEvents();
   }, [fetchEvents]);
 
+  // 인접 월(±1) prefetch — 사용자가 스와이프했을 때 캐시 히트로 즉시 표시.
+  // fetch 와 별도 effect, 결과는 cache 만 갱신 (state 무영향).
+  // 이미 캐시된 키는 skip — 네트워크 절약.
+  const visibleKey = useMemo(
+    () => [...visibleUserIds].sort().join(","),
+    [visibleUserIds],
+  );
+  useEffect(() => {
+    if (!currentUserId || visibleUserIds.length === 0) return;
+    let cancelled = false;
+    const prefetch = async (y: number, m: number) => {
+      const sd = `${y}-${String(m).padStart(2, "0")}-01`;
+      const ed =
+        m === 12
+          ? `${y + 1}-01-01`
+          : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+      const k = `cal-events:${currentUserId}:${sd}:${ed}:${visibleKey}`;
+      if (getSessionCache(k)) return;
+      const { data } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .in("user_id", visibleUserIds)
+        .lt("start_date", ed)
+        .or(
+          `end_date.gte.${sd},and(end_date.is.null,start_date.gte.${sd})`,
+        )
+        .order("start_date")
+        .order("sort_order")
+        .order("created_at");
+      if (cancelled) return;
+      setSessionCache(k, (data as SharedEvent[]) || []);
+    };
+    const prev =
+      month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
+    const next =
+      month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
+    prefetch(prev.y, prev.m).catch(() => {});
+    prefetch(next.y, next.m).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month, currentUserId, visibleKey]);
+
   function safeData(data: Record<string, unknown>) {
     const { tag, repeat, sort_order, shared_with, shared_accepted_by, series_id, ...rest } =
       data;

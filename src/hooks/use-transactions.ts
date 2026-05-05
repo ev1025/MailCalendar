@@ -115,6 +115,41 @@ export function useTransactions(startDate: string, endDate?: string) {
     fetchTransactions();
   }, [fetchTransactions]);
 
+  // 인접 월(±1) prefetch — 사용자가 좌우 스와이프했을 때 캐시 히트로 즉시 표시.
+  // startDate 가 "YYYY-MM-01" 형태일 때만 의미있음 (월 단위 범위). 부분 범위는 skip.
+  useEffect(() => {
+    if (!/^\d{4}-\d{2}-01$/.test(startDate)) return;
+    let cancelled = false;
+    const baseY = parseInt(startDate.slice(0, 4), 10);
+    const baseM = parseInt(startDate.slice(5, 7), 10);
+    const prefetch = async (delta: number) => {
+      const t = new Date(baseY, baseM - 1 + delta, 1);
+      const ny = t.getFullYear();
+      const nm = t.getMonth() + 1;
+      const sd = `${ny}-${String(nm).padStart(2, "0")}-01`;
+      const ed = new Date(ny, nm, 1);
+      const edStr = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, "0")}-01`;
+      const k = `tx:${userId ?? ""}:${sd}:${edStr}`;
+      if (getSessionCache(k)) return;
+      let q = supabase
+        .from("expenses")
+        .select("*, category:expense_categories(*)")
+        .gte("date", sd)
+        .lt("date", edStr)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (userId) q = q.eq("user_id", userId);
+      const { data } = await q;
+      if (cancelled || !data) return;
+      setSessionCache(k, data);
+    };
+    prefetch(-1).catch(() => {});
+    prefetch(1).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [startDate, userId]);
+
   const addTransaction = async (
     tx: Omit<Expense, "id" | "created_at" | "category">
   ) => {

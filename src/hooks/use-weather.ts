@@ -146,5 +146,63 @@ export function useWeather(year: number, month: number) {
     };
   }, [startDate, endDate, locKey, location.lat, location.lon, location.country]);
 
+  // 인접 월(±1) prefetch — 사용자가 캘린더에서 좌우 스와이프했을 때
+  // 날씨 아이콘이 캐시에서 즉시 뜨도록 백그라운드로 미리 요청.
+  // 이미 캐시된 날짜(미만료) 만 있으면 skip.
+  useEffect(() => {
+    let cancelled = false;
+    const ac = new AbortController();
+    const prefetch = async (delta: number) => {
+      const t = new Date(year, month - 1 + delta, 1);
+      const ny = t.getFullYear();
+      const nm = t.getMonth() + 1;
+      const sd = `${ny}-${String(nm).padStart(2, "0")}-01`;
+      const lastD = new Date(ny, nm, 0).getDate();
+      const ed = `${ny}-${String(nm).padStart(2, "0")}-${String(lastD).padStart(2, "0")}`;
+      const cache = loadCache(locKey);
+      // 이 월의 모든 날짜가 캐시에 있고 forecast 미만료 인지 검사 — 모두 OK 면 skip.
+      const cur = new Date(sd + "T00:00:00");
+      const end = new Date(ed + "T00:00:00");
+      let allCached = true;
+      while (cur <= end) {
+        const d = cur.toISOString().split("T")[0];
+        const entry = cache[d];
+        if (!entry || (entry.type === "forecast" && isForecastExpired(entry.cachedAt))) {
+          allCached = false;
+          break;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      if (allCached) return;
+      try {
+        const res = await fetch(
+          `/api/weather?start=${sd}&end=${ed}&lat=${location.lat}&lon=${location.lon}&country=${location.country}`,
+          { signal: ac.signal },
+        );
+        if (!res.ok || cancelled) return;
+        const fresh: Record<string, WeatherData> = await res.json();
+        const today = todayISO();
+        const nowIso = new Date().toISOString();
+        const merged = loadCache(locKey);
+        for (const [date, data] of Object.entries(fresh)) {
+          merged[date] = {
+            data,
+            cachedAt: nowIso,
+            type: date >= today ? "forecast" : "past",
+          };
+        }
+        if (!cancelled) saveCache(locKey, merged);
+      } catch {
+        /* network/abort 무시 */
+      }
+    };
+    prefetch(-1);
+    prefetch(1);
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [year, month, locKey, location.lat, location.lon, location.country]);
+
   return { weatherMap, loading };
 }
