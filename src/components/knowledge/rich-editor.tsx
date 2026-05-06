@@ -58,7 +58,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       title={title}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded transition-colors ${
+      className={`flex h-10 w-10 md:h-8 md:w-8 shrink-0 items-center justify-center rounded transition-colors ${
         active
           ? "bg-primary/15 text-primary"
           : "text-muted-foreground hover:bg-accent hover:text-foreground"

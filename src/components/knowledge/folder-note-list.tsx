@@ -9,6 +9,7 @@ import PromptDialog from "@/components/ui/prompt-dialog";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import SelectionToolbar from "@/components/ui/selection-toolbar";
 import { useSelectionMode } from "@/hooks/use-selection-mode";
+import { hapticSelect } from "@/lib/haptics";
 import type { KnowledgeFolder, KnowledgeItem } from "@/types";
 import MoveTargetTree from "@/components/knowledge/move-target-tree";
 import KnowledgeBreadcrumb from "@/components/knowledge/breadcrumb";
@@ -260,7 +261,7 @@ function FolderRow({ sf, selectMode, selected, onClick, onLongPress }: {
     <div
       data-sel-id={sf.id} data-sel-type="folder" role="button" tabIndex={0}
       onClick={onClick}
-      onTouchStart={() => { timerRef.current = setTimeout(onLongPress, 400); }}
+      onTouchStart={() => { timerRef.current = setTimeout(() => { hapticSelect(); onLongPress(); }, 250); }}
       onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
@@ -285,7 +286,7 @@ function ItemRow({ item, selectMode, selected, onClick, onLongPress, onTogglePin
     <div
       data-sel-id={item.id} data-sel-type="item" role="button" tabIndex={0}
       onClick={onClick}
-      onTouchStart={() => { timerRef.current = setTimeout(onLongPress, 400); }}
+      onTouchStart={() => { timerRef.current = setTimeout(() => { hapticSelect(); onLongPress(); }, 250); }}
       onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}

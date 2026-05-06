@@ -12,6 +12,7 @@ import PromptDialog from "@/components/ui/prompt-dialog";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import SelectionToolbar from "@/components/ui/selection-toolbar";
 import { useSelectionMode } from "@/hooks/use-selection-mode";
+import { hapticSelect } from "@/lib/haptics";
 import MoveTargetTree from "@/components/knowledge/move-target-tree";
 import KnowledgeEmptyState from "@/components/knowledge/empty-state";
 
@@ -51,7 +52,7 @@ export function NoteTreeRow({ item, depth, selectMode, selected, onToggle, onCli
     <div
       data-sel-id={item.id} data-sel-type="item" role="button" tabIndex={0}
       onClick={selectMode ? onToggle : onClick}
-      onTouchStart={() => { timerRef.current = setTimeout(onLongPress, 400); }}
+      onTouchStart={() => { timerRef.current = setTimeout(() => { hapticSelect(); onLongPress(); }, 250); }}
       onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
@@ -131,7 +132,7 @@ export function FolderTreeRow({
         data-sel-id={folder.id} data-sel-type="folder"
         role="button" tabIndex={0}
         onClick={() => selectMode ? onToggleFolder(folder.id) : onClickFolder(folder.id)}
-        onTouchStart={() => { timerRef.current = setTimeout(() => onLongPress(folder.id, "folder"), 400); }}
+        onTouchStart={() => { timerRef.current = setTimeout(() => { hapticSelect(); onLongPress(folder.id, "folder"); }, 250); }}
         onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
         onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
         onContextMenu={(e) => { e.preventDefault(); onLongPress(folder.id, "folder"); }}

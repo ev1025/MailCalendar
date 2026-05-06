@@ -101,6 +101,10 @@ export default function NoteEditorView({
           <Input
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter → 키보드 dismiss. 본문은 별도 에디터라 줄바꿈 의미 없음.
+              if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+            }}
             className="w-full h-10 text-base font-semibold border-none bg-transparent focus-visible:ring-0 px-1 min-w-0 placeholder:text-muted-foreground/70 placeholder:font-normal"
             placeholder="새 노트 제목..."
           />
@@ -112,6 +116,9 @@ export default function NoteEditorView({
         <Input
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+          }}
           className="flex-1 h-10 text-base font-semibold border-none bg-transparent focus-visible:ring-0 px-1 min-w-0 placeholder:text-muted-foreground/70 placeholder:font-normal"
           placeholder="새 노트 제목..."
         />
@@ -146,6 +153,21 @@ export default function NoteEditorView({
           onChange={onContentChange}
         />
       </div>
+
+      {/* 모바일 전용 하단 고정 저장 — 큰 폰에서 상단 헤더의 저장 버튼이 엄지로
+          닿지 않는 문제 해결. dirty 일 때만 노출, 키보드 위에 떠 있게 fixed bottom.
+          safe-area 인셋 + bottom-nav(56px) 위쪽 여백 확보. */}
+      {dirty && (
+        <button
+          type="button"
+          onClick={onSave}
+          className="md:hidden fixed right-4 z-40 flex h-12 items-center gap-1.5 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg active:scale-95 transition-transform"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 4.5rem)" }}
+          aria-label="저장"
+        >
+          저장
+        </button>
+      )}
 
       {/* 저장 안 된 변경 경고 — 본문/제목 수정 후 임시저장·저장 없이 이탈 시. */}
       <ConfirmDialog

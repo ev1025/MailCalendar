@@ -86,7 +86,7 @@ export default function KnowledgeBreadcrumb({
         <button
           type="button"
           onClick={() => onNavigate(null)}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors shrink-0"
+          className="flex items-center gap-1 px-2 py-1.5 md:py-0.5 md:px-1.5 rounded hover:bg-accent hover:text-foreground transition-colors shrink-0"
         >
           <Home className="h-3 w-3" />
           <span>지식창고</span>
@@ -101,7 +101,7 @@ export default function KnowledgeBreadcrumb({
               onClick={() => onNavigate(collapsedJumpTarget.id)}
               title={hiddenNames}
               aria-label={`생략된 상위 폴더 (${hiddenNames})로 이동`}
-              className="px-1.5 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors"
+              className="px-2 py-1.5 md:py-0.5 md:px-1.5 rounded hover:bg-accent hover:text-foreground transition-colors"
             >
               …
             </button>
@@ -112,10 +112,10 @@ export default function KnowledgeBreadcrumb({
         const isLast = idx === visibleTail.length - 1 && !trailingLabel;
         return (
           <span key={f.id} className="flex items-center gap-1 min-w-0">
-            <ChevronRight className="h-3 w-3 shrink-0" />
+            <ChevronRight className="h-3.5 w-3.5 md:h-3 md:w-3 shrink-0 text-muted-foreground/60" />
             {isLast ? (
               <CrumbDroppable id={`breadcrumb:${f.id}`} enabled={droppable}>
-                <span className="px-1.5 py-0.5 font-medium text-foreground truncate">
+                <span className="px-2 py-1.5 md:py-0.5 md:px-1.5 font-medium text-foreground truncate">
                   {f.name}
                 </span>
               </CrumbDroppable>
@@ -124,7 +124,7 @@ export default function KnowledgeBreadcrumb({
                 <button
                   type="button"
                   onClick={() => onNavigate(f.id)}
-                  className="px-1.5 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors truncate max-w-[120px] shrink-0"
+                  className="px-2 py-1.5 md:py-0.5 md:px-1.5 rounded hover:bg-accent hover:text-foreground transition-colors truncate max-w-[120px] shrink-0"
                 >
                   {f.name}
                 </button>
@@ -135,8 +135,8 @@ export default function KnowledgeBreadcrumb({
       })}
       {trailingLabel && (
         <span className="flex items-center gap-1 min-w-0">
-          <ChevronRight className="h-3 w-3 shrink-0" />
-          <span className="px-1.5 py-0.5 font-medium text-foreground truncate">
+          <ChevronRight className="h-3.5 w-3.5 md:h-3 md:w-3 shrink-0 text-muted-foreground/60" />
+          <span className="px-2 py-1.5 md:py-0.5 md:px-1.5 font-medium text-foreground truncate">
             {trailingLabel}
           </span>
         </span>

@@ -43,6 +43,12 @@ export default function SearchInput({
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          // Enter → 키보드 dismiss. 모바일에서 검색 결과가 키보드에 가려져
+          // "검색이 안 되는 듯" 한 인상을 받는 문제 해결. 검색 자체는 onChange 가
+          // 실시간으로 처리하므로 Enter 는 단순 blur 의미.
+          if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+        }}
         placeholder={placeholder}
         className={cn(heightCls, padCls)}
         autoFocus={autoFocus}
