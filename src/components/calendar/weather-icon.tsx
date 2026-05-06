@@ -8,6 +8,9 @@ interface WeatherIconProps {
   compact?: boolean;
   inline?: boolean;
   showRange?: boolean;
+  /** 기본 가로형에서 폰트·아이콘·여백 한 단계 축소. day-detail 헤더 우측처럼
+   *  공간 좁을 때 사용. */
+  dense?: boolean;
 }
 
 interface TempRangeProps {
@@ -40,6 +43,7 @@ export default function WeatherIcon({
   compact,
   inline,
   showRange,
+  dense,
 }: WeatherIconProps) {
   const iconUrl = getWeatherIconUrl(weather.weather_icon);
 
@@ -80,14 +84,18 @@ export default function WeatherIcon({
 
   // 기본 — DayDetail 헤더 / EventForm 헤더. 가로 1줄.
   // 순서: [한글 설명] [아이콘] [기온] — 텍스트 좌측, 시각 표현 우측.
+  // dense=true: 공간 좁은 곳용으로 폰트·아이콘 한 단계 축소.
+  const textCls = dense ? "text-[11px]" : "text-xs";
+  const gapCls = dense ? "gap-1" : "gap-1.5";
+  const imgCls = dense ? "h-4 w-4" : "h-5 w-5";
   return (
-    <div className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+    <div className={`flex items-center ${gapCls} ${textCls} whitespace-nowrap`}>
       <span className="text-muted-foreground leading-none">{weather.weather_description}</span>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={iconUrl}
         alt={weather.weather_description}
-        className="h-5 w-5 shrink-0"
+        className={`${imgCls} shrink-0`}
         title={weather.weather_description}
       />
       {showRange ? (

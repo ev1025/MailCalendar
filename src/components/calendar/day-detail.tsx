@@ -201,7 +201,7 @@ export default function DayDetail({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showBackButton={false} className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center justify-between gap-3 min-w-0">
             <DialogTitle className="text-sm md:text-base truncate min-w-0">
               {dateLabel}
             </DialogTitle>
@@ -209,12 +209,13 @@ export default function DayDetail({
               <button
                 type="button"
                 onClick={() => setHourlyOpen(true)}
-                className="shrink-0 -mr-1 rounded-md px-1 py-0.5 hover:bg-accent transition-colors"
+                // 우측 정렬로 날짜와 거리 확보. compact tone — 폰트 살짝 축소, 패딩 최소.
+                // 내부 WeatherIcon 크기는 weatherIconCompact 모드로 별도 처리.
+                className="ml-auto shrink-0 rounded-md px-0.5 py-0.5 text-[11px] hover:bg-accent transition-colors"
                 aria-label="시간별 날씨 보기"
                 title="시간별 날씨 보기"
               >
-                {/* compact(아이콘+온도 스택) 대신 가로형 — 한글 설명 좌측 표시. */}
-                <WeatherIcon weather={weather} showRange />
+                <WeatherIcon weather={weather} showRange dense />
               </button>
             )}
           </div>
