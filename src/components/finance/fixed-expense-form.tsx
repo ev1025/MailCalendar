@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
+import MoneyInput from "@/components/ui/money-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -268,14 +269,11 @@ export default function FixedExpenseForm({
         {/* 금액 + 시작일 + 반복 — 한 행. 시작일·반복 dropdown 은 컨텐츠 폭(약간 여백). */}
         <div className="flex items-start gap-3 flex-wrap">
           <FormField label="금액" required>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min="0"
+            <MoneyInput
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               placeholder="50000"
-              className={`${FORM_INPUT_PRIMARY} w-[8.5rem] tabular-nums`}
+              className={`${FORM_INPUT_PRIMARY} w-[9.5rem]`}
             />
           </FormField>
           <FormField label="시작일" className="flex-1 min-w-0">

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Wallet, ShoppingBag, X, Check, Repeat } from "lucide-react";
 import DateRangePicker from "@/components/layout/date-range-picker";
 import PageHeader from "@/components/layout/page-header";
@@ -430,7 +431,10 @@ function FinancePageInner() {
           if (!r.error && r.bulkDone) {
             r.bulkDone
               .then(() => refetchTransactions())
-              .catch((e) => console.error("[income recurring]", e));
+              .catch((e) => {
+                console.error("[income recurring]", e);
+                toast.error("거래 자동 등록 실패 — 가계부에 반영되지 않을 수 있어요");
+              });
           }
           return { error: r.error };
         }}

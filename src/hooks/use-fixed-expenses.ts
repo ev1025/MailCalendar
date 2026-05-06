@@ -203,16 +203,23 @@ export function useFixedExpenses() {
       if (txs.length === 0) return;
       const ins = await supabase.from("expenses").insert(txs);
       if (ins.error) {
+        // 신규 컬럼(title/fixed_expense_id) 미존재 환경 폴백 — user_id 는 절대 빼지 않는다.
+        // 이전엔 user_id 까지 함께 strip 하다가 RLS 통과 실패로 expense 가 안 들어가
+        // "수입 매니저엔 보이지만 가계부 스코어카드엔 0" 버그 발생.
+        console.warn("[fixed-expense bulk insert] 1차 실패:", ins.error.message);
         const fallback = txs.map((t) => {
-          const { title, user_id, fixed_expense_id, ...rest } = t as {
+          const { title, fixed_expense_id, ...rest } = t as {
             title?: unknown;
-            user_id?: unknown;
             fixed_expense_id?: unknown;
           } & Record<string, unknown>;
-          void title; void user_id; void fixed_expense_id;
+          void title; void fixed_expense_id;
           return rest;
         });
-        await supabase.from("expenses").insert(fallback);
+        const r2 = await supabase.from("expenses").insert(fallback);
+        if (r2.error) {
+          console.error("[fixed-expense bulk insert] 2차 실패:", r2.error.message);
+          throw r2.error; // bulkDone 의 .catch 에서 toast 표시.
+        }
       }
     })();
 

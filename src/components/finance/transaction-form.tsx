@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
+import MoneyInput from "@/components/ui/money-input";
 import { Textarea } from "@/components/ui/textarea";
 import TagInput from "@/components/ui/tag-input";
 import DatePicker from "@/components/ui/date-picker";
@@ -189,13 +190,10 @@ export default function TransactionForm({
                 : null
           }
         >
-          <Input
+          <MoneyInput
             id="amount"
-            type="number"
-            inputMode="numeric"
-            min="0"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
             placeholder="10000"
             aria-invalid={amount !== "" && (Number.isNaN(parseInt(amount, 10)) || parseInt(amount, 10) <= 0)}
             className={FORM_INPUT_PRIMARY}
