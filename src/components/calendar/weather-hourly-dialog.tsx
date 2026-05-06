@@ -196,17 +196,11 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                       <span className="mt-0.5 text-sm font-bold tabular-nums leading-none">
                         {e.temperature}°
                       </span>
-                      {/* 강수확률 — 아이콘과 값 사이 gap-0.5 로 이전처럼 가까이.
-                          카드별 자릿수 변동에 흔들리지 않도록 카드는 min-w 로 안정. */}
-                      <span className="mt-1 flex items-center gap-0.5 text-[9px] tabular-nums leading-none text-blue-500">
-                        {e.precipitation_probability != null ? (
-                          <>
-                            <Droplet className="h-2.5 w-2.5 shrink-0" />
-                            <span>{e.precipitation_probability}%</span>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground/30">·</span>
-                        )}
+                      {/* 강수확률 — 아이콘과 값 사이 gap-0.5 로 가까이. 사이즈 한 단계 더 축소.
+                          데이터 없는 날(과거 등) 도 "0%" 로 통일 표기 — 사용자 일관성. */}
+                      <span className="mt-1 flex items-center gap-0.5 text-[8px] tabular-nums leading-none text-blue-500">
+                        <Droplet className="h-2 w-2 shrink-0" />
+                        <span>{e.precipitation_probability ?? 0}%</span>
                       </span>
                     </div>
                   );
