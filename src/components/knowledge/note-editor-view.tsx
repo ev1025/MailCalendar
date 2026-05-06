@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import RichEditor from "@/components/knowledge/rich-editor";
 import DraftsPopover from "@/components/knowledge/drafts-popover";
 import type { KnowledgeItem } from "@/types";
@@ -44,6 +46,24 @@ export default function NoteEditorView({
   draftsOpen,
   onDraftsOpenChange,
 }: Props) {
+  // 저장 안 된 변경(dirty) 인 채로 이탈 시 ConfirmDialog 로 한 번 확인.
+  // 임시저장 한 번 안 거치면 5초 자동저장 전에 닫혔을 때 변경 손실되는 케이스가 있음.
+  const [pending, setPending] = useState<"exit" | "cancel" | null>(null);
+  const guardedExit = () => {
+    if (dirty) setPending("exit");
+    else onExit();
+  };
+  const guardedCancel = () => {
+    if (dirty) setPending("cancel");
+    else (onCancel ?? onExit)();
+  };
+  const proceed = async () => {
+    const action = pending;
+    setPending(null);
+    if (action === "exit") await onExit();
+    else if (action === "cancel") await (onCancel ?? onExit)();
+  };
+
   return (
     <>
       {/* 모바일 전용 헤더 — 2줄 구조:
@@ -53,7 +73,7 @@ export default function NoteEditorView({
         <div className="flex items-center gap-2 px-3 h-14">
           <button
             type="button"
-            onClick={onExit}
+            onClick={guardedExit}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground -ml-1"
             title="보기로 돌아가기"
             aria-label="뒤로"
@@ -111,7 +131,7 @@ export default function NoteEditorView({
           <Button size="sm" variant="outline" onClick={onSaveDraft} className="h-8 text-xs px-2.5">
             임시저장
           </Button>
-          <Button size="sm" variant="ghost" onClick={onCancel ?? onExit} className="h-8 text-xs px-2.5">
+          <Button size="sm" variant="ghost" onClick={guardedCancel} className="h-8 text-xs px-2.5">
             취소
           </Button>
           <Button size="sm" onClick={onSave} disabled={!dirty} className="h-8 text-xs px-2.5">
@@ -126,6 +146,18 @@ export default function NoteEditorView({
           onChange={onContentChange}
         />
       </div>
+
+      {/* 저장 안 된 변경 경고 — 본문/제목 수정 후 임시저장·저장 없이 이탈 시. */}
+      <ConfirmDialog
+        open={!!pending}
+        onOpenChange={(o) => { if (!o) setPending(null); }}
+        title="저장하지 않은 변경이 있어요"
+        description="이 노트의 변경 사항을 저장하지 않고 나가면 잃게 됩니다."
+        confirmLabel="나가기"
+        cancelLabel="계속 편집"
+        destructive
+        onConfirm={proceed}
+      />
     </>
   );
 }

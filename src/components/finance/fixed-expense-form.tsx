@@ -177,6 +177,11 @@ export default function FixedExpenseForm({
 
   const handleSubmit = async () => {
     if (!amount || !categoryId) return;
+    const parsed = parseInt(amount, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      toast.error("금액은 0보다 커야 합니다");
+      return;
+    }
     setSaving(true);
 
     // UI 반복 → DB 필드 매핑.
@@ -240,7 +245,7 @@ export default function FixedExpenseForm({
       open={open}
       onOpenChange={onOpenChange}
       title={formTitle}
-      submitDisabled={!amount || !categoryId}
+      submitDisabled={!amount || parseInt(amount, 10) <= 0 || !categoryId}
       saving={saving}
       onSubmit={handleSubmit}
     >

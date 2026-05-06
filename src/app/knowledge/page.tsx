@@ -188,7 +188,7 @@ function KnowledgePageInner() {
         setEditing(false);
         return;
       }
-      const { data } = await addItem({
+      const { data, error } = await addItem({
         folder_id: pendingNew.folderId,
         title: editTitle,
         content: sanitizeRichHTML(editContent),
@@ -198,22 +198,32 @@ function KnowledgePageInner() {
         type: "note",
         url: null,
       });
+      if (error) {
+        toast.error("저장 실패");
+        return;
+      }
       if (data) {
         setPendingNew(null);
         setSelectedItemId(data.id);
         setDirty(false);
         setEditing(false);
+        toast.success("저장됐어요");
       }
       return;
     }
 
     if (!selectedItem) return;
-    await updateItem(selectedItem.id, {
+    const { error } = await updateItem(selectedItem.id, {
       title: editTitle,
       content: sanitizeRichHTML(editContent),
     });
+    if (error) {
+      toast.error("저장 실패");
+      return;
+    }
     setDirty(false);
     setEditing(false);
+    toast.success("저장됐어요");
   };
 
   const handleSaveDraft = () => {
@@ -267,8 +277,13 @@ function KnowledgePageInner() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteItem(id);
+    const { error } = await deleteItem(id);
+    if (error) {
+      toast.error("삭제 실패");
+      return;
+    }
     if (selectedItemId === id) setSelectedItemId(null);
+    toast.success("삭제됐어요");
   };
 
   // pendingNew(드래프트 에디터) 상태도 "노트 뷰" 로 취급 — PageHeader 숨김·전체화면 적용.

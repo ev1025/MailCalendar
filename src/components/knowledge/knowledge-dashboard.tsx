@@ -9,6 +9,7 @@ import { useKnowledgeFavorites } from "@/lib/knowledge-favorites";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PromptDialog from "@/components/ui/prompt-dialog";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import SelectionToolbar from "@/components/ui/selection-toolbar";
 import { useSelectionMode } from "@/hooks/use-selection-mode";
 import MoveTargetTree from "@/components/knowledge/move-target-tree";
@@ -224,6 +225,8 @@ export default function KnowledgeDashboard({
   const [moveMode, setMoveMode] = useState(false);
   // 이름 변경 — PromptDialog 한 가지 진입 (인라인 rename 제거).
   const [renamePrompt, setRenamePrompt] = useState<{ id: string; type: "folder" | "item"; current: string } | null>(null);
+  // 일괄 삭제 확인 — SelectionToolbar 휴지통 즉시 삭제 대신 확인 단계.
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const exitSelect = () => {
     sel.exit();
@@ -323,9 +326,12 @@ export default function KnowledgeDashboard({
   void toggleFolderFav;
   void isFolderFav;
 
-  const handleDeleteBulk = () => {
-    if (selItems.size > 0 && onDeleteItems) onDeleteItems(Array.from(selItems));
-    if (selFolders.size > 0 && onDeleteFolders) onDeleteFolders(Array.from(selFolders));
+  // 휴지통 클릭 → 확인 다이얼로그. 실제 삭제는 사용자 확인 후 performDelete 에서.
+  const handleDeleteBulk = () => setConfirmDelete(true);
+  const performDelete = async () => {
+    if (selItems.size > 0 && onDeleteItems) await onDeleteItems(Array.from(selItems));
+    if (selFolders.size > 0 && onDeleteFolders) await onDeleteFolders(Array.from(selFolders));
+    setConfirmDelete(false);
     exitSelect();
   };
 
@@ -535,6 +541,27 @@ export default function KnowledgeDashboard({
         placeholder={renamePrompt?.type === "folder" ? "폴더 이름" : "노트 제목"}
         confirmLabel="변경"
         onConfirm={submitRename}
+      />
+
+      {/* 일괄 삭제 확인 — folder-note-list 와 동일 패턴. */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={
+          selFolders.size > 0 && selItems.size > 0
+            ? `폴더 ${selFolders.size}개 · 노트 ${selItems.size}개 삭제`
+            : selFolders.size > 0
+              ? `폴더 ${selFolders.size}개 삭제`
+              : `노트 ${selItems.size}개 삭제`
+        }
+        description={
+          selFolders.size > 0
+            ? "폴더 안의 모든 하위 노트와 폴더가 함께 삭제돼요."
+            : "삭제하면 되돌릴 수 없어요."
+        }
+        confirmLabel="삭제"
+        destructive
+        onConfirm={performDelete}
       />
     </div>
   );

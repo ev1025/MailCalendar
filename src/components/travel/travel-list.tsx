@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import FilterPanel from "@/components/ui/filter-panel";
 import ListToolbar from "@/components/ui/list-toolbar";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
+import DeleteRecordDescription from "@/components/ui/delete-record-description";
 import TravelForm from "./travel-form";
 import TravelToCalendarDialog from "./travel-to-calendar-dialog";
 import AddToPlanDialog from "./add-to-plan-dialog";
@@ -223,6 +225,8 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
   const [editing, setEditing] = useState<TravelItem | null>(null);
   const [calendarItem, setCalendarItem] = useState<TravelItem | null>(null);
   const [planItem, setPlanItem] = useState<TravelItem | null>(null);
+  // 삭제 확인 다이얼로그 — 행 메뉴의 삭제 클릭 시 즉시 삭제 대신 확인 단계.
+  const [deletingItem, setDeletingItem] = useState<TravelItem | null>(null);
 
   const tagColorMap: Record<string, string> = {};
   for (const t of tags) tagColorMap[t.name] = t.color;
@@ -517,12 +521,24 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
       {loading ? (
         <div className="py-20" aria-hidden />
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-2">
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
           <p className="text-sm text-muted-foreground">
             {items.length === 0 ? "여행 항목이 없습니다" : "검색 결과가 없습니다"}
           </p>
-          {items.length === 0 && (
+          {items.length === 0 ? (
             <p className="text-[11px] text-muted-foreground/60">+ 추가 버튼으로 시작하세요</p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setFilterCategories([]);
+                setFilterTags([]);
+              }}
+              className="text-xs text-info hover:underline"
+            >
+              필터 해제하기
+            </button>
           )}
         </div>
       ) : (
@@ -570,7 +586,7 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
                       onToggleVisited={() => toggleVisited(item.id, item.visited)}
                       onAddToCalendar={() => setCalendarItem(item)}
                       onAddToPlan={() => setPlanItem(item)}
-                      onDelete={() => deleteItem(item.id)}
+                      onDelete={() => setDeletingItem(item)}
                     />
                   ))}
                 </SortableContext>
@@ -614,6 +630,37 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
         open={!!planItem}
         onOpenChange={(o) => !o && setPlanItem(null)}
         travelItem={planItem}
+      />
+
+      {/* 여행 항목 삭제 확인 — 가계부와 동일한 ConfirmDialog + DeleteRecordDescription 패턴. */}
+      <ConfirmDialog
+        open={!!deletingItem}
+        onOpenChange={(o) => { if (!o) setDeletingItem(null); }}
+        title={deletingItem ? `"${deletingItem.title}" 삭제` : "삭제"}
+        description={
+          deletingItem ? (
+            <DeleteRecordDescription
+              fields={[
+                { label: "분류", value: deletingItem.category },
+                ...(deletingItem.region ? [{ label: "위치", value: deletingItem.region }] : []),
+                ...(deletingItem.month ? [{ label: "시기", value: `${deletingItem.month}월` }] : []),
+              ]}
+              footnote="삭제하면 되돌릴 수 없어요."
+            />
+          ) : null
+        }
+        confirmLabel="삭제"
+        destructive
+        onConfirm={async () => {
+          if (!deletingItem) return;
+          const r = await deleteItem(deletingItem.id);
+          if (r.error) {
+            toast.error("삭제 실패");
+            return;
+          }
+          toast.success("삭제됐어요");
+          setDeletingItem(null);
+        }}
       />
     </div>
   );

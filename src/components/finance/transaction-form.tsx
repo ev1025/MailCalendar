@@ -73,6 +73,8 @@ export default function TransactionForm({
   /** 할부 개월 수 — 1 = 일시불 (기본), 2~24 가능. 수정 모드에선 비활성. */
   const [installmentMonths, setInstallmentMonths] = useState(1);
   const [saving, setSaving] = useState(false);
+  /** 사용자가 한 번이라도 제출 시도했는지 — 그 전엔 인라인 에러 숨김(첫 진입에서 빨간 표시 X). */
+  const [submitted, setSubmitted] = useState(false);
 
   const isEdit = !!transaction;
 
@@ -103,7 +105,14 @@ export default function TransactionForm({
   const filteredCategories = categories.filter((c) => c.type === type);
 
   const handleSubmit = async () => {
-    if (!amount || !categoryId) return;
+    setSubmitted(true);
+    if (!title.trim() || !amount || !categoryId) return;
+    const parsed = parseInt(amount, 10);
+    // DB 무결성보다 사용자 의도 보호: 0원/음수 거래는 가계부 합계를 왜곡시키므로 차단.
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      toast.error("금액은 0보다 커야 합니다");
+      return;
+    }
     setSaving(true);
     // payment_method 는 빈 문자열이면 DB CHECK 가 거부하므로 fallback "카드".
     const { error } = await onSave(
@@ -142,13 +151,18 @@ export default function TransactionForm({
       open={open}
       onOpenChange={onOpenChange}
       title={headerLabel}
-      submitDisabled={!title.trim() || !amount || !categoryId}
+      submitDisabled={!title.trim() || !amount || parseInt(amount, 10) <= 0 || !categoryId}
       saving={saving}
       onSubmit={handleSubmit}
     >
       <div className="flex flex-col gap-4">
         {/* 1. 지출명/수입명 (필수) */}
-        <FormField label={titleLabel} required htmlFor="title">
+        <FormField
+          label={titleLabel}
+          required
+          htmlFor="title"
+          error={submitted && !title.trim() ? `${titleLabel}을 입력하세요` : null}
+        >
           <Textarea
             id="title"
             value={title}
@@ -156,12 +170,24 @@ export default function TransactionForm({
             placeholder="예: 기후동행카드, 점심"
             rows={2}
             className="min-h-0"
+            aria-invalid={submitted && !title.trim()}
           />
         </FormField>
 
         {/* 2. 금액 — type 은 카드의 +수입/+지출 버튼에서 결정되어 props 로 들어옴.
             폼 헤더에 type 표시되니 라벨 prefix 는 제거. */}
-        <FormField label="금액 (원)" required htmlFor="amount">
+        <FormField
+          label="금액 (원)"
+          required
+          htmlFor="amount"
+          error={
+            submitted && !amount
+              ? "금액을 입력하세요"
+              : amount && parseInt(amount, 10) <= 0
+                ? "0보다 큰 금액을 입력하세요"
+                : null
+          }
+        >
           <Input
             id="amount"
             type="number"
@@ -170,7 +196,7 @@ export default function TransactionForm({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="10000"
-            aria-invalid={amount !== "" && (Number.isNaN(parseInt(amount, 10)) || parseInt(amount, 10) < 0)}
+            aria-invalid={amount !== "" && (Number.isNaN(parseInt(amount, 10)) || parseInt(amount, 10) <= 0)}
             className={FORM_INPUT_PRIMARY}
           />
         </FormField>
@@ -234,7 +260,11 @@ export default function TransactionForm({
 
         {/* 5. 카테고리 | 결제수단 */}
         <div className="grid grid-cols-2 gap-2">
-          <FormField label="카테고리" required>
+          <FormField
+            label="카테고리"
+            required
+            error={submitted && !categoryId ? "카테고리를 선택하세요" : null}
+          >
             <TagInput
               selectedTags={
                 categoryId

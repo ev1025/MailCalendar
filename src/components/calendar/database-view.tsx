@@ -240,8 +240,28 @@ export default function DatabaseView({
       {loading ? (
         <div className="py-20" aria-hidden />
       ) : filtered.length === 0 ? (
-        <div className="flex items-center justify-center py-20">
-          <p className="text-sm text-muted-foreground">{search || filterTags.length > 0 ? "검색 결과가 없습니다" : "이 달의 일정이 없습니다"}</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <p className="text-sm text-muted-foreground">
+            {search || filterTags.length > 0
+              ? "검색 결과가 없습니다"
+              : "이 달의 일정이 없습니다"}
+          </p>
+          {(search || filterTags.length > 0) ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setFilterTags([]);
+              }}
+              className="text-xs text-info hover:underline"
+            >
+              필터 해제하기
+            </button>
+          ) : (
+            <p className="text-xs text-muted-foreground/70 break-keep">
+              달력 뷰에서 날짜를 눌러 일정을 추가해보세요
+            </p>
+          )}
         </div>
       ) : (
         <div className={`flex-1 min-h-0 overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>

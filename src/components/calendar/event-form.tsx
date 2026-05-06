@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { translateError } from "@/lib/api-errors";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -218,9 +220,12 @@ export default function EventForm({
           : undefined,
     );
     setSaving(false);
-    if (!error) {
-      onOpenChange(false);
+    if (error) {
+      const msg = error instanceof Error ? error.message : typeof error === "string" ? error : null;
+      toast.error(`저장 실패: ${translateError(msg)}`);
+      return;
     }
+    onOpenChange(false);
   };
 
   return (
