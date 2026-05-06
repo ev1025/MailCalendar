@@ -229,6 +229,7 @@ export default function TravelForm({
     }
     clearDraft();
     onOpenChange(false);
+    toast.success(item ? "수정됐어요" : "저장됐어요");
   };
 
   // 닫기 인터셉트 — 유의미 입력이 있으면 자동 저장 후 닫기.

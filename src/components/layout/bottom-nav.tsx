@@ -14,6 +14,7 @@ import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
 import { useNotifications } from "@/hooks/use-notifications";
+import { useNavBadges } from "@/hooks/use-nav-badges";
 
 // 모바일 하단 네비. 캘린더 | 여행 | 가계부 | 지식 | 프로필
 
@@ -39,6 +40,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const currentUser = useCurrentUser();
   const { unreadCount } = useNotifications();
+  const { todayEvents, todayFixed } = useNavBadges();
   const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
 
   const isActive = (item: NavItem): boolean => {
@@ -47,21 +49,35 @@ export default function BottomNav() {
     return false;
   };
 
+  /** 각 탭별 뱃지 카운트 — 0이면 표시 안 함. */
+  const badgeFor = (href: string): number => {
+    if (href === "/calendar") return todayEvents;
+    if (href === "/finance") return todayFixed;
+    return 0;
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-lg md:hidden pb-safe">
       <div className="flex h-14 items-stretch justify-around">
         {navItems.map((item) => {
           const active = isActive(item);
+          const badge = badgeFor(item.href);
           return (
             <Link
               key={item.label}
               href={item.href}
               style={active ? { color: ACTIVE_COLOR } : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] transition-all duration-200 active:bg-accent/50 active:scale-95",
+                "relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] transition-all duration-200 active:bg-accent/50 active:scale-95",
                 active ? "font-semibold" : "text-muted-foreground"
               )}
             >
+              {/* 카운트 뱃지 — 9 초과 시 9+ 표기. 알림 빨간 닷과 위치 통일. */}
+              {badge > 0 && (
+                <span className="absolute top-1 right-[calc(50%-12px)] inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold leading-none text-white">
+                  {badge > 9 ? "9+" : badge}
+                </span>
+              )}
               <item.icon size={22} weight={active ? "fill" : "regular"} />
               <span>{item.label}</span>
             </Link>

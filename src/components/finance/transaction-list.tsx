@@ -111,14 +111,15 @@ export default function TransactionList({
                     {tx.type === "income" ? "+" : "-"}
                     {formatMoney(tx.amount)}
                   </span>
-                  {/* 휴지통: 연한 회색. 행 클릭으로는 편집으로 가니 삭제만 별도 버튼. */}
+                  {/* 휴지통: 연한 회색. 행 클릭으로는 편집으로 가니 삭제만 별도 버튼.
+                      모바일 터치 타겟 44×44 보장 — 좁으면 인접 행 잘못 누름. */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeletingTx(tx);
                     }}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent transition-colors"
+                    className="inline-flex h-11 w-11 md:h-8 md:w-8 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent transition-colors"
                     aria-label="거래 삭제"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

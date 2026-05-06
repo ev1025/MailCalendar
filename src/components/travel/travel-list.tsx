@@ -35,6 +35,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { toDragProps } from "@/lib/dnd-types";
 
 const ORDER_KEY = "travel_list_custom_order";
+const FILTER_KEY = "travel_list_filters_v1";
 
 function loadCustomOrder(): string[] {
   if (typeof window === "undefined") return [];
@@ -49,6 +50,32 @@ function loadCustomOrder(): string[] {
 function saveCustomOrder(ids: string[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
+}
+
+interface PersistedFilters {
+  search: string;
+  filterCategories: string[];
+  filterTags: string[];
+  sortKeys: SortKey[];
+}
+
+function loadFilters(): Partial<PersistedFilters> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(FILTER_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveFilters(state: PersistedFilters) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(FILTER_KEY, JSON.stringify(state));
+  } catch {
+    /* quota 초과 무시 */
+  }
 }
 
 type SortField = "title" | "category" | "region" | "tag" | "month";
@@ -198,7 +225,7 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
   const { tags, addTag, deleteTag, updateTagColor } = useTravelTags(visibleUserIds);
   const { tags: eventTags, addTag: addEventTag, deleteTag: deleteEventTag, updateTagColor: updateEventTagColor, updateTagName: updateEventTagName, refetch: refetchEventTags } = useEventTags(visibleUserIds);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => loadFilters().search ?? "");
   const [showVisited, setShowVisited] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem("travel_show_visited") !== "false";
@@ -216,10 +243,24 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
-  const [filterCategories, setFilterCategories] = useState<string[]>([]);
-  const [filterTags, setFilterTags] = useState<string[]>([]);
+  // 필터/정렬 — localStorage 에서 복원. 페이지 이동·재진입 후에도 유지.
+  const [filterCategories, setFilterCategories] = useState<string[]>(
+    () => loadFilters().filterCategories ?? [],
+  );
+  const [filterTags, setFilterTags] = useState<string[]>(
+    () => loadFilters().filterTags ?? [],
+  );
   const [openFilter, setOpenFilter] = useState<"category" | "tag" | null>(null);
-  const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
+  const [sortKeys, setSortKeys] = useState<SortKey[]>(
+    () => loadFilters().sortKeys ?? [],
+  );
+
+  // search 초기값 — 위에서 useState 선언했지만 hook 순서상 여기서 동기화.
+  // (search/showVisited 는 이미 별도 localStorage 처리되어 있어 그대로 두고
+  // 카테고리·태그·정렬만 새 키 묶음으로 통합 저장.)
+  useEffect(() => {
+    saveFilters({ search, filterCategories, filterTags, sortKeys });
+  }, [search, filterCategories, filterTags, sortKeys]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TravelItem | null>(null);

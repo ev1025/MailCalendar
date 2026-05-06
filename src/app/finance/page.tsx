@@ -15,6 +15,7 @@ import TransactionForm from "@/components/finance/transaction-form";
 import CategoryChart from "@/components/finance/category-chart";
 import FixedExpenseManager from "@/components/finance/fixed-expense-manager";
 import { Skeleton } from "@/components/ui/skeleton";
+import PullToRefresh from "@/components/ui/pull-to-refresh";
 import {
   Dialog,
   DialogContent,
@@ -260,6 +261,9 @@ function FinancePageInner() {
         shiftMonth(dx < 0 ? 1 : -1);
       }}
     >
+      <PullToRefresh
+        onRefresh={async () => { await refetchTransactions(); }}
+      >
       <div className="w-full md:max-w-5xl md:mx-auto">
       <div className="mb-2 flex justify-center">
         <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleRangeChange} />
@@ -589,6 +593,7 @@ function FinancePageInner() {
         </DialogContent>
       </Dialog>
       </div>
+      </PullToRefresh>
     </div>
     </div>
     </>
