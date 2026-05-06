@@ -169,11 +169,11 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
                         className="h-9 w-9"
                       />
                       {/* 기온 — 가장 강조. */}
-                      <span className="text-base font-bold tabular-nums leading-none">
+                      <span className="mt-1 text-base font-bold tabular-nums leading-none">
                         {e.temperature}°
                       </span>
                       {/* 강수확률 — 물방울 1개. 미래 데이터만 (과거는 hyphen). */}
-                      <span className="flex items-center gap-0.5 text-[10px] tabular-nums text-blue-500 leading-none mt-0.5">
+                      <span className="mt-1.5 flex items-center gap-0.5 text-[10px] tabular-nums text-blue-500 leading-none">
                         {e.precipitation_probability != null ? (
                           <>
                             <Droplet className="h-3 w-3" />
@@ -184,7 +184,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
                         )}
                       </span>
                       {/* 풍속 — 보조 정보, 작게. */}
-                      <span className="flex items-center gap-0.5 text-[10px] tabular-nums text-muted-foreground leading-none">
+                      <span className="mt-1 flex items-center gap-0.5 text-[10px] tabular-nums text-muted-foreground leading-none">
                         <Wind className="h-2.5 w-2.5" />
                         {e.wind_speed}
                       </span>
