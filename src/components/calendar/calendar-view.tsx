@@ -359,11 +359,23 @@ export default function CalendarView({
                           // className 이 mismatch 날 수 있어 경고 억제.
                           // 최초 렌더 후엔 클라이언트 값으로 재조정되므로 UX 영향 없음.
                           suppressHydrationWarning
-                          className={`inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-xs font-semibold md:h-5 md:w-5 md:text-xs ${
-                            tod ? "today-pulse bg-primary text-primary-foreground" : hol ? "text-red-500" : dow === 6 ? "text-blue-500" : ""
-                          }`}
+                          // 행 전체 정렬을 위해 outer 박스 크기는 통일 (18×18 / md 20×20).
+                          // 오늘 강조 동그라미는 inner span 으로 분리해 더 작게 (14×14 / md 16×16).
+                          className="relative inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center md:h-5 md:w-5"
                         >
-                          {format(day, "d")}
+                          {tod ? (
+                            <span className="today-pulse inline-flex h-[14px] w-[14px] items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold md:h-4 md:w-4 md:text-[11px]">
+                              {format(day, "d")}
+                            </span>
+                          ) : (
+                            <span
+                              className={`text-xs font-semibold md:text-xs ${
+                                hol ? "text-red-500" : dow === 6 ? "text-blue-500" : ""
+                              }`}
+                            >
+                              {format(day, "d")}
+                            </span>
+                          )}
                         </span>
                         {w && inM && <WeatherIcon weather={w} compact />}
                       </div>

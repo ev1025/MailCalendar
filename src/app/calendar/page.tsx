@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { motion } from "motion/react";
 import {
   CalendarDays,
   TableProperties,
@@ -59,6 +60,10 @@ function CalendarPageInner() {
   // 캘린더 가로 스와이프 좌표 — capture 단계에서 저장. 이전엔 currentTarget 에
   // 직접 dataset 으로 저장했는데 dnd-kit 셀 캡처와 충돌 가능. ref 가 안정적.
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
+  // 월 전환 방향 — +1 = 다음달(왼쪽으로 밀려와 들어옴), -1 = 이전달(오른쪽에서 들어옴),
+  // 0 = MonthPicker 직접 변경(슬라이드 없이 fade only).
+  // AnimatePresence 없이 key 변경 + initial/animate 만으로 enter 애니메이션 → 레이아웃 안전.
+  const slideDirRef = useRef(0);
   useEffect(() => {
     if (yParam) {
       const y = parseInt(yParam, 10);
@@ -327,7 +332,8 @@ function CalendarPageInner() {
             // 임계값 완화: 가로 40px 이상 & 세로 이동 50px 이내 (수직 스크롤·DnD 와 구분).
             if (Math.abs(dx) < 40 || Math.abs(dy) > 50) return;
             if (dx < 0) {
-              // 왼쪽으로 밀기 → 다음 월
+              // 왼쪽으로 밀기 → 다음 월. enter 방향 +1 (오른쪽에서 슬라이드 들어옴).
+              slideDirRef.current = 1;
               if (month === 12) {
                 setYear(year + 1);
                 setMonth(1);
@@ -335,7 +341,8 @@ function CalendarPageInner() {
                 setMonth(month + 1);
               }
             } else {
-              // 오른쪽으로 밀기 → 이전 월
+              // 오른쪽으로 밀기 → 이전 월. enter 방향 -1 (왼쪽에서 슬라이드 들어옴).
+              slideDirRef.current = -1;
               if (month === 1) {
                 setYear(year - 1);
                 setMonth(12);
@@ -345,17 +352,36 @@ function CalendarPageInner() {
             }
           }}
         >
-        <CalendarView
-          year={year}
-          month={month}
-          events={events}
-          weatherMap={weatherMap}
-          onDateClick={handleDateClick}
-          onEventMove={async (eventId, newStart, newEnd) => {
-            await updateEvent(eventId, { start_date: newStart, end_date: newEnd });
+        {/* 월 전환 enter 애니메이션 — key 변경 시 새 motion.div 가 마운트되며
+            방향에 맞게 슬라이드 + fade. exit 애니메이션 없음(=mode="popLayout" 류
+            absolute 처리 회피) → flex 체인 보존돼 레이아웃 안전.
+            flex flex-col flex-1 min-h-0 → 부모 calendar-md-height 의 flex 체인 그대로 상속. */}
+        <motion.div
+          key={`${year}-${month}`}
+          initial={{
+            x: slideDirRef.current > 0 ? 40 : slideDirRef.current < 0 ? -40 : 0,
+            opacity: 0,
           }}
-          onReorder={batchUpdateSortOrder}
-        />
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col flex-1 min-h-0"
+          onAnimationComplete={() => {
+            // 다음 mountcheck 이 MonthPicker 직접 변경일 수 있으니 리셋.
+            slideDirRef.current = 0;
+          }}
+        >
+          <CalendarView
+            year={year}
+            month={month}
+            events={events}
+            weatherMap={weatherMap}
+            onDateClick={handleDateClick}
+            onEventMove={async (eventId, newStart, newEnd) => {
+              await updateEvent(eventId, { start_date: newStart, end_date: newEnd });
+            }}
+            onReorder={batchUpdateSortOrder}
+          />
+        </motion.div>
         </div>
       ) : (
         <DatabaseView
