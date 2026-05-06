@@ -78,9 +78,11 @@ export default function WeatherIcon({
     );
   }
 
-  // 기본 — DayDetail 헤더. 가로 1줄.
+  // 기본 — DayDetail 헤더 / EventForm 헤더. 가로 1줄.
+  // 순서: [한글 설명] [아이콘] [기온] — 텍스트 좌측, 시각 표현 우측.
   return (
     <div className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+      <span className="text-muted-foreground leading-none">{weather.weather_description}</span>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={iconUrl}
@@ -95,7 +97,6 @@ export default function WeatherIcon({
       ) : (
         <span className="text-muted-foreground leading-none">{weather.temperature_max}°</span>
       )}
-      <span className="text-muted-foreground">{weather.weather_description}</span>
     </div>
   );
 }

@@ -204,7 +204,8 @@ export default function DayDetail({
             </DialogTitle>
             {weather && (
               <div className="shrink-0">
-                <WeatherIcon weather={weather} compact />
+                {/* compact(아이콘+온도 스택) 대신 가로형 — 한글 설명 좌측 표시. */}
+                <WeatherIcon weather={weather} showRange />
               </div>
             )}
           </div>
