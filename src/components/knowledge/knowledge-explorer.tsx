@@ -24,6 +24,7 @@ import {
   type DragMoveEvent,
 } from "@dnd-kit/core";
 import type { KnowledgeFolder, KnowledgeItem } from "@/types";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 
 // Windows 탐색기 스타일 파일·폴더 UI.
 // - 클릭: 단일 선택 / Ctrl+클릭: 토글 / Shift+클릭: 범위
@@ -108,6 +109,8 @@ export default function KnowledgeExplorer({
   // 인라인 이름 편집
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  // 삭제 확인 대상 — refs 가 있으면 ConfirmDialog 노출. confirmDelete 호출 시 onDelete 실행.
+  const [pendingDelete, setPendingDelete] = useState<SelectedRef[] | null>(null);
 
   // 컨텍스트 메뉴 — 마우스 좌표와 대상 id·kind
   const [ctxMenu, setCtxMenu] = useState<{
@@ -334,10 +337,16 @@ export default function KnowledgeExplorer({
     setRenamingId(null);
   };
 
-  const handleDelete = async () => {
+  // 삭제 — folder-note-list 와 동일하게 ConfirmDialog 통과 후 실제 삭제. 즉시 삭제 X.
+  const handleDelete = () => {
     const refs = selectedRefs();
     if (refs.length === 0) return;
-    await onDelete(refs);
+    setPendingDelete(refs);
+  };
+  const performDelete = async () => {
+    if (!pendingDelete) return;
+    await onDelete(pendingDelete);
+    setPendingDelete(null);
     clearSelection();
   };
 
@@ -579,6 +588,32 @@ export default function KnowledgeExplorer({
           })()
         ) : null}
       </DragOverlay>
+
+      {/* 삭제 확인 — folder-note-list 와 동일 메시지/패턴. */}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => { if (!o) setPendingDelete(null); }}
+        title={
+          pendingDelete
+            ? (() => {
+                const folderCount = pendingDelete.filter((r) => r.kind === "folder").length;
+                const itemCount = pendingDelete.filter((r) => r.kind === "item").length;
+                if (folderCount > 0 && itemCount > 0)
+                  return `폴더 ${folderCount}개 · 노트 ${itemCount}개 삭제`;
+                if (folderCount > 0) return `폴더 ${folderCount}개 삭제`;
+                return `노트 ${itemCount}개 삭제`;
+              })()
+            : "삭제"
+        }
+        description={
+          pendingDelete?.some((r) => r.kind === "folder")
+            ? "폴더 안의 모든 하위 노트와 폴더가 함께 삭제돼요."
+            : "삭제하면 되돌릴 수 없어요."
+        }
+        confirmLabel="삭제"
+        destructive
+        onConfirm={performDelete}
+      />
     </DndContext>
   );
 }

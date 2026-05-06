@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { translateError } from "@/lib/api-errors";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
 import MoneyInput from "@/components/ui/money-input";
@@ -224,11 +225,12 @@ export default function FixedExpenseForm({
     );
     setSaving(false);
     if (error) {
-      const msg =
-        typeof error === "object" && error && "message" in error
-          ? String((error as { message?: unknown }).message)
-          : "저장 실패";
-      toast.error(msg);
+      const raw = error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : (error as { message?: string })?.message ?? null;
+      toast.error(`저장 실패: ${translateError(raw)}`);
       return;
     }
     onOpenChange(false);

@@ -33,6 +33,12 @@ const DEFAULT_SEED: { name: string; color: string; sort_order: number }[] = [
 /** 빌트인 카테고리 이름 — 컴포넌트가 builtinIds 로 전달할 때 사용. 시드와 동기화. */
 export const BUILTIN_TRAVEL_CATEGORIES = DEFAULT_SEED.map((s) => s.name);
 
+/** 빌트인 카테고리 색상 fallback 맵 — DB 미반영(첫 진입 직후) 또는 시드 변경 전 데이터에 사용.
+ *  travel-list 등에서 인라인 매직 객체 대신 import 해서 사용. */
+export const BUILTIN_TRAVEL_CATEGORY_COLORS: Record<string, string> = Object.fromEntries(
+  DEFAULT_SEED.map((s) => [s.name, s.color]),
+);
+
 export function useTravelCategories() {
   const userId = useCurrentUserId();
   const [rows, setRows] = useState<TravelCategoryRow[]>([]);

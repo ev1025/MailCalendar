@@ -17,7 +17,7 @@ import KnowledgeExplorer from "@/components/knowledge/knowledge-explorer";
 import KnowledgeSidebarTree from "@/components/knowledge/knowledge-sidebar-tree";
 import type { KnowledgeItem } from "@/types";
 import { toast } from "sonner";
-import { sanitizeRichHTML } from "@/lib/sanitize";
+import { sanitizeRichHTML, stripHtml } from "@/lib/sanitize";
 import PageHeader from "@/components/layout/page-header";
 import PromptDialog from "@/components/ui/prompt-dialog";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -182,7 +182,7 @@ function KnowledgePageInner() {
     // pendingNew 모드 — 내용 있으면 addItem, 없으면 그냥 상태 리셋(no-op).
     if (pendingNew) {
       const trimmedTitle = editTitle.trim();
-      const textOnly = editContent.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+      const textOnly = stripHtml(editContent);
       if (!trimmedTitle && !textOnly) {
         setPendingNew(null);
         setEditing(false);
@@ -521,11 +521,6 @@ function KnowledgePageInner() {
                     loading={knowledgeLoading}
                     onSelectItem={(id) => setSelectedItemId(id)}
                     onSelectFolder={(fid) => setViewFolderId(fid)}
-                    onBack={() => {
-                      const current = folders.find((f) => f.id === viewFolderId);
-                      if (current?.parent_id) setViewFolderId(current.parent_id);
-                      else setViewFolderId(null);
-                    }}
                     onNavigateToFolder={(fid) => setViewFolderId(fid)}
                     onDeleteItems={async (ids) => {
                       for (const id of ids) await handleDelete(id);

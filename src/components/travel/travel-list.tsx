@@ -13,7 +13,7 @@ import TravelToCalendarDialog from "./travel-to-calendar-dialog";
 import AddToPlanDialog from "./add-to-plan-dialog";
 import { useTravelItems } from "@/hooks/use-travel-items";
 import { useTravelTags } from "@/hooks/use-travel-tags";
-import { useTravelCategories } from "@/hooks/use-travel-categories";
+import { useTravelCategories, BUILTIN_TRAVEL_CATEGORY_COLORS } from "@/hooks/use-travel-categories";
 import { useEventTags } from "@/hooks/use-event-tags";
 import { toast } from "sonner";
 import type { TravelItem, CalendarEvent } from "@/types";
@@ -82,17 +82,8 @@ type SortField = "title" | "category" | "region" | "tag" | "month";
 type SortDir = "asc" | "desc";
 type SortKey = { field: SortField; dir: SortDir };
 
-// hook 의 DEFAULT_COLORS 와 동일해야 함 — 카테고리 색이 표시 컴포넌트와 어긋나지 않게.
-// hook 이 우선이고 이 맵은 fallback 용 (사용자 정의 색 없을 때).
-const CATEGORY_COLORS: Record<string, string> = {
-  자연: "#22C55E",
-  숙소: "#A855F7",
-  식당: "#F50B0B",
-  놀거리: "#3B82F6",
-  데이트: "#EC4899",
-  공연: "#E1D04E",
-  쇼핑: "#06B6D4",
-};
+// 빌트인 카테고리 색은 use-travel-categories 의 DEFAULT_SEED 가 단일 SoT.
+// 여기선 그 맵을 import 해서 fallback 으로 사용 → 두 곳에 색을 따로 적어놓는 위험 제거.
 
 interface TravelRowProps {
   item: TravelItem;
@@ -128,7 +119,7 @@ const TravelRow = memo(function TravelRow({
     opacity: isDragging ? 0.5 : 1,
   };
   // 사용자 정의 분류는 categoryColors 에 있고, 기본 5개는 CATEGORY_COLORS 에 있어 둘 다 탐색.
-  const color = categoryColors[item.category] || CATEGORY_COLORS[item.category] || "#6B7280";
+  const color = categoryColors[item.category] || BUILTIN_TRAVEL_CATEGORY_COLORS[item.category] || "#6B7280";
 
   return (
     <tr
@@ -429,7 +420,7 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
       end_date: endDate,
       start_time: startTime,
       end_time: endTime,
-      color: calendarItem.color || CATEGORY_COLORS[calendarItem.category] || "#3B82F6",
+      color: calendarItem.color || BUILTIN_TRAVEL_CATEGORY_COLORS[calendarItem.category] || "#3B82F6",
       tag: calendarItem.tag,
       repeat: null,
     });
@@ -536,7 +527,7 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
         open={openFilter === "category" && allCategories.length > 0}
         items={allCategories}
         selected={filterCategories}
-        colorOf={(c) => CATEGORY_COLORS[c] || "#6B7280"}
+        colorOf={(c) => BUILTIN_TRAVEL_CATEGORY_COLORS[c] || "#6B7280"}
         onToggle={(c) =>
           setFilterCategories((prev) =>
             prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]

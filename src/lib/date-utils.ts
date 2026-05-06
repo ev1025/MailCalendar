@@ -34,10 +34,49 @@ export function nthWeekday(
  *  setMonth 오버플로우 회피 위해 day-of-month 를 그 달 말일로 클램프.
  *  잘못된 입력은 그대로 반환. */
 export function shiftMonthBack(date: string): string {
+  return shiftMonth(date, -1);
+}
+
+/** "YYYY-MM-DD" 를 N개월 이동. delta 는 양수=미래, 음수=과거.
+ *  setMonth 오버플로우 회피 위해 day-of-month 를 대상 월 말일로 클램프.
+ *  잘못된 입력은 그대로 반환. */
+export function shiftMonth(date: string, delta: number): string {
   const d = new Date(date + "T00:00:00");
   if (Number.isNaN(d.getTime())) return date;
   const targetDay = d.getDate();
-  const t = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  const t = new Date(d.getFullYear(), d.getMonth() + delta, 1);
   const lastDay = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
   return ymd(new Date(t.getFullYear(), t.getMonth(), Math.min(targetDay, lastDay)));
+}
+
+/** (year, month) → 그 달 1일과 말일 의 "YYYY-MM-DD" 페어. month 는 1~12. */
+export function monthBounds(year: number, month: number): { start: string; end: string } {
+  const last = new Date(year, month, 0);
+  return {
+    start: `${year}-${String(month).padStart(2, "0")}-01`,
+    end: ymd(last),
+  };
+}
+
+/** 다음 날 "YYYY-MM-DD" — exclusive 상한 계산용. */
+export function nextDay(date: string): string {
+  const d = new Date(date + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return date;
+  d.setDate(d.getDate() + 1);
+  return ymd(d);
+}
+
+/** 두 "YYYY-MM-DD" 사이의 일수 (b - a). */
+export function daysBetween(a: string, b: string): number {
+  const da = new Date(a + "T00:00:00");
+  const db = new Date(b + "T00:00:00");
+  return Math.round((db.getTime() - da.getTime()) / 86400000);
+}
+
+/** "YYYY-MM-DD" 를 N일 이동. */
+export function addDaysISO(date: string, days: number): string {
+  const d = new Date(date + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return date;
+  d.setDate(d.getDate() + days);
+  return ymd(d);
 }

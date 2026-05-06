@@ -17,11 +17,7 @@ import {
   FORM_INPUT_PRIMARY,
   FORM_INPUT_COMPACT,
 } from "@/lib/form-classes";
-
-const todayIsoDate = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+import { todayYmd as todayIsoDate } from "@/lib/date-utils";
 
 interface Props {
   open: boolean;

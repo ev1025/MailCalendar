@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Star, ChevronRight, FileText, Folder, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SearchInput from "@/components/ui/search-input";
@@ -197,15 +197,18 @@ export default function KnowledgeDashboard({
 }: DashboardProps) {
   const { toggleFolder: toggleFolderFav, isFolderFav } = useKnowledgeFavorites();
   // 즐겨찾기 = DB pinned (items) — 폴더는 글 전용 정책으로 즐겨찾기 대상 아님.
-  const favoriteItems = items.filter((i) => i.pinned);
-  const rootFolders = folders.filter((f) => !f.parent_id);
-  // 폴더에 속하지 않는 최상위 노트들 — 대시보드 하단에 플랫하게 노출해야 접근 가능.
-  const rootItems = items
-    .filter((i) => !i.folder_id)
-    .sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-    });
+  // useMemo: items/folders 가 안 바뀌면 재계산 회피. 50+ 노트에서 매 렌더 O(n) 정렬·필터 부담 제거.
+  const favoriteItems = useMemo(() => items.filter((i) => i.pinned), [items]);
+  const rootFolders = useMemo(() => folders.filter((f) => !f.parent_id), [folders]);
+  const rootItems = useMemo(
+    () => items
+      .filter((i) => !i.folder_id)
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }),
+    [items],
+  );
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggleExpand = (id: string) => setExpanded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });

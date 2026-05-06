@@ -10,6 +10,7 @@ import DatePicker from "@/components/ui/date-picker";
 import NumberWheel from "@/components/ui/number-wheel";
 import { FormField } from "@/components/ui/form-field";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
+import { todayYmd } from "@/lib/date-utils";
 import { FORM_INPUT_PRIMARY } from "@/lib/form-classes";
 import { translateError } from "@/lib/api-errors";
 import { toast } from "sonner";
@@ -69,7 +70,7 @@ export default function TransactionForm({
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(todayYmd());
   const [paymentMethod, setPaymentMethod] = useState("");
   /** 할부 개월 수 — 1 = 일시불 (기본), 2~24 가능. 수정 모드에선 비활성. */
   const [installmentMonths, setInstallmentMonths] = useState(1);
@@ -95,7 +96,7 @@ export default function TransactionForm({
       setAmount("");
       setCategoryId("");
       setDescription("");
-      setDate(new Date().toISOString().split("T")[0]);
+      setDate(todayYmd());
       // payment_method 는 DB CHECK 제약 ('카드','현금','계좌이체','자동이체','간편결제','기타') 에
       // 빈 문자열이 통과 못 함. 기본값 "카드" — 사용자가 폼에서 다른 값으로 덮어쓰면 됨.
       setPaymentMethod("카드");

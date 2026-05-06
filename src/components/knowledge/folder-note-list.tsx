@@ -22,7 +22,6 @@ interface Props {
   loading?: boolean;
   onSelectItem: (id: string) => void;
   onSelectFolder: (folderId: string) => void;
-  onBack: () => void;
   onNavigateToFolder: (folderId: string | null) => void;
   onDeleteItems?: (ids: string[]) => void;
   onDeleteFolders?: (ids: string[]) => void;
@@ -40,11 +39,10 @@ interface Props {
 }
 
 export default function FolderNoteList({
-  folder, folders, items, loading = false, onSelectItem, onSelectFolder, onBack, onNavigateToFolder,
+  folder, folders, items, loading = false, onSelectItem, onSelectFolder, onNavigateToFolder,
   onDeleteItems, onDeleteFolders, onRenameFolder, onRenameItem, onMoveItems, onMoveFolders,
   onSelectModeChange, onTogglePinItem, searchQuery, onSearch, hideBreadcrumb,
 }: Props) {
-  void onBack;
   const folderId = folder?.id ?? null;
   const subFolders = folders.filter((f) => f.parent_id === folderId);
   const folderItems = items

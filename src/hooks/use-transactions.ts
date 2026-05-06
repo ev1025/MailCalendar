@@ -72,11 +72,13 @@ export function useTransactions(startDate: string, endDate?: string) {
     const { data, error } = await query;
 
     if (error) {
+      // fallback: 시그니처 동일하게 endExclusive 사용 — 이전엔 endDate 로 잘못 비교해
+      // 마지막 날 거래가 누락되던 off-by-one 버그.
       const fallback = await supabase
         .from("expenses")
         .select("*, category:expense_categories(*)")
         .gte("date", startDate)
-        .lt("date", endDate)
+        .lt("date", endExclusive)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false });
       if (fallback.data) {
@@ -88,7 +90,7 @@ export function useTransactions(startDate: string, endDate?: string) {
       setSessionCache(txCacheKey, data);
     }
     setLoading(false);
-  }, [startDate, endExclusive, endDate, userId, txCacheKey]);
+  }, [startDate, endExclusive, userId, txCacheKey]);
 
   // 키 변경 시 캐시 hydrate. 캐시 없으면 빈 상태로 로딩 표시.
   useEffect(() => {

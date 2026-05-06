@@ -23,6 +23,17 @@ const ALLOWED_ATTR = [
   "data-*",
 ];
 
+/**
+ * HTML 태그를 모두 제거해 plain text 만 반환. excerpt/검색 인덱싱·드래프트 길이 비교 등에 사용.
+ * &nbsp; 도 공백으로 변환. trim 적용. 간단한 정규식 — sanitize 한 결과만 통과시키는 게 안전.
+ *
+ * 이전엔 use-knowledge-items, use-knowledge-drafts 양쪽에 동일 함수가 인라인으로 있어 통합.
+ */
+export function stripHtml(html: string): string {
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+}
+
 /** TipTap/리치 에디터가 생성한 HTML을 안전하게 정리. */
 export function sanitizeRichHTML(html: string): string {
   if (!html) return html;

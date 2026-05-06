@@ -4,11 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
 import { getSessionCache, setSessionCache } from "@/lib/session-cache";
+import { stripHtml } from "@/lib/sanitize";
 import type { KnowledgeItem } from "@/types";
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
-}
 
 export function useKnowledgeItems(folderId: string | null) {
   const userId = useCurrentUserId();

@@ -278,7 +278,14 @@ function ProductsPageInner() {
       .from("product_purchases")
       .select("product_id, total_price")
       .in("product_id", productIds)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          // 최저가 조회 실패해도 페이지는 동작 — 카드만 stats 없는 상태로.
+          // 사용자에게 silent — 비치명적 부가 정보라 toast 까지는 과함.
+          console.warn("[product stats]", error.message);
+          setStats({});
+          return;
+        }
         if (!data) return;
         const map: Record<string, ProductStat> = {};
         for (const p of data as { product_id: string; total_price: number }[]) {

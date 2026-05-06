@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { stripHtml } from "@/lib/sanitize";
 
 // 지식창고 노트의 임시저장(drafts) 을 localStorage 로 관리하는 훅.
 // - 수동 저장: saveDraft({ title, content, sourceId, folderId })
@@ -82,10 +83,7 @@ export function useKnowledgeDrafts() {
       enabled: boolean;
     }) => {
       if (!input.enabled) return;
-      const textOnly = input.content
-        .replace(/<[^>]*>/g, "")
-        .replace(/&nbsp;/g, " ")
-        .trim();
+      const textOnly = stripHtml(input.content);
       if (!input.title.trim() && !textOnly) return;
 
       const timer = setTimeout(() => {

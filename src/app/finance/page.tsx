@@ -17,6 +17,8 @@ import CategoryChart from "@/components/finance/category-chart";
 import FixedExpenseManager from "@/components/finance/fixed-expense-manager";
 import { Skeleton } from "@/components/ui/skeleton";
 import PullToRefresh from "@/components/ui/pull-to-refresh";
+import { monthBounds } from "@/lib/date-utils";
+import { formatMoney } from "@/lib/format-money";
 import {
   Dialog,
   DialogContent,
@@ -38,11 +40,10 @@ function FinancePageInner() {
   const now = new Date();
 
   // 시작일/종료일 — 기본은 이번 달 1일~말일. URL 에 ?s=YYYY-MM-DD&e=YYYY-MM-DD 동기화.
-  const defaultStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const defaultEnd = (() => {
-    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
-  })();
+  const { start: defaultStart, end: defaultEnd } = monthBounds(
+    now.getFullYear(),
+    now.getMonth() + 1,
+  );
   const [startDate, setStartDate] = useUrlStringParam("s", defaultStart);
   const [endDate, setEndDate] = useUrlStringParam("e", defaultEnd);
 
@@ -73,13 +74,9 @@ function FinancePageInner() {
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
   const shiftMonth = (delta: number) => {
     const t = new Date(year, month - 1 + delta, 1);
-    const ny = t.getFullYear();
-    const nm = t.getMonth() + 1;
-    const last = new Date(ny, nm, 0).getDate();
-    const s = `${ny}-${String(nm).padStart(2, "0")}-01`;
-    const e = `${ny}-${String(nm).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
-    setStartDate(s);
-    setEndDate(e);
+    const { start, end } = monthBounds(t.getFullYear(), t.getMonth() + 1);
+    setStartDate(start);
+    setEndDate(end);
   };
 
   const {
@@ -124,7 +121,8 @@ function FinancePageInner() {
   // 등록되는 문제의 근본 원인이었음. 이제 사용자가 명시적으로 트리거 (고정비 추가 시
   // 다이얼로그, 또는 매니저의 "이번달 자동 적용" 버튼) 할 때만 적용됨.
 
-  const allTransactions = [...transactions].sort((a, b) => b.date.localeCompare(a.date));
+  // useTransactions 가 이미 date desc + created_at desc 로 정렬해서 반환 — 재정렬 불필요.
+  const allTransactions = transactions;
 
   // 카테고리 차트 클릭으로 설정되는 필터. null = 전체.
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -320,7 +318,7 @@ function FinancePageInner() {
               <span className="text-xs text-muted-foreground tabular-nums truncate">
                 총 {filteredTransactions.length}건
                 {filteredTotal > 0 && (
-                  <> · {new Intl.NumberFormat("ko-KR").format(filteredTotal)}원</>
+                  <> · {formatMoney(filteredTotal)}</>
                 )}
               </span>
             </div>
