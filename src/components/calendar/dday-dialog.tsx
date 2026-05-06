@@ -202,8 +202,9 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
               </div>
               {calcOpen && (
                 <div className="mt-3 flex flex-col items-center border-t border-border/60 pt-4">
-                  {/* 입력박스도 위 버튼과 같은 폭으로 — 시각적 무게 균형. */}
-                  <div className="relative w-[140px]">
+                  {/* 입력박스 폭 절반(70px) — 100/1000 같은 짧은 숫자만 받으므로 충분.
+                      placeholder 는 한 단계 더 흐릿하게(/40) — 기본값 음영보다 약하게. */}
+                  <div className="relative w-[70px]">
                     <Input
                       type="number"
                       inputMode="numeric"
@@ -214,7 +215,7 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
                         if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
                       }}
                       placeholder="100"
-                      className="h-9 pr-10 text-right tabular-nums"
+                      className="h-9 pr-9 text-right tabular-nums placeholder:text-muted-foreground/40"
                     />
                     <span
                       aria-hidden
