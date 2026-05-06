@@ -84,10 +84,10 @@ export default function WeatherIcon({
 
   // 기본 — DayDetail 헤더 / EventForm 헤더. 가로 1줄.
   // 순서: [한글 설명] [아이콘] [기온] — 텍스트 좌측, 시각 표현 우측.
-  // dense=true: 공간 좁은 곳용으로 폰트·아이콘 한 단계 축소.
-  const textCls = dense ? "text-[11px]" : "text-xs";
-  const gapCls = dense ? "gap-1" : "gap-1.5";
-  const imgCls = dense ? "h-4 w-4" : "h-5 w-5";
+  // dense=true: 공간 좁은 곳용으로 폰트·아이콘·간격 한 단계 더 축소.
+  const textCls = dense ? "text-[10px]" : "text-xs";
+  const gapCls = dense ? "gap-0.5" : "gap-1.5";
+  const imgCls = dense ? "h-3.5 w-3.5" : "h-5 w-5";
   return (
     <div className={`flex items-center ${gapCls} ${textCls} whitespace-nowrap`}>
       <span className="text-muted-foreground leading-none">{weather.weather_description}</span>
