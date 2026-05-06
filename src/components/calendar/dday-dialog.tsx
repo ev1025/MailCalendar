@@ -1,18 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Heart } from "lucide-react";
 
 /**
- * D-day 다이얼로그 — 사용자가 입력한 기념일(date+time)부터 경과 시간을 1초 단위로
- * 표시. 디자인은 srcDoc HTML/CSS/JS 그대로, date 만 동적 주입.
+ * D-day 다이얼로그 — 사용자가 입력한 기념일(date+time)부터 경과 시간을 1초 단위로 표시.
  *
- * 외부 임베드(apption)는 X-Frame 차단으로 폐기. 자체 srcDoc 인라인이라 차단 무관.
+ * 이전 iframe srcDoc 방식은 흰 배경이 다이얼로그 카드와 분리 안 돼 어색.
+ * 또 다크모드 미대응. React 네이티브 렌더로 교체 → 테마 토큰·그라디언트·다크모드 자동.
  */
 
 interface Props {
@@ -24,146 +25,121 @@ interface Props {
   time: string;
 }
 
-/**
- * 입력 date+time 으로 IFRAME 의 HTML 문자열 생성.
- *
- * 보안:
- *  - date 는 "YYYY-MM-DD" 정규식 통과만 허용 (영숫자+- 만)
- *  - time 은 "HH:MM" 정규식 통과만 허용
- *  - 둘 다 검증 실패하면 빈 문자열 반환 → iframe 이 빈 화면 표시
- *  - 향후 사용자 자유입력 (예: 라벨 커스터마이즈) 추가 시에도 인용 처리 강제.
- */
-function buildIframeHtml(date: string, time: string): string {
-  // 입력 검증 — 형식 외 문자 들어오면 즉시 거부 (XSS 방지).
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
-  if (!/^\d{2}:\d{2}$/.test(time)) return "";
-  // myDate JS 파싱용 ISO. iOS Safari 도 안전하게 파싱하는 형식.
-  const isoLike = `${date}T${time}:00`;
-  // 라벨용 한글 형식 — "YYYY. MM. DD. HH:MM"
-  const [y, m, d] = date.split("-");
-  const labelDate = `${y}. ${m}. ${d}. ${time}`;
-  return `<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Montserrat:900" rel="stylesheet">
-  <style>
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      background-color: white;
-      font-family: 'Montserrat', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    #timer {
-      color: #eeeeee;
-      text-transform: uppercase;
-      font-size: 1em;
-      letter-spacing: 5px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .anniversary-label {
-      align-self: flex-end;
-      margin-top: 6px;
-      letter-spacing: normal;
-      text-transform: none;
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 1em;
-      font-weight: 500;
-      color: #444;
-      background-color: rgba(255, 255, 255, 0.8);
-      padding: 5px 10px;
-      border-radius: 10px;
-    }
-    .row {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-    .days, .hours, .minutes, .seconds {
-      padding: 14px;
-      width: 100px;
-      height: 100px;
-      box-sizing: content-box;
-      border-radius: 5px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-    .days { background: #EF2F3C; }
-    .hours { background: #eeeeee; color: #183059; }
-    .minutes { background: #276FBF; }
-    .seconds { background: #F0A202; }
-    .numbers {
-      font-family: 'Montserrat', sans-serif;
-      color: #183059;
-      font-size: 2.7em;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
-  <div id="timer">
-    <div class="row">
-      <div class="days"><div id="days" class="numbers"></div>일</div>
-      <div class="hours"><div id="hours" class="numbers"></div>시간</div>
+interface Diff {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
+function computeDiff(target: Date): Diff {
+  const ms = Date.now() - target.getTime();
+  const abs = Math.abs(ms);
+  return {
+    days: Math.floor(abs / 86400000),
+    hours: Math.floor((abs % 86400000) / 3600000),
+    minutes: Math.floor((abs % 3600000) / 60000),
+    seconds: Math.floor((abs % 60000) / 1000),
+  };
+}
+
+/** 단일 카운트 셀 — 숫자 + 단위. 색상은 props 의 tone 으로 결정. */
+function CountCell({
+  value,
+  unit,
+  tone,
+}: {
+  value: number;
+  unit: string;
+  tone: "rose" | "slate" | "blue" | "amber";
+}) {
+  const tones: Record<typeof tone, { bg: string; text: string }> = {
+    rose: { bg: "bg-rose-500", text: "text-white" },
+    slate: { bg: "bg-slate-200 dark:bg-slate-700", text: "text-slate-900 dark:text-slate-100" },
+    blue: { bg: "bg-blue-600", text: "text-white" },
+    amber: { bg: "bg-amber-500", text: "text-white" },
+  };
+  const { bg, text } = tones[tone];
+  return (
+    <div
+      className={`${bg} ${text} flex aspect-square w-full max-w-[110px] flex-col items-center justify-center rounded-2xl shadow-sm`}
+    >
+      <span className="text-3xl font-extrabold tabular-nums leading-none tracking-tight sm:text-4xl">
+        {value}
+      </span>
+      <span className="mt-1 text-[10px] font-medium uppercase tracking-widest opacity-90 sm:text-[11px]">
+        {unit}
+      </span>
     </div>
-    <div class="row">
-      <div class="minutes"><div id="minutes" class="numbers"></div>분</div>
-      <div class="seconds"><div id="seconds" class="numbers"></div>초</div>
-    </div>
-    <div class="anniversary-label">❤ ${labelDate} ~</div>
-  </div>
-  <script>
-    const myDate = new Date('${isoLike}');
-    function tick() {
-      const diff = Date.now() - myDate.getTime();
-      const days = Math.floor(diff / 86400000);
-      const hours = Math.floor((diff % 86400000) / 3600000);
-      const minutes = Math.floor((diff % 3600000) / 60000);
-      const seconds = Math.floor((diff % 60000) / 1000);
-      document.getElementById("days").innerText = days;
-      document.getElementById("hours").innerText = hours;
-      document.getElementById("minutes").innerText = minutes;
-      document.getElementById("seconds").innerText = seconds;
-    }
-    tick();
-    setInterval(tick, 1000);
-  </script>
-</body>
-</html>`;
+  );
 }
 
 export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
-  // date/time 이 바뀌면 srcDoc 만 갱신 (iframe 자체는 동일 인스턴스 → 매끄러운 전환).
-  const html = useMemo(() => buildIframeHtml(date, time), [date, time]);
+  const target = useMemo(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+    if (!/^\d{2}:\d{2}$/.test(time)) return null;
+    const t = new Date(`${date}T${time}:00`);
+    return Number.isNaN(t.getTime()) ? null : t;
+  }, [date, time]);
+
+  const [diff, setDiff] = useState<Diff | null>(() => (target ? computeDiff(target) : null));
+
+  useEffect(() => {
+    if (!open || !target) return;
+    setDiff(computeDiff(target));
+    const id = setInterval(() => setDiff(computeDiff(target)), 1000);
+    return () => clearInterval(id);
+  }, [open, target]);
+
+  const labelDate = useMemo(() => {
+    if (!target) return "";
+    const [y, m, d] = date.split("-");
+    return `${y}. ${m}. ${d}. ${time}`;
+  }, [date, time, target]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        className="max-w-[calc(100%-1.5rem)] sm:max-w-[400px] p-0 gap-0 overflow-hidden bg-white"
+        // 다이얼로그 카드 자체는 default(투명) — 내부 그라디언트가 그대로 보이도록.
+        className="max-w-[calc(100%-1.5rem)] sm:max-w-[420px] p-0 gap-0 overflow-hidden border-none"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>D-day</DialogTitle>
         </DialogHeader>
-        <iframe
-          srcDoc={html}
-          title="D-day"
-          sandbox="allow-scripts"
-          className="block w-full h-[380px] sm:h-[370px] border-0 bg-white"
-        />
+
+        {/* 배경 — 부드러운 라디얼 그라디언트 + 다크모드 대응. 카드 외곽과 자연스럽게 이어짐. */}
+        <div
+          className="relative px-6 py-8 sm:px-8 sm:py-10"
+          style={{
+            background:
+              "radial-gradient(circle at top right, oklch(0.75 0.13 20 / 0.12), transparent 55%), radial-gradient(circle at bottom left, oklch(0.7 0.13 250 / 0.14), transparent 50%), var(--card)",
+          }}
+        >
+          {/* 상단 라벨 */}
+          {target && (
+            <div className="mb-5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+              <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+              <span className="tabular-nums">{labelDate}</span>
+            </div>
+          )}
+
+          {/* 카운트 그리드 — 2x2. 셀 색은 의미별: 일=강조(rose), 시간=중립(slate), 분=blue, 초=amber. */}
+          {diff && (
+            <div className="mx-auto grid w-full max-w-[260px] grid-cols-2 gap-3 sm:max-w-[300px] sm:gap-4">
+              <CountCell value={diff.days} unit="일" tone="rose" />
+              <CountCell value={diff.hours} unit="시간" tone="slate" />
+              <CountCell value={diff.minutes} unit="분" tone="blue" />
+              <CountCell value={diff.seconds} unit="초" tone="amber" />
+            </div>
+          )}
+
+          {!target && (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              D-day 기준일이 설정되지 않았어요
+            </p>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
