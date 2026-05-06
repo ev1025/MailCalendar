@@ -7,7 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Heart } from "lucide-react";
+import { Heart, CalendarDays } from "lucide-react";
+import DatePicker from "@/components/ui/date-picker";
+import { todayYmd, daysBetween } from "@/lib/date-utils";
 
 /**
  * D-day 다이얼로그 — 사용자가 입력한 기념일(date+time)부터 경과 시간을 1초 단위로 표시.
@@ -97,6 +99,16 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
     return `${y}. ${m}. ${d}. ${time}`;
   }, [date, time, target]);
 
+  // D-day 계산기 — 임의의 날짜를 골라 오늘부터의 차이 표시. 다이얼로그 안에서만 임시 상태.
+  const [calcDate, setCalcDate] = useState("");
+  const calcResult = useMemo(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(calcDate)) return null;
+    const days = daysBetween(todayYmd(), calcDate);
+    if (days === 0) return { label: "D-Day", tone: "today" as const, days: 0 };
+    if (days > 0) return { label: `D-${days}`, tone: "future" as const, days };
+    return { label: `D+${Math.abs(days)}`, tone: "past" as const, days };
+  }, [calcDate]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -139,6 +151,41 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
               D-day 기준일이 설정되지 않았어요
             </p>
           )}
+
+          {/* 구분선 + D-day 계산기 — 임의 날짜를 골라 오늘부터 차이 표시.
+              future = D-N / today = D-Day / past = D+N. */}
+          <div className="mt-6 border-t border-border/60 pt-5">
+            <div className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>D-day 계산기</span>
+            </div>
+            <DatePicker
+              value={calcDate}
+              onChange={setCalcDate}
+              placeholder="날짜를 선택하세요"
+              className="w-full"
+            />
+            {calcResult && (
+              <div
+                className={`mt-3 flex items-baseline justify-center gap-2 rounded-xl py-3 ${
+                  calcResult.tone === "today"
+                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                    : calcResult.tone === "future"
+                      ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                      : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                }`}
+              >
+                <span className="text-3xl font-extrabold tabular-nums tracking-tight">
+                  {calcResult.label}
+                </span>
+                {calcResult.tone !== "today" && (
+                  <span className="text-xs text-muted-foreground">
+                    {calcResult.tone === "future" ? "남음" : "지남"}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
