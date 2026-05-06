@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -80,26 +80,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
     return new Date().getHours();
   }, [date]);
 
-  // 외부(backdrop) 클릭 시 닫힘 — Base UI 기본 동작이지만 z-stack 충돌 환경에서
-  // 보강하기 위해 ref + document pointerdown 으로 outside 감지.
-  const popupRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: PointerEvent) => {
-      const t = e.target as Node | null;
-      if (popupRef.current && t && !popupRef.current.contains(t)) {
-        onOpenChange(false);
-      }
-    };
-    // 다음 tick — open 트리거 자체 click 이 outside 로 잡히는 race 회피.
-    const id = window.setTimeout(() => {
-      document.addEventListener("pointerdown", handler);
-    }, 0);
-    return () => {
-      window.clearTimeout(id);
-      document.removeEventListener("pointerdown", handler);
-    };
-  }, [open, onOpenChange]);
+  // 외부 클릭 닫힘은 Base UI Dialog 의 native dismissible(default true) 에 위임.
+  // 이전엔 document pointerdown 으로 직접 outside 감지했지만, 그 클릭이 부모
+  // DayDetail 의 backdrop 까지 그대로 전달되어 둘 다 닫히는 문제 발생 → 제거.
 
   /** "오전 12시 / 오전 N시 / 오후 12시 / 오후 N시" 한국식 12h 시각 라벨. */
   const formatHourKo = (h: number): string => {
@@ -117,7 +100,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
         // 가로 스크롤 스트립을 충분히 보여주기 위해 max-w 살짝 키움.
         className="max-w-[calc(100%-1.5rem)] sm:max-w-lg p-0 gap-0 overflow-hidden z-[80]"
       >
-        <div ref={popupRef} className="contents">
+        <div className="contents">
           <DialogHeader className="px-5 pt-5 pb-3 shrink-0">
             <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
           </DialogHeader>
