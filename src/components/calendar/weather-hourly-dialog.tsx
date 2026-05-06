@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Droplet, Wind } from "lucide-react";
+import { Droplet } from "lucide-react";
 import { useWeatherLocation } from "@/hooks/use-weather-location";
 import { getWeatherIconUrl } from "@/lib/weather";
 
@@ -102,6 +102,13 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
         // overlay 도 함께 z-[80] — 부모 다이얼로그 콘텐츠 위로 깔리지 않으면
         // 일정이 많은 DayDetail 의 popup ring/border 가 hourly popup 을 가림.
         overlayClassName="z-[80]"
+        // overlay 클릭 시 명시적 close — Base UI dismissible 이 nested 환경에서
+        // 동작 안 하는 케이스 보강. stopPropagation 으로 부모(DayDetail) 까지
+        // 전파 안 되게 막아 부모 닫힘 cascade 방지.
+        onOverlayClick={(e) => {
+          e.stopPropagation();
+          onOpenChange(false);
+        }}
       >
         <div className="contents">
           <DialogHeader className="px-5 pt-5 pb-3 shrink-0">
@@ -170,11 +177,6 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
                         ) : (
                           <span className="mx-auto text-muted-foreground/30">·</span>
                         )}
-                      </span>
-                      {/* 풍속 — 동일 패턴. 같은 w-10 사용해 강수와 세로축 정렬 일치. */}
-                      <span className="mt-1 flex w-10 items-center justify-between text-[10px] tabular-nums leading-none text-muted-foreground">
-                        <Wind className="h-2.5 w-2.5 shrink-0" />
-                        <span>{e.wind_speed}</span>
                       </span>
                     </div>
                   );

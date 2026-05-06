@@ -52,6 +52,7 @@ const BackButtonContext = React.createContext<{
 function DialogContent({
   className,
   overlayClassName,
+  onOverlayClick,
   children,
   showCloseButton = false,
   showBackButton = true,
@@ -63,10 +64,13 @@ function DialogContent({
   onBack?: () => void
   /** Backdrop(z-50 default) override — nested dialog 등에서 z-index 올릴 때 사용. */
   overlayClassName?: string
+  /** Backdrop 클릭 핸들러 — Base UI dismissible 가 nested 환경에서 안 먹을 때 보강용.
+   *  e.stopPropagation 호출해 부모 dialog 까지 전파 안 되게. */
+  onOverlayClick?: (e: React.MouseEvent) => void
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay className={overlayClassName} />
+      <DialogOverlay className={overlayClassName} onClick={onOverlayClick} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         // 앱 전 팝업 공통 규격 — 모바일 좌우 1.5rem 인셋(이전 1rem이라 답답했음),
