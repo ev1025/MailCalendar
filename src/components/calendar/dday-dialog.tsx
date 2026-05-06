@@ -8,8 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Heart, CalendarDays } from "lucide-react";
-import DatePicker from "@/components/ui/date-picker";
-import { todayYmd, daysBetween } from "@/lib/date-utils";
+import { Input } from "@/components/ui/input";
+import { addDaysISO, ymd, todayYmd, daysBetween } from "@/lib/date-utils";
 
 /**
  * D-day 다이얼로그 — 사용자가 입력한 기념일(date+time)부터 경과 시간을 1초 단위로 표시.
@@ -102,15 +102,31 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
     return `${y}. ${m}. ${d}. ${time}`;
   }, [date, time, target]);
 
-  // D-day 계산기 — 임의의 날짜를 골라 오늘부터의 차이 표시. 다이얼로그 안에서만 임시 상태.
-  const [calcDate, setCalcDate] = useState("");
+  // D-day 계산기 — 기준일(date)부터 N일째 되는 날짜 계산. 예: 100, 1000일 기념일 산출.
+  // 음수도 허용 → 기준일 N일 전 날짜. 기준일 미설정 시 비활성.
+  const [calcDays, setCalcDays] = useState("");
   const calcResult = useMemo(() => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(calcDate)) return null;
-    const days = daysBetween(todayYmd(), calcDate);
-    if (days === 0) return { label: "D-Day", tone: "today" as const, days: 0 };
-    if (days > 0) return { label: `D-${days}`, tone: "future" as const, days };
-    return { label: `D+${Math.abs(days)}`, tone: "past" as const, days };
-  }, [calcDate]);
+    if (!target) return null;
+    const trimmed = calcDays.trim();
+    if (!trimmed) return null;
+    const n = parseInt(trimmed, 10);
+    if (Number.isNaN(n)) return null;
+    // 1일째 = 기준일 그 자체. N일째 = 기준일 + (N-1)일.
+    // 음수 입력은 그대로 (-N 일째 = 기준일에서 -N+1, 사실상 |N| 일 전).
+    const offset = n >= 1 ? n - 1 : n;
+    const resultDate = addDaysISO(ymd(target), offset);
+    const today = todayYmd();
+    const diffFromToday = daysBetween(today, resultDate);
+    return { date: resultDate, n, offset, diffFromToday };
+  }, [calcDays, target]);
+
+  /** "YYYY-MM-DD" → "YYYY년 M월 D일 (요일)" 표시. */
+  const formatKoreanDate = (iso: string): string => {
+    const d = new Date(iso + "T00:00:00");
+    if (Number.isNaN(d.getTime())) return iso;
+    const wk = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${wk})`;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,40 +171,67 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
             </p>
           )}
 
-          {/* 구분선 + D-day 계산기 — 임의 날짜를 골라 오늘부터 차이 표시.
-              future = D-N / today = D-Day / past = D+N. */}
-          <div className="mt-6 border-t border-border/60 pt-5">
-            <div className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" />
-              <span>D-day 계산기</span>
-            </div>
-            <DatePicker
-              value={calcDate}
-              onChange={setCalcDate}
-              placeholder="날짜를 선택하세요"
-              className="w-full"
-            />
-            {calcResult && (
-              <div
-                className={`mt-3 flex items-baseline justify-center gap-2 rounded-xl py-3 ${
-                  calcResult.tone === "today"
-                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                    : calcResult.tone === "future"
-                      ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                      : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                }`}
-              >
-                <span className="text-3xl font-extrabold tabular-nums tracking-tight">
-                  {calcResult.label}
-                </span>
-                {calcResult.tone !== "today" && (
-                  <span className="text-xs text-muted-foreground">
-                    {calcResult.tone === "future" ? "남음" : "지남"}
-                  </span>
-                )}
+          {/* 구분선 + D-day 계산기 — 기준일 기준 N일째 되는 날짜 계산. 100일/1000일 기념일 등.
+              기준일 미설정 시는 안내 문구만 표시. */}
+          {target && (
+            <div className="mt-6 border-t border-border/60 pt-5">
+              <div className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5" />
+                <span>며칠째 되는 날 계산</span>
               </div>
-            )}
-          </div>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={calcDays}
+                    onChange={(e) => setCalcDays(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+                    }}
+                    placeholder="100"
+                    className="pr-8 text-right tabular-nums"
+                  />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
+                  >
+                    일째
+                  </span>
+                </div>
+                {/* 빠른 프리셋 — 100/200/365/1000일 */}
+                <div className="flex gap-1">
+                  {[100, 365, 1000].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setCalcDays(String(p))}
+                      className="px-2 h-9 rounded-md border text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors tabular-nums"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {calcResult && (
+                <div className="mt-3 rounded-xl bg-rose-500/10 px-4 py-3 text-center">
+                  <p className="text-[11px] text-muted-foreground">
+                    기준일로부터 <span className="font-semibold tabular-nums">{calcResult.n}</span>일째
+                  </p>
+                  <p className="mt-1 text-base font-semibold tabular-nums text-rose-700 dark:text-rose-300">
+                    {formatKoreanDate(calcResult.date)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+                    {calcResult.diffFromToday === 0
+                      ? "바로 오늘"
+                      : calcResult.diffFromToday > 0
+                        ? `오늘로부터 ${calcResult.diffFromToday}일 후`
+                        : `${Math.abs(calcResult.diffFromToday)}일 전 지남`}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
