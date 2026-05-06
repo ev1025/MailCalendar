@@ -108,9 +108,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   ? "justify-center p-2.5"
                   : "gap-2.5 px-2.5 py-1.5 text-[13px]",
                 active
-                  ? "bg-accent font-medium text-foreground"
+                  ? "bg-accent-color-soft font-medium"
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground hover:translate-x-0.5"
               )}
+              style={
+                active
+                  ? { color: "var(--accent-color, var(--foreground))" }
+                  : undefined
+              }
             >
               <item.icon className="h-4 w-4 shrink-0" />
               {!collapsed && <span>{item.label}</span>}

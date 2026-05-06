@@ -33,6 +33,15 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };
 
+/**
+ * 다크모드 FOUC 제거 — React hydrate 전에 <html> 에 .dark 클래스를 적용.
+ * localStorage 의 "theme" 값이 "dark" 거나, "system" 인데 OS 가 dark 면 적용.
+ * try/catch — localStorage 차단 환경(쿠키 차단 등) 에서도 무해.
+ *
+ * 라이트모드와 마찬가지로 .accent-* 클래스도 같이 — 사용자 액센트 컬러 즉시 반영.
+ */
+const themeBootScript = `(function(){try{var t=localStorage.getItem('theme')||'system';var m=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(t==='system'&&m)){document.documentElement.classList.add('dark');}var a=localStorage.getItem('accent');if(a){document.documentElement.setAttribute('data-accent',a);}}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -42,7 +51,12 @@ export default function RootLayout({
     <html
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* 첫 paint 전에 테마 적용 — 라이트→다크 깜빡임 방지. */}
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <AppShell>{children}</AppShell>
         <Toaster richColors position="top-center" />

@@ -16,6 +16,10 @@
   --color-info-bg: var(--info-bg);
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
+  /* 사용자 액센트 컬러 — data-accent 로 전환되며 사이드바 active, 토글 on 등에 사용. */
+  --color-accent-color: var(--accent-color);
+  --color-accent-color-fg: var(--accent-color-fg);
+  --color-accent-color-soft: var(--accent-color-soft);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
@@ -106,6 +110,41 @@
   --info-bg: oklch(0.97 0.02 240);
   --success: oklch(0.55 0.16 155);            /* emerald-600 근사 */
   --success-bg: oklch(0.96 0.04 155);
+}
+
+/* === 액센트 컬러 — data-accent="green|blue|purple|rose|amber" 로 전환 ===
+   기본(unset) 은 forest green(#219143) 톤을 그대로. 사용자가 설정 → 액센트 컬러
+   고르면 <html data-accent="..."> 가 적용되고 --accent-color / --primary 가 바뀜.
+   사이드바 active, 토글 on 색, 차트 등에 일관 사용. */
+:root {
+  --accent-color: oklch(0.55 0.13 150);          /* forest green 기본 */
+  --accent-color-fg: oklch(0.985 0 0);
+  --accent-color-soft: oklch(0.55 0.13 150 / 0.12);
+}
+[data-accent="blue"] {
+  --accent-color: oklch(0.6 0.18 248);
+  --accent-color-fg: oklch(0.985 0 0);
+  --accent-color-soft: oklch(0.6 0.18 248 / 0.12);
+}
+[data-accent="purple"] {
+  --accent-color: oklch(0.55 0.22 295);
+  --accent-color-fg: oklch(0.985 0 0);
+  --accent-color-soft: oklch(0.55 0.22 295 / 0.12);
+}
+[data-accent="rose"] {
+  --accent-color: oklch(0.6 0.22 12);
+  --accent-color-fg: oklch(0.985 0 0);
+  --accent-color-soft: oklch(0.6 0.22 12 / 0.12);
+}
+[data-accent="amber"] {
+  --accent-color: oklch(0.7 0.18 65);
+  --accent-color-fg: oklch(0.205 0 0);
+  --accent-color-soft: oklch(0.7 0.18 65 / 0.14);
+}
+[data-accent="cyan"] {
+  --accent-color: oklch(0.65 0.13 200);
+  --accent-color-fg: oklch(0.985 0 0);
+  --accent-color-soft: oklch(0.65 0.13 200 / 0.12);
 }
 
 .dark {
@@ -266,6 +305,38 @@
 }
 
 /* === 전역 애니메이션 키프레임 === */
+
+/* Skeleton shimmer — 좌→우로 빛이 흐르며 "로딩 중" 의미 강조.
+   .skeleton-shimmer 적용 요소 위에 ::after 의사 요소를 띄워 그라디언트 슬라이드. */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(1 0 0 / 0.06),
+    transparent
+  );
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+.dark .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(1 0 0 / 0.04),
+    transparent
+  );
+}
 
 /* 페이지 진입 — 살짝 위로 밀려 올라오며 fade-in. 6px → 8px 사이의 미세 이동.
    route 전환 / 탭 전환 / 데이터 로딩 직후 같은 곳에 .animate-page-in 으로 적용. */

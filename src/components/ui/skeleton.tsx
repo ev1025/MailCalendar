@@ -1,16 +1,19 @@
 import { cn } from "@/lib/utils";
 
 /**
- * 로딩 중 자리 차지용 스켈레톤. Tailwind animate-pulse 기본.
+ * 로딩 중 자리 차지용 스켈레톤. shimmer 효과 (좌→우 빛 슬라이드).
  * 사용 예: <Skeleton className="h-4 w-24" />
  *
- * 너비/높이는 호출부에서 className 으로 지정. 색상은 muted/50 → 어둡고 밝은
- * 모드 모두 자연스러움.
+ * shimmer 키프레임은 globals.css 의 .skeleton-shimmer 클래스로 정의.
+ * 정적 pulse 보다 "로딩 중" 의미가 명확하고, 실제 콘텐츠 흐름을 암시.
  */
 export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-muted/60", className)}
+      className={cn(
+        "skeleton-shimmer rounded-md bg-muted/60 overflow-hidden relative",
+        className,
+      )}
       {...props}
     />
   );

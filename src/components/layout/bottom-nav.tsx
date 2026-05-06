@@ -33,8 +33,9 @@ const navItems: NavItem[] = [
   { href: "/knowledge", label: "지식", icon: Book },
 ];
 
-// 활성 탭 색상 — forest green (#219143).
-const ACTIVE_COLOR = "#219143";
+// 활성 탭 색상 — 사용자 액센트 컬러 (data-accent) 따라감. 미지정 시 forest green.
+// CSS 변수를 직접 쓰면 다크모드/액센트 변경 즉시 반영.
+const ACTIVE_COLOR = "var(--accent-color, #219143)";
 
 export default function BottomNav() {
   const pathname = usePathname();

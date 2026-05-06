@@ -2,6 +2,7 @@
 
 import { Pencil, Plus } from "lucide-react";
 import { formatMoney } from "@/lib/format-money";
+import AnimatedCounter from "@/components/ui/animated-counter";
 
 interface MonthlySummaryProps {
   totalIncome: number;
@@ -104,7 +105,9 @@ export default function MonthlySummary({
               />
             ) : undefined
           }
-          value={`+${formatMoney(totalIncome)}`}
+          value={
+            <AnimatedCounter value={totalIncome} formatter={formatMoney} prefix="+" />
+          }
         />
         <Cell
           label="고정비"
@@ -118,7 +121,9 @@ export default function MonthlySummary({
               />
             ) : undefined
           }
-          value={`-${formatMoney(totalFixed)}`}
+          value={
+            <AnimatedCounter value={totalFixed} formatter={formatMoney} prefix="-" />
+          }
         />
       </div>
 
@@ -127,7 +132,13 @@ export default function MonthlySummary({
         <Cell
           label="이번달 잔액"
           color={balanceColor}
-          value={`${balanceSign}${formatMoney(Math.abs(balance))}`}
+          value={
+            <AnimatedCounter
+              value={Math.abs(balance)}
+              formatter={formatMoney}
+              prefix={balanceSign}
+            />
+          }
         />
         <Cell
           label="이번달 지출"
@@ -141,7 +152,9 @@ export default function MonthlySummary({
               />
             ) : undefined
           }
-          value={`-${formatMoney(totalExpense)}`}
+          value={
+            <AnimatedCounter value={totalExpense} formatter={formatMoney} prefix="-" />
+          }
         />
       </div>
     </div>

@@ -33,6 +33,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type Theme = "system" | "light" | "dark";
 
+/** 액센트 컬러 옵션 — globals.css 의 [data-accent="..."] 와 매칭. */
+type Accent = "default" | "blue" | "purple" | "rose" | "amber" | "cyan";
+const ACCENT_OPTIONS: { value: Accent; label: string; swatch: string }[] = [
+  { value: "default", label: "그린", swatch: "#219143" },
+  { value: "blue", label: "블루", swatch: "#3B82F6" },
+  { value: "purple", label: "퍼플", swatch: "#A855F7" },
+  { value: "rose", label: "로즈", swatch: "#F43F5E" },
+  { value: "amber", label: "앰버", swatch: "#F59E0B" },
+  { value: "cyan", label: "시안", swatch: "#06B6D4" },
+];
+
 function ApiSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -159,6 +170,7 @@ function SettingsPageInner() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<"general" | "account" | "api">("general");
   const [theme, setTheme] = useState<Theme>("system");
+  const [accent, setAccent] = useState<Accent>("default");
   const currentLocation = useWeatherLocation();
   const [locQuery, setLocQuery] = useState("");
   const [locResults, setLocResults] = useState<GeoResult[]>([]);
@@ -248,6 +260,8 @@ function SettingsPageInner() {
   useEffect(() => {
     const saved = localStorage.getItem("theme") as Theme | null;
     if (saved) setTheme(saved);
+    const savedAccent = localStorage.getItem("accent") as Accent | null;
+    if (savedAccent) setAccent(savedAccent);
   }, []);
 
   const applyTheme = (t: Theme) => {
@@ -260,6 +274,14 @@ function SettingsPageInner() {
       if (window.matchMedia("(prefers-color-scheme: dark)").matches) root.classList.add("dark");
       else root.classList.remove("dark");
     }
+  };
+
+  const applyAccent = (a: Accent) => {
+    setAccent(a);
+    localStorage.setItem("accent", a);
+    const root = document.documentElement;
+    if (a === "default") root.removeAttribute("data-accent");
+    else root.setAttribute("data-accent", a);
   };
 
   const kmaExpiry = "2028-04-12";
@@ -333,6 +355,35 @@ function SettingsPageInner() {
                     {label}
                   </Button>
                 ))}
+              </div>
+
+              {/* 액센트 컬러 — 사이드바 활성, 토스트, 강조 등에 적용. 6개 색상. */}
+              <div className="mt-4 pt-4 border-t flex flex-col gap-2">
+                <p className="text-xs text-muted-foreground">액센트 컬러</p>
+                <div className="flex flex-wrap gap-2">
+                  {ACCENT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => applyAccent(opt.value)}
+                      aria-label={opt.label}
+                      title={opt.label}
+                      className={`group relative flex h-9 w-9 items-center justify-center rounded-full transition-all tap-feedback ${
+                        accent === opt.value
+                          ? "ring-2 ring-offset-2 ring-offset-background"
+                          : "hover:scale-110"
+                      }`}
+                      style={{
+                        backgroundColor: opt.swatch,
+                        ...(accent === opt.value ? { ["--tw-ring-color" as never]: opt.swatch } : {}),
+                      }}
+                    >
+                      {accent === opt.value && (
+                        <span className="text-white text-xs font-bold">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -57,7 +57,7 @@ export default function TransactionList({
               locale: ko,
             })}
           </h3>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 stagger-list">
             {grouped[date].map((tx) => (
               <div
                 key={tx.id}
