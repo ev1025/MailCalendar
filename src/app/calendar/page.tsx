@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarDays,
   TableProperties,
@@ -59,6 +60,9 @@ function CalendarPageInner() {
   // 캘린더 가로 스와이프 좌표 — capture 단계에서 저장. 이전엔 currentTarget 에
   // 직접 dataset 으로 저장했는데 dnd-kit 셀 캡처와 충돌 가능. ref 가 안정적.
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
+  // 월 전환 방향 — +1 = 다음달(왼쪽으로 밀려), -1 = 이전달(오른쪽으로 밀려), 0 = 무애니메이션.
+  // AnimatePresence 의 initial/exit 방향에 사용.
+  const [slideDir, setSlideDir] = useState(0);
   useEffect(() => {
     if (yParam) {
       const y = parseInt(yParam, 10);
@@ -328,6 +332,7 @@ function CalendarPageInner() {
             if (Math.abs(dx) < 40 || Math.abs(dy) > 50) return;
             if (dx < 0) {
               // 왼쪽으로 밀기 → 다음 월
+              setSlideDir(1);
               if (month === 12) {
                 setYear(year + 1);
                 setMonth(1);
@@ -336,6 +341,7 @@ function CalendarPageInner() {
               }
             } else {
               // 오른쪽으로 밀기 → 이전 월
+              setSlideDir(-1);
               if (month === 1) {
                 setYear(year - 1);
                 setMonth(12);
@@ -345,17 +351,37 @@ function CalendarPageInner() {
             }
           }}
         >
-        <CalendarView
-          year={year}
-          month={month}
-          events={events}
-          weatherMap={weatherMap}
-          onDateClick={handleDateClick}
-          onEventMove={async (eventId, newStart, newEnd) => {
-            await updateEvent(eventId, { start_date: newStart, end_date: newEnd });
-          }}
-          onReorder={batchUpdateSortOrder}
-        />
+        {/* 월 전환 시 좌/우 슬라이드 — 스와이프 방향과 동일하게 새 월이 들어오고
+            이전 월이 반대쪽으로 사라짐. mode=popLayout 으로 두 월이 동시에 존재해
+            CSS Grid 가 변형되지 않게 stack. */}
+        <AnimatePresence mode="popLayout" initial={false} custom={slideDir}>
+          <motion.div
+            key={`${year}-${month}`}
+            custom={slideDir}
+            variants={{
+              enter: (dir: number) => ({ x: dir > 0 ? "100%" : dir < 0 ? "-100%" : 0, opacity: dir === 0 ? 1 : 0 }),
+              center: { x: 0, opacity: 1 },
+              exit: (dir: number) => ({ x: dir > 0 ? "-100%" : "100%", opacity: 0 }),
+            }}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ x: { type: "spring", stiffness: 360, damping: 36 }, opacity: { duration: 0.18 } }}
+            className="h-full"
+          >
+            <CalendarView
+              year={year}
+              month={month}
+              events={events}
+              weatherMap={weatherMap}
+              onDateClick={handleDateClick}
+              onEventMove={async (eventId, newStart, newEnd) => {
+                await updateEvent(eventId, { start_date: newStart, end_date: newEnd });
+              }}
+              onReorder={batchUpdateSortOrder}
+            />
+          </motion.div>
+        </AnimatePresence>
         </div>
       ) : (
         <DatabaseView

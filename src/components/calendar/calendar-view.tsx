@@ -360,7 +360,7 @@ export default function CalendarView({
                           // 최초 렌더 후엔 클라이언트 값으로 재조정되므로 UX 영향 없음.
                           suppressHydrationWarning
                           className={`inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-xs font-semibold md:h-5 md:w-5 md:text-xs ${
-                            tod ? "bg-primary text-primary-foreground" : hol ? "text-red-500" : dow === 6 ? "text-blue-500" : ""
+                            tod ? "today-pulse bg-primary text-primary-foreground" : hol ? "text-red-500" : dow === 6 ? "text-blue-500" : ""
                           }`}
                         >
                           {format(day, "d")}

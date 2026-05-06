@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Trash2, Pencil } from "lucide-react";
 import {
   Dialog,
@@ -57,17 +58,23 @@ export default function TransactionList({
               locale: ko,
             })}
           </h3>
-          <div className="flex flex-col gap-2 stagger-list">
+          <div className="flex flex-col gap-2">
+            <AnimatePresence initial={false}>
             {grouped[date].map((tx) => (
-              <div
+              <motion.div
                 key={tx.id}
+                layout
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 0 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                transition={{ type: "spring", stiffness: 380, damping: 32, opacity: { duration: 0.18 } }}
                 role="button"
                 tabIndex={0}
                 onClick={() => onEdit(tx)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") onEdit(tx);
                 }}
-                className="group flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors hover:bg-accent/50 active:bg-accent"
+                className="group flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-accent/50 active:bg-accent overflow-hidden"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   {tx.category && (
@@ -125,8 +132,9 @@ export default function TransactionList({
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
+            </AnimatePresence>
           </div>
         </div>
       ))}
