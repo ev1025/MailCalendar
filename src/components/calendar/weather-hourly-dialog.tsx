@@ -146,36 +146,35 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
                   return (
                     <div
                       key={e.time}
-                      className={`flex shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-2 min-w-[64px] ${
+                      className={`flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5 min-w-[54px] ${
                         isNow ? "bg-primary/10 ring-1 ring-primary/20" : ""
                       }`}
                     >
-                      {/* 시각 — 오전/오후 N시 */}
-                      <span className="text-[11px] font-medium tabular-nums text-muted-foreground whitespace-nowrap">
+                      {/* 시각 — 오전/오후 N시. 살짝 축소. */}
+                      <span className="text-[10px] font-medium tabular-nums text-muted-foreground whitespace-nowrap">
                         {formatHourKo(hour)}
                       </span>
-                      {/* 아이콘 */}
+                      {/* 아이콘 — 한 단계 작게(36px → 32px). */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={getWeatherIconUrl(e.weather_icon)}
                         alt={e.weather_description}
-                        className="h-9 w-9"
+                        className="h-8 w-8"
                       />
-                      {/* 기온 — 가장 강조. */}
-                      <span className="mt-1 text-base font-bold tabular-nums leading-none">
+                      {/* 기온 — 가장 강조이지만 한 단계 축소. */}
+                      <span className="mt-0.5 text-sm font-bold tabular-nums leading-none">
                         {e.temperature}°
                       </span>
-                      {/* 강수확률 — 고정 폭(w-10) 안에서 아이콘 좌측 / 값 우측 정렬.
-                          카드별로 값 자릿수가 달라도(0%/30%/100%) 아이콘 위치가
-                          항상 같은 column 에 정렬되어 정돈된 느낌. */}
-                      <span className="mt-1.5 flex w-10 items-center justify-between text-[10px] tabular-nums leading-none text-blue-500">
+                      {/* 강수확률 — 아이콘과 값 사이 gap-0.5 로 이전처럼 가까이.
+                          카드별 자릿수 변동에 흔들리지 않도록 카드는 min-w 로 안정. */}
+                      <span className="mt-1 flex items-center gap-0.5 text-[9px] tabular-nums leading-none text-blue-500">
                         {e.precipitation_probability != null ? (
                           <>
-                            <Droplet className="h-3 w-3 shrink-0" />
+                            <Droplet className="h-2.5 w-2.5 shrink-0" />
                             <span>{e.precipitation_probability}%</span>
                           </>
                         ) : (
-                          <span className="mx-auto text-muted-foreground/30">·</span>
+                          <span className="text-muted-foreground/30">·</span>
                         )}
                       </span>
                     </div>
