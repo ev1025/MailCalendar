@@ -165,9 +165,11 @@ function FinancePageInner() {
   // includeFixed 만 적용한 베이스 — 스코어카드(이번달 수입/지출) + 카테고리별 차트의 기준.
   // (categoryFilter 는 거래 목록에만 적용되어야 함 — 차트 자체가 카테고리 선택의 출발점이므로
   // 차트가 자기 자신에 의해 필터되면 단일 카테고리만 보이는 비정상 상태가 됨.)
+  // includeFixed=false 일 때도 수입(type=income) 은 항상 유지 — 사용자는 "고정 지출만
+  // 가리고 싶다"는 의도이며 수입까지 가려지면 잔액 계산이 음수로 왜곡됨.
   const baseTransactions = useMemo(() => {
     if (includeFixed) return allTransactions;
-    return allTransactions.filter((tx) => !isFromFixed(tx));
+    return allTransactions.filter((tx) => tx.type === "income" || !isFromFixed(tx));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allTransactions, includeFixed, fixedSet]);
 
