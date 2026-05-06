@@ -270,6 +270,7 @@ export default function DayDetail({
         open={hourlyOpen}
         onOpenChange={setHourlyOpen}
         date={date}
+        weather={weather}
       />
     </Dialog>
   );

@@ -415,6 +415,7 @@ export default function EventForm({
           open={hourlyOpen}
           onOpenChange={setHourlyOpen}
           date={startDate}
+          weather={weatherMap?.[startDate] ?? null}
         />
     </FormPage>
   );

@@ -8,9 +8,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Droplet } from "lucide-react";
+import { Droplet, ArrowUp, ArrowDown } from "lucide-react";
 import { useWeatherLocation } from "@/hooks/use-weather-location";
 import { getWeatherIconUrl } from "@/lib/weather";
+import type { WeatherData } from "@/types";
 
 /**
  * 시간별 날씨 상세 다이얼로그 — date 와 좌표 전달, /api/weather/hourly 호출.
@@ -31,9 +32,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   /** "YYYY-MM-DD" — 비어있으면 다이얼로그 빈 상태. */
   date: string;
+  /** 일일 요약(최고/최저/대표 아이콘) — 헤더에 큰 아이콘으로 노출. 없으면 헤더 간소화. */
+  weather?: WeatherData | null;
 }
 
-export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props) {
+export default function WeatherHourlyDialog({ open, onOpenChange, date, weather }: Props) {
   const location = useWeatherLocation();
   const [entries, setEntries] = useState<HourlyEntry[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -97,8 +100,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
       <DialogContent
         showBackButton={false}
         // FormPage(z-[70]) / 부모 DayDetail Dialog(z-50) 위에 모두 떠야 함.
-        // 가로 스크롤 스트립을 충분히 보여주기 위해 max-w 살짝 키움.
-        className="max-w-[calc(100%-1.5rem)] sm:max-w-lg p-0 gap-0 overflow-hidden z-[80]"
+        // 부모 DayDetail 의 일정이 많아도 가려지도록 max-w xl 까지 확장.
+        // 모바일은 calc(100%-1rem) — 거의 풀너비.
+        className="max-w-[calc(100%-1rem)] sm:max-w-xl p-0 gap-0 overflow-hidden z-[80]"
         // overlay 도 함께 z-[80] — 부모 다이얼로그 콘텐츠 위로 깔리지 않으면
         // 일정이 많은 DayDetail 의 popup ring/border 가 hourly popup 을 가림.
         overlayClassName="z-[80]"
@@ -111,9 +115,36 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
         }}
       >
         <div className="contents">
-          <DialogHeader className="px-5 pt-5 pb-3 shrink-0">
+          <DialogHeader className="px-5 pt-5 pb-2 shrink-0">
             <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
           </DialogHeader>
+
+          {/* 일일 요약 — 큰 아이콘 + 한글 설명 + 최고/최저 기온. weather prop 없으면 생략. */}
+          {weather && (
+            <div className="flex items-center gap-4 px-5 pb-4 pt-1 border-b">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getWeatherIconUrl(weather.weather_icon)}
+                alt={weather.weather_description}
+                className="h-16 w-16 shrink-0"
+              />
+              <div className="flex flex-col gap-1 min-w-0 flex-1">
+                <span className="text-sm font-medium text-foreground truncate">
+                  {weather.weather_description}
+                </span>
+                <div className="flex items-center gap-3 text-sm tabular-nums">
+                  <span className="flex items-center gap-0.5 text-red-500">
+                    <ArrowUp className="h-3.5 w-3.5" />
+                    {weather.temperature_max}°
+                  </span>
+                  <span className="flex items-center gap-0.5 text-blue-500">
+                    <ArrowDown className="h-3.5 w-3.5" />
+                    {weather.temperature_min}°
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 본문 — 가로 스크롤 스트립. iPhone Weather 앱 스타일.
               한 컬럼: 시각 / 아이콘 / 기온 / 풍속 / 강수확률. */}
