@@ -49,6 +49,9 @@ interface DayDetailProps {
   onEditEvent?: (event: CalendarEvent) => void;
   onDeleteEvent?: (id: string) => void;
   onReorder?: (ids: string[]) => void;
+  /** 헤더 우측 날씨 칩 클릭 — 부모가 시간별 날씨 다이얼로그를 자기 레벨에서 띄움.
+   *  미지정 시 내부 fallback 으로 자체 다이얼로그 마운트(Base UI nested 이슈 가능). */
+  onWeatherClick?: (date: string, weather: WeatherData) => void;
 }
 
 function SortableItem({ ev, tagColorMap, isOwner, owner, onEdit, onDelete }: {
@@ -160,10 +163,11 @@ export default function DayDetail({
   onEditEvent,
   onDeleteEvent,
   onReorder,
+  onWeatherClick,
 }: DayDetailProps) {
   const { tags: travelTags } = useTravelTags(visibleUserIds);
   const currentUserId = useCurrentUserId();
-  // 날씨 칩 클릭 → 시간별 상세 다이얼로그.
+  // 날씨 칩 클릭 → 시간별 상세 다이얼로그. onWeatherClick prop 이 있으면 부모에 위임.
   const [hourlyOpen, setHourlyOpen] = useState(false);
   const { users } = useAppUsers();
   const usersById = new Map(users.map((u) => [u.id, u]));
@@ -208,9 +212,13 @@ export default function DayDetail({
             {weather && (
               <button
                 type="button"
-                onClick={() => setHourlyOpen(true)}
+                onClick={() => {
+                  // onWeatherClick prop 우선 — 부모(calendar/page) 가 자기 레벨에서
+                  // 다이얼로그를 띄워 Base UI nested context 충돌 회피.
+                  if (onWeatherClick) onWeatherClick(date, weather);
+                  else setHourlyOpen(true);
+                }}
                 // 우측 정렬로 날짜와 거리 확보. compact tone — 폰트 살짝 축소, 패딩 최소.
-                // 내부 WeatherIcon 크기는 weatherIconCompact 모드로 별도 처리.
                 className="ml-auto shrink-0 rounded-md px-0.5 py-0.5 text-[11px] hover:bg-accent transition-colors"
                 aria-label="시간별 날씨 보기"
                 title="시간별 날씨 보기"

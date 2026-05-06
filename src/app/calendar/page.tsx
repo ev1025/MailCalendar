@@ -21,6 +21,8 @@ import CalendarView from "@/components/calendar/calendar-view";
 import DatabaseView from "@/components/calendar/database-view";
 import EventForm from "@/components/calendar/event-form";
 import DayDetail from "@/components/calendar/day-detail";
+import WeatherHourlyDialog, { prefetchHourlyWeather } from "@/components/calendar/weather-hourly-dialog";
+import { useWeatherLocation } from "@/hooks/use-weather-location";
 import RepeatScopeDialog, { type RepeatScope } from "@/components/calendar/repeat-scope-dialog";
 import { useAppUsers } from "@/lib/current-user";
 import { getHolidayMap } from "@/lib/holidays";
@@ -88,6 +90,15 @@ function CalendarPageInner() {
   const [dayDetailOpen, setDayDetailOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
 
+  // 시간별 날씨 다이얼로그 — DayDetail 의 자식으로 두면 Base UI nested context
+  // 충돌로 outside-click 닫힘 안 됨. 페이지 레벨에서 형제로 마운트해 격리.
+  const [hourlyState, setHourlyState] = useState<{
+    open: boolean;
+    date: string;
+    weather: import("@/types").WeatherData | null;
+  }>({ open: false, date: "", weather: null });
+  const weatherLoc = useWeatherLocation();
+
   // D-day 다이얼로그 — 설정에서 토글 ON + date/time 입력 시에만 버튼 노출.
   const [ddayOpen, setDdayOpen] = useState(false);
   const { settings: ddaySettings, isReady: ddayReady } = useDdaySettings();
@@ -111,6 +122,21 @@ function CalendarPageInner() {
     | null
   >(null);
   const { weatherMap } = useWeather(year, month);
+
+  // 시간별 날씨 prefetch — 일일 weatherMap 이 로드되면, 가시 월의 ±3일 정도
+  // 백그라운드로 시간별 데이터 미리 받음. 사용자가 클릭 시 캐시 hit 으로 즉시 표시.
+  // 너무 많이 호출하면 외부 API 부담이라 오늘 ±3일만 처리.
+  useEffect(() => {
+    const today = new Date();
+    for (let d = -1; d <= 3; d++) {
+      const t = new Date(today);
+      t.setDate(today.getDate() + d);
+      const ymdStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+      if (weatherMap[ymdStr]) {
+        prefetchHourlyWeather(ymdStr, weatherLoc.lat, weatherLoc.lon);
+      }
+    }
+  }, [weatherMap, weatherLoc.lat, weatherLoc.lon]);
   // 공유 owner 의 태그까지 색상이 보이려면 visibleUserIds 전달.
   const { tags, addTag, deleteTag, updateTagColor, updateTagName } = useEventTags(visibleUserIds);
 
@@ -408,7 +434,28 @@ function CalendarPageInner() {
         onEditEvent={(ev) => { setDayDetailOpen(false); setEditing(ev); setFormOpen(true); }}
         onDeleteEvent={async (id) => { await handleDelete(id); }}
         onReorder={batchUpdateSortOrder}
+        onWeatherClick={(d, w) => setHourlyState({ open: true, date: d, weather: w })}
       />
+
+      {/* 시간별 날씨 — DayDetail 과 형제 레벨로 마운트해 nested 충돌 회피. */}
+      {hourlyState.open && (
+        <WeatherHourlyDialog
+          open={hourlyState.open}
+          onOpenChange={(o) => {
+            setHourlyState((s) => ({ ...s, open: o }));
+            // 닫힘 시 트리거 버튼에 잔류하는 :focus-visible 링 제거.
+            if (!o) {
+              requestAnimationFrame(() => {
+                if (document.activeElement instanceof HTMLElement) {
+                  document.activeElement.blur();
+                }
+              });
+            }
+          }}
+          date={hourlyState.date}
+          weather={hourlyState.weather}
+        />
+      )}
 
       {/* 일정 추가/수정 폼 */}
       <EventForm

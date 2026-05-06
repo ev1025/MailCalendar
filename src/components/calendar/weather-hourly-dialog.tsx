@@ -27,6 +27,49 @@ interface HourlyEntry {
   weather_description: string;
 }
 
+// 모듈 레벨 캐시 — 같은 (date,lat,lon) 의 시간별 응답을 5분 보관.
+// 사용자가 다이얼로그 열기 전에 prefetchHourly() 로 미리 채울 수도 있음.
+type CacheEntry = { entries: HourlyEntry[]; cachedAt: number };
+const hourlyCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
+
+function cacheKey(date: string, lat: number, lon: number): string {
+  return `${date}|${lat.toFixed(3)}|${lon.toFixed(3)}`;
+}
+
+async function fetchHourly(
+  date: string,
+  lat: number,
+  lon: number,
+  signal?: AbortSignal,
+): Promise<HourlyEntry[] | null> {
+  const key = cacheKey(date, lat, lon);
+  const cached = hourlyCache.get(key);
+  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    return cached.entries;
+  }
+  try {
+    const res = await fetch(
+      `/api/weather/hourly?date=${date}&lat=${lat}&lon=${lon}`,
+      { signal },
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.error) return null;
+    const entries = (json.entries ?? []) as HourlyEntry[];
+    hourlyCache.set(key, { entries, cachedAt: Date.now() });
+    return entries;
+  } catch {
+    return null;
+  }
+}
+
+/** 외부에서 미리 시간별 날씨 prefetch — calendar/page 에서 weatherMap 로드 후
+ *  보이는 월의 일부 날짜에 대해 백그라운드 호출. 사용자가 클릭했을 때 즉시 표시. */
+export function prefetchHourlyWeather(date: string, lat: number, lon: number): void {
+  fetchHourly(date, lat, lon).catch(() => {});
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,21 +87,23 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
 
   useEffect(() => {
     if (!open || !date) return;
+    // 캐시 즉시 hydrate — 있으면 loading=false 로 0초 표시.
+    const cached = hourlyCache.get(cacheKey(date, location.lat, location.lon));
+    if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+      setEntries(cached.entries);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     let cancelled = false;
     setEntries(null);
     setError(null);
     setLoading(true);
-    fetch(
-      `/api/weather/hourly?date=${date}&lat=${location.lat}&lon=${location.lon}`,
-    )
-      .then((r) => r.json())
-      .then((json) => {
+    fetchHourly(date, location.lat, location.lon)
+      .then((rows) => {
         if (cancelled) return;
-        if (json.error) setError(json.error);
-        else setEntries(json.entries ?? []);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(String(e));
+        if (rows === null) setError("fetch failed");
+        else setEntries(rows);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -115,13 +160,13 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
         }}
       >
         <div className="contents">
-          <DialogHeader className="px-5 pt-5 pb-2 shrink-0">
+          <DialogHeader className="px-4 pt-5 pb-2 shrink-0">
             <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
           </DialogHeader>
 
           {/* 일일 요약 — 큰 아이콘 + 한글 설명 + 최고/최저 기온. weather prop 없으면 생략. */}
           {weather && (
-            <div className="flex items-center gap-4 px-5 pb-4 pt-1 border-b">
+            <div className="flex items-center gap-4 px-4 pb-4 pt-1">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={getWeatherIconUrl(weather.weather_icon)}
@@ -147,7 +192,8 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           )}
 
           {/* 본문 — 가로 스크롤 스트립. iPhone Weather 앱 스타일.
-              한 컬럼: 시각 / 아이콘 / 기온 / 풍속 / 강수확률. */}
+              한 컬럼: 시각 / 아이콘 / 기온 / 강수확률.
+              스트립 영역만 muted 배경(연한 회색) 으로 덮어 일일 요약과 시각 구분. */}
           <div className="overflow-x-auto overflow-y-hidden pb-5">
             {loading && (
               <div className="flex gap-3 px-5">
