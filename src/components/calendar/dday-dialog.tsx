@@ -193,15 +193,17 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
                   onClick={() => setCalcOpen((o) => !o)}
                   aria-label="D-day 계산기 열기"
                   aria-expanded={calcOpen}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/40 transition-colors"
+                  // 테두리 + 살짝 톤 다운 — 버튼임이 한눈에 보이도록.
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background/60 px-3 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors tap-feedback"
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
                   <span>D-day 계산기</span>
                 </button>
               </div>
               {calcOpen && (
-                <div className="mt-3 border-t border-border/60 pt-4">
-                  <div className="relative">
+                <div className="mt-3 flex flex-col items-center border-t border-border/60 pt-4">
+                  {/* 입력박스도 위 버튼과 같은 폭으로 — 시각적 무게 균형. */}
+                  <div className="relative w-[140px]">
                     <Input
                       type="number"
                       inputMode="numeric"
@@ -212,7 +214,7 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
                         if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
                       }}
                       placeholder="100"
-                      className="pr-10 text-right tabular-nums"
+                      className="h-9 pr-10 text-right tabular-nums"
                     />
                     <span
                       aria-hidden
@@ -222,7 +224,7 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
                     </span>
                   </div>
                   {calcResult && (
-                    <div className="mt-3 rounded-xl bg-rose-500/10 px-4 py-3 text-center">
+                    <div className="mt-3 w-full rounded-xl bg-rose-500/10 px-4 py-3 text-center">
                       <p className="text-base font-semibold tabular-nums text-rose-700 dark:text-rose-300">
                         {formatKoreanDate(calcResult.date)}
                       </p>
