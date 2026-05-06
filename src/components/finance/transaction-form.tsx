@@ -215,16 +215,6 @@ export default function TransactionForm({
                   {p.label}
                 </button>
               ))}
-              {amount && (
-                <button
-                  type="button"
-                  onClick={() => setAmount("")}
-                  className="px-1.5 h-7 rounded-md border text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  aria-label="금액 비우기"
-                >
-                  ×
-                </button>
-              )}
             </div>
           </div>
         </FormField>

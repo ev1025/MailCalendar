@@ -97,9 +97,11 @@ export default function RowActionPopover({
         )}
         title={isDraggable ? "드래그로 이동 / 탭하면 메뉴" : undefined}
         aria-label={triggerLabel}
-        // 상위 row 의 onClick (열기) 으로 이벤트 버블 방지.
+        // 상위 row 의 onClick (열기) 으로 이벤트 버블 방지. click 만으로 충분.
+        // pointerdown 은 dnd-kit 의 dragListeners 가 사용 — 여기서 stopPropagation 하면
+        // 객체 스프레드 + 나중 prop 우선 규칙에 의해 dragListeners.onPointerDown 이
+        // 덮여 드래그 시작 자체가 안 됨. 그래서 onPointerDown 핸들러는 두지 않는다.
         onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
       >
         <Icon className="h-4 w-4" />
       </PopoverTrigger>
