@@ -395,18 +395,18 @@
   transform: scale(0.97);
 }
 
-/* 오늘 날짜 셀 호흡 효과 — 매우 미세한 ring pulse. 캘린더에서 "오늘"이라는
-   정보를 강조하되 산만하지 않게 2.4s cycle, opacity 0.6→0.0. */
+/* 오늘 날짜 셀 호흡 효과 — 1.5px 까지만 ring 으로 매우 절제. 시각 면적 거의
+   안 늘어나고 호흡감만 표현. 2.6s 주기. */
 @keyframes todayPulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 var(--primary, oklch(0.205 0 0 / 0.6));
+    box-shadow: 0 0 0 0 oklch(from var(--primary) l c h / 0.55);
   }
   50% {
-    box-shadow: 0 0 0 4px var(--primary, oklch(0.205 0 0 / 0));
+    box-shadow: 0 0 0 1.5px oklch(from var(--primary) l c h / 0);
   }
 }
 .today-pulse {
-  animation: todayPulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: todayPulse 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .today-pulse { animation: none; }
