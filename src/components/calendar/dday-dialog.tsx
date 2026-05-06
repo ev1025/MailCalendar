@@ -45,7 +45,8 @@ function computeDiff(target: Date): Diff {
   };
 }
 
-/** 단일 카운트 셀 — 숫자 + 단위. 색상은 props 의 tone 으로 결정. */
+/** 단일 카운트 셀 — 숫자 + 단위. 원래 iframe 시절 컬러 팔레트 복원.
+ *  숫자는 모두 진한 네이비(#183059) 로 통일, 라벨은 셀별 대비색. */
 function CountCell({
   value,
   unit,
@@ -53,26 +54,34 @@ function CountCell({
 }: {
   value: number;
   unit: string;
-  tone: "rose" | "slate" | "blue" | "amber";
+  tone: "days" | "hours" | "minutes" | "seconds";
 }) {
-  const tones: Record<typeof tone, { bg: string; text: string }> = {
-    rose: { bg: "bg-rose-500", text: "text-white" },
-    slate: { bg: "bg-slate-200 dark:bg-slate-700", text: "text-slate-900 dark:text-slate-100" },
-    blue: { bg: "bg-blue-600", text: "text-white" },
-    amber: { bg: "bg-amber-500", text: "text-white" },
+  // bg = 셀 배경 hex, label = "일/시간/분/초" 색. 숫자는 항상 NAVY.
+  const NAVY = "#183059";
+  const palette: Record<typeof tone, { bg: string; label: string }> = {
+    days: { bg: "#EF2F3C", label: "#EEEEEE" },          // 빨강 + 옅은 회색 라벨
+    hours: { bg: "#EEEEEE", label: NAVY },              // 연회색 + 네이비 라벨
+    minutes: { bg: "#276FBF", label: "#EEEEEE" },        // 파랑 + 옅은 회색 라벨
+    seconds: { bg: "#F0A202", label: "#EEEEEE" },       // 주황 + 옅은 회색 라벨
   };
-  const { bg, text } = tones[tone];
+  const { bg, label } = palette[tone];
   return (
     <div
       // max-w 제거 — 트랙을 꽉 채우도록. 그래야 그리드 col-gap 과 row-gap 이
-      // 시각적으로도 같은 간격으로 보임 (max-w 가 있으면 트랙 안에서 셀이
-      // 좌측에 몰려 cell 사이 공백이 row-gap 보다 커 보이는 문제).
-      className={`${bg} ${text} flex aspect-square w-full flex-col items-center justify-center rounded-2xl shadow-sm`}
+      // 시각적으로도 같은 간격으로 보임.
+      className="flex aspect-square w-full flex-col items-center justify-center rounded-2xl shadow-sm"
+      style={{ backgroundColor: bg }}
     >
-      <span className="text-3xl font-extrabold tabular-nums leading-none tracking-tight sm:text-4xl">
+      <span
+        className="text-3xl font-extrabold tabular-nums leading-none tracking-tight sm:text-4xl"
+        style={{ color: NAVY }}
+      >
         {value}
       </span>
-      <span className="mt-1 text-[10px] font-medium uppercase tracking-widest opacity-90 sm:text-[11px]">
+      <span
+        className="mt-1 text-[10px] font-medium uppercase tracking-widest sm:text-[11px]"
+        style={{ color: label }}
+      >
         {unit}
       </span>
     </div>
@@ -155,13 +164,13 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
             </div>
           )}
 
-          {/* 카운트 그리드 — 2x2. 셀 색은 의미별: 일=강조(rose), 시간=중립(slate), 분=blue, 초=amber. */}
+          {/* 카운트 그리드 — 2x2. 색상은 이전 iframe 디자인 그대로 복원. */}
           {diff && (
             <div className="mx-auto grid w-full max-w-[228px] grid-cols-2 gap-2 sm:max-w-[228px] sm:gap-2">
-              <CountCell value={diff.days} unit="일" tone="rose" />
-              <CountCell value={diff.hours} unit="시간" tone="slate" />
-              <CountCell value={diff.minutes} unit="분" tone="blue" />
-              <CountCell value={diff.seconds} unit="초" tone="amber" />
+              <CountCell value={diff.days} unit="일" tone="days" />
+              <CountCell value={diff.hours} unit="시간" tone="hours" />
+              <CountCell value={diff.minutes} unit="분" tone="minutes" />
+              <CountCell value={diff.seconds} unit="초" tone="seconds" />
             </div>
           )}
 
