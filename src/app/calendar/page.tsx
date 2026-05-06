@@ -440,7 +440,19 @@ function CalendarPageInner() {
 
       <DdayDialog
         open={ddayOpen}
-        onOpenChange={setDdayOpen}
+        onOpenChange={(o) => {
+          setDdayOpen(o);
+          // 다이얼로그 닫힐 때 트리거(D-day) 버튼에 :focus-visible 링이 남아 있는 문제 →
+          // 활성 요소 명시적 blur. Dialog 가 trigger 로 focus 복원해도 스펙상 mouse 로
+          // 닫았으면 visible 안 되어야 하지만 일부 브라우저(iOS Safari 등) 가 잔류시킴.
+          if (!o) {
+            requestAnimationFrame(() => {
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
+            });
+          }
+        }}
         date={ddaySettings.date}
         time={ddaySettings.time}
       />
