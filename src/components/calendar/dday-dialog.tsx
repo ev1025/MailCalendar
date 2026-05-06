@@ -64,7 +64,10 @@ function CountCell({
   const { bg, text } = tones[tone];
   return (
     <div
-      className={`${bg} ${text} flex aspect-square w-full max-w-[110px] flex-col items-center justify-center rounded-2xl shadow-sm`}
+      // max-w 제거 — 트랙을 꽉 채우도록. 그래야 그리드 col-gap 과 row-gap 이
+      // 시각적으로도 같은 간격으로 보임 (max-w 가 있으면 트랙 안에서 셀이
+      // 좌측에 몰려 cell 사이 공백이 row-gap 보다 커 보이는 문제).
+      className={`${bg} ${text} flex aspect-square w-full flex-col items-center justify-center rounded-2xl shadow-sm`}
     >
       <span className="text-3xl font-extrabold tabular-nums leading-none tracking-tight sm:text-4xl">
         {value}
@@ -138,7 +141,7 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
 
           {/* 카운트 그리드 — 2x2. 셀 색은 의미별: 일=강조(rose), 시간=중립(slate), 분=blue, 초=amber. */}
           {diff && (
-            <div className="mx-auto grid w-full max-w-[260px] grid-cols-2 gap-2 sm:max-w-[300px] sm:gap-2">
+            <div className="mx-auto grid w-full max-w-[228px] grid-cols-2 gap-2 sm:max-w-[228px] sm:gap-2">
               <CountCell value={diff.days} unit="일" tone="rose" />
               <CountCell value={diff.hours} unit="시간" tone="slate" />
               <CountCell value={diff.minutes} unit="분" tone="blue" />
