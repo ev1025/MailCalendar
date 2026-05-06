@@ -15,6 +15,8 @@ interface NumberWheelProps {
   max?: number;
   className?: string;
   allowInfinity?: boolean;
+  /** 숫자를 사용자 표시용 라벨로 변환. 미지정 시 그대로 숫자 표시 (-1 은 "계속"). */
+  formatLabel?: (n: number) => string;
 }
 
 const ITEM_HEIGHT = 32;
@@ -27,7 +29,12 @@ export default function NumberWheel({
   max = 99,
   className,
   allowInfinity = false,
+  formatLabel,
 }: NumberWheelProps) {
+  const renderLabel = (n: number): string => {
+    if (formatLabel) return formatLabel(n);
+    return n === -1 ? "계속" : String(n);
+  };
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [inputVal, setInputVal] = useState("");
@@ -37,7 +44,7 @@ export default function NumberWheel({
   const numbers = Array.from({ length: max - min + 1 }, (_, i) => min + i);
   const items = allowInfinity ? [-1, ...numbers] : numbers;
 
-  const displayValue = value === -1 ? "계속" : String(value);
+  const displayValue = renderLabel(value);
 
   // 팝오버 열릴 때 현재 값으로 스크롤
   useEffect(() => {
@@ -163,7 +170,7 @@ export default function NumberWheel({
                     scrollRef.current?.scrollTo({ top: items.indexOf(n) * ITEM_HEIGHT, behavior: "smooth" });
                   }}
                 >
-                  {n === -1 ? "계속" : n}
+                  {renderLabel(n)}
                 </div>
               );
             })}

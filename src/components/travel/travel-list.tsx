@@ -59,10 +59,14 @@ interface PersistedFilters {
   sortKeys: SortKey[];
 }
 
+// sessionStorage 사용 — 같은 탭 세션 안에선 필터 유지(페이지 이동 후 복귀 OK),
+// 앱 재진입(탭/브라우저 재시작) 시 초기화. 이전 localStorage 였을 때, 며칠 전 적용한
+// 필터가 숨겨진 채 남아 dragEnabled = !hasActiveSortOrFilter 가 false → 행 드래그
+// 핸들이 죽어 있는 것처럼 보이는 회귀 발생.
 function loadFilters(): Partial<PersistedFilters> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = localStorage.getItem(FILTER_KEY);
+    const raw = sessionStorage.getItem(FILTER_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -72,7 +76,7 @@ function loadFilters(): Partial<PersistedFilters> {
 function saveFilters(state: PersistedFilters) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(FILTER_KEY, JSON.stringify(state));
+    sessionStorage.setItem(FILTER_KEY, JSON.stringify(state));
   } catch {
     /* quota 초과 무시 */
   }

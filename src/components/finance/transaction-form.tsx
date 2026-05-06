@@ -46,11 +46,11 @@ interface TransactionFormProps {
 }
 
 const PRESET_AMOUNTS: { value: number; label: string }[] = [
-  { value: 5000, label: "+5천" },
-  { value: 10000, label: "+1만" },
-  { value: 30000, label: "+3만" },
-  { value: 50000, label: "+5만" },
-  { value: 100000, label: "+10만" },
+  { value: 5000, label: "5천" },
+  { value: 10000, label: "1만" },
+  { value: 30000, label: "3만" },
+  { value: 50000, label: "5만" },
+  { value: 100000, label: "10만" },
 ];
 
 export default function TransactionForm({
@@ -177,7 +177,8 @@ export default function TransactionForm({
           />
         </FormField>
 
-        {/* 2. 금액 — type 은 카드의 +수입/+지출 버튼에서 결정되어 props 로 들어옴.
+        {/* 2. 금액 — input + 프리셋(5천/1만/3만/5만/10만) 한 행에 배치.
+            input 은 고정폭 9rem, 프리셋은 남은 공간을 wrap 하며 채움.
             폼 헤더에 type 표시되니 라벨 prefix 는 제거. */}
         <FormField
           label="금액 (원)"
@@ -191,42 +192,42 @@ export default function TransactionForm({
                 : null
           }
         >
-          <MoneyInput
-            id="amount"
-            value={amount}
-            onChange={setAmount}
-            placeholder="10000"
-            aria-invalid={amount !== "" && (Number.isNaN(parseInt(amount, 10)) || parseInt(amount, 10) <= 0)}
-            className={FORM_INPUT_PRIMARY}
-          />
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <MoneyInput
+              id="amount"
+              value={amount}
+              onChange={setAmount}
+              placeholder="10000"
+              aria-invalid={amount !== "" && (Number.isNaN(parseInt(amount, 10)) || parseInt(amount, 10) <= 0)}
+              className={`${FORM_INPUT_PRIMARY} w-[9rem]`}
+            />
+            <div className="flex items-center gap-1 flex-wrap">
+              {PRESET_AMOUNTS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => {
+                    const cur = parseInt(amount || "0", 10) || 0;
+                    setAmount(String(cur + p.value));
+                  }}
+                  className="px-1.5 h-7 rounded-md border text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors tabular-nums"
+                >
+                  {p.label}
+                </button>
+              ))}
+              {amount && (
+                <button
+                  type="button"
+                  onClick={() => setAmount("")}
+                  className="px-1.5 h-7 rounded-md border text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  aria-label="금액 비우기"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
         </FormField>
-
-        {/* 3. 프리셋 — 5천/1만/3만/5만/10만 + 클리어 */}
-        <div className="flex flex-wrap gap-1 -mt-2">
-          {PRESET_AMOUNTS.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              onClick={() => {
-                const cur = parseInt(amount || "0", 10) || 0;
-                setAmount(String(cur + p.value));
-              }}
-              className="px-2.5 py-1 rounded-md border text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            >
-              {p.label}
-            </button>
-          ))}
-          {amount && (
-            <button
-              type="button"
-              onClick={() => setAmount("")}
-              className="px-2.5 py-1 rounded-md border text-[11px] text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-              aria-label="금액 비우기"
-            >
-              ×
-            </button>
-          )}
-        </div>
 
         {/* 4. 날짜 | 할부 — 수정 모드에선 할부 비활성(이미 묶음 만들어진 상태) */}
         <div className="grid grid-cols-2 gap-2">
@@ -244,11 +245,10 @@ export default function TransactionForm({
                 onChange={(v) => !isEdit && setInstallmentMonths(v)}
                 min={1}
                 max={36}
-                className={isEdit ? "opacity-50 pointer-events-none" : ""}
+                // 1 = 일시불, 그 외 = "N개월". 휠 안에서 그대로 표시.
+                formatLabel={(n) => (n === 1 ? "일시불" : `${n}개월`)}
+                className={`w-20 ${isEdit ? "opacity-50 pointer-events-none" : ""}`}
               />
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {installmentMonths === 1 ? "일시불" : `${installmentMonths}개월 할부`}
-              </span>
             </div>
           </FormField>
         </div>
