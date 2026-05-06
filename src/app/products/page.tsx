@@ -12,6 +12,7 @@ import {
   Repeat,
   Copy,
   X,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SearchInput from "@/components/ui/search-input";
@@ -147,7 +148,7 @@ const ProductRow = memo(function ProductRow({
           {idx + 1}
         </span>
       </td>
-      {/* 제품명 + 브랜드 + (구매 표시 시) 지갑 — 왕관 자리에 위치. */}
+      {/* 제품명 + 브랜드 + (구매 표시 시) 지갑 + (link 있으면) 외부 링크 아이콘. */}
       <td className="px-2 py-1.5">
         <div className="flex items-center gap-1 min-w-0">
           <span className="font-medium text-xs truncate">{p.name}</span>
@@ -160,6 +161,26 @@ const ProductRow = memo(function ProductRow({
               aria-label="구매됨"
             />
           )}
+          {p.link && (() => {
+            const trimmed = p.link.trim();
+            const looksLikeUrl =
+              /^https?:\/\//i.test(trimmed) || /^[\w-]+(\.[\w-]+)+/.test(trimmed);
+            if (!looksLikeUrl) return null;
+            const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+            return (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors"
+                aria-label="구매처 열기"
+                title="구매처 열기"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            );
+          })()}
         </div>
       </td>
       {/* 최저가 */}

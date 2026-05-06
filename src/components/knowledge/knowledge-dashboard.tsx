@@ -48,11 +48,28 @@ export function NoteTreeRow({ item, depth, selectMode, selected, onToggle, onCli
 }) {
   void isFavorite;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // long-press 가 발동한 직후 발생하는 synthetic click 1회 차단용.
+  // (touchend → 브라우저가 click 이벤트로 변환 → selectMode true 면 toggle → 방금 선택한 항목 해제 버그)
+  const longPressFiredRef = useRef(false);
   return (
     <div
       data-sel-id={item.id} data-sel-type="item" role="button" tabIndex={0}
-      onClick={selectMode ? onToggle : onClick}
-      onTouchStart={() => { timerRef.current = setTimeout(() => { hapticSelect(); onLongPress(); }, 250); }}
+      onClick={() => {
+        if (longPressFiredRef.current) {
+          longPressFiredRef.current = false;
+          return;
+        }
+        if (selectMode) onToggle();
+        else onClick();
+      }}
+      onTouchStart={() => {
+        longPressFiredRef.current = false;
+        timerRef.current = setTimeout(() => {
+          longPressFiredRef.current = true;
+          hapticSelect();
+          onLongPress();
+        }, 250);
+      }}
       onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
@@ -124,6 +141,8 @@ export function FolderTreeRow({
   const hasChildren = subFolders.length > 0;
   const isOpen = expanded.has(folder.id);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // long-press 발동 직후 synthetic click 1회 차단용.
+  const longPressFiredRef = useRef(false);
 
   return (
     <div>
@@ -131,8 +150,22 @@ export function FolderTreeRow({
       <div
         data-sel-id={folder.id} data-sel-type="folder"
         role="button" tabIndex={0}
-        onClick={() => selectMode ? onToggleFolder(folder.id) : onClickFolder(folder.id)}
-        onTouchStart={() => { timerRef.current = setTimeout(() => { hapticSelect(); onLongPress(folder.id, "folder"); }, 250); }}
+        onClick={() => {
+          if (longPressFiredRef.current) {
+            longPressFiredRef.current = false;
+            return;
+          }
+          if (selectMode) onToggleFolder(folder.id);
+          else onClickFolder(folder.id);
+        }}
+        onTouchStart={() => {
+          longPressFiredRef.current = false;
+          timerRef.current = setTimeout(() => {
+            longPressFiredRef.current = true;
+            hapticSelect();
+            onLongPress(folder.id, "folder");
+          }, 250);
+        }}
         onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
         onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
         onContextMenu={(e) => { e.preventDefault(); onLongPress(folder.id, "folder"); }}
@@ -410,7 +443,9 @@ export default function KnowledgeDashboard({
       </Dialog>
 
       <div
-        className="flex flex-col gap-3 p-4 overflow-y-auto flex-1 w-full md:max-w-xl"
+        // 폴더 진입 화면(folder-note-list)과 검색바·콘텐츠 여백을 통일 — 진입 시
+        // 헤더가 들썩이지 않도록 px-3 py-3 + gap-2 로 맞춤. md+ 는 기존 max-w-xl 유지.
+        className="flex flex-col gap-2 px-3 py-3 md:p-4 md:gap-3 overflow-y-auto flex-1 w-full md:max-w-xl"
         data-sel-container
         onMouseDown={handleContainerMouseDown}
         onClickCapture={handleContainerClickCapture}

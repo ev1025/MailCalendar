@@ -257,11 +257,26 @@ function FolderRow({ sf, selectMode, selected, onClick, onLongPress }: {
   onClick: () => void; onLongPress: () => void;
 }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // long-press 발동 직후 synthetic click 1회 차단 — 선택했다 즉시 해제되는 버그 회피.
+  const longPressFiredRef = useRef(false);
   return (
     <div
       data-sel-id={sf.id} data-sel-type="folder" role="button" tabIndex={0}
-      onClick={onClick}
-      onTouchStart={() => { timerRef.current = setTimeout(() => { hapticSelect(); onLongPress(); }, 250); }}
+      onClick={() => {
+        if (longPressFiredRef.current) {
+          longPressFiredRef.current = false;
+          return;
+        }
+        onClick();
+      }}
+      onTouchStart={() => {
+        longPressFiredRef.current = false;
+        timerRef.current = setTimeout(() => {
+          longPressFiredRef.current = true;
+          hapticSelect();
+          onLongPress();
+        }, 250);
+      }}
       onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
@@ -282,11 +297,25 @@ function ItemRow({ item, selectMode, selected, onClick, onLongPress, onTogglePin
   onTogglePin?: (id: string, pinned: boolean) => Promise<void>;
 }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
   return (
     <div
       data-sel-id={item.id} data-sel-type="item" role="button" tabIndex={0}
-      onClick={onClick}
-      onTouchStart={() => { timerRef.current = setTimeout(() => { hapticSelect(); onLongPress(); }, 250); }}
+      onClick={() => {
+        if (longPressFiredRef.current) {
+          longPressFiredRef.current = false;
+          return;
+        }
+        onClick();
+      }}
+      onTouchStart={() => {
+        longPressFiredRef.current = false;
+        timerRef.current = setTimeout(() => {
+          longPressFiredRef.current = true;
+          hapticSelect();
+          onLongPress();
+        }, 250);
+      }}
       onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}

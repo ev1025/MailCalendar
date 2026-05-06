@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 import { Wallet, ShoppingBag, X, Check, Repeat } from "lucide-react";
 import DateRangePicker from "@/components/layout/date-range-picker";
@@ -72,7 +73,11 @@ function FinancePageInner() {
   // 캘린더와 동일한 ref-기반 capture 패턴. 임계값: 가로 40px, 세로 50px 미만.
   // 스와이프 시 startDate 기준 월의 1일부터 말일까지로 범위를 강제 정규화.
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
+  // 월 전환 슬라이드 방향 — +1 = 다음달(오른쪽에서 들어옴), -1 = 이전달, 0 = 직접 변경(fade only).
+  // 캘린더와 동일 패턴.
+  const slideDirRef = useRef(0);
   const shiftMonth = (delta: number) => {
+    slideDirRef.current = delta > 0 ? 1 : -1;
     const t = new Date(year, month - 1 + delta, 1);
     const { start, end } = monthBounds(t.getFullYear(), t.getMonth() + 1);
     setStartDate(start);
@@ -263,10 +268,23 @@ function FinancePageInner() {
       <PullToRefresh
         onRefresh={async () => { await refetchTransactions(); }}
       >
-      <div className="w-full md:max-w-5xl md:mx-auto">
+      {/* 월 전환 슬라이드 — 캘린더와 동일 방식. key 변경 시 새 motion.div 마운트 +
+          enter only (exit 없음 → 레이아웃 안전). DateRangePicker 자체는 외부에 두면
+          매번 같이 슬라이드되면 어색하므로 콘텐츠만 감쌈. */}
       <div className="mb-2 flex justify-center">
         <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleRangeChange} />
       </div>
+      <motion.div
+        key={`${year}-${month}`}
+        initial={{
+          x: slideDirRef.current > 0 ? 40 : slideDirRef.current < 0 ? -40 : 0,
+          opacity: 0,
+        }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+        onAnimationComplete={() => { slideDirRef.current = 0; }}
+        className="w-full md:max-w-5xl md:mx-auto"
+      >
 
       {/* 페이지 상단의 [고정비] [+ 추가] 버튼은 제거. 액션은 MonthlySummary
           각 카드 우상단의 ✏️ / + 아이콘으로 직접 수행. */}
@@ -599,7 +617,7 @@ function FinancePageInner() {
           </div>
         </DialogContent>
       </Dialog>
-      </div>
+      </motion.div>
       </PullToRefresh>
     </div>
     </div>

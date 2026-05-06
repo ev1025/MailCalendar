@@ -11,6 +11,7 @@ import { useCurrentUserId } from "@/lib/current-user";
 import { useProductCategories } from "@/hooks/use-product-categories";
 import { useProductSubTags } from "@/hooks/use-product-subtags";
 import TagInput from "@/components/ui/tag-input";
+import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import type { Product, ProductCategory } from "@/types";
 import {
@@ -236,14 +237,39 @@ export default function ProductForm({
           </FormField>
         </div>
 
-        {/* 4행: URL */}
+        {/* 4행: URL — 입력은 자유, 유효한 http(s)/도메인 패턴이면 우측 외부링크
+            아이콘이 활성화돼 새 탭 열기. https:// 없이 도메인만 입력해도 자동 보정. */}
         <FormField label="URL">
-          <Input
-            value={siteUrl}
-            onChange={(e) => setSiteUrl(e.target.value)}
-            placeholder="https://..."
-            className={FORM_INPUT_COMPACT}
-          />
+          <div className="relative">
+            <Input
+              value={siteUrl}
+              onChange={(e) => setSiteUrl(e.target.value)}
+              placeholder="https://..."
+              className={`${FORM_INPUT_COMPACT} pr-10`}
+            />
+            {(() => {
+              const trimmed = siteUrl.trim();
+              if (!trimmed) return null;
+              // 도메인 비슷하게 보이면 활성. 그 외(메모성 텍스트) 비활성.
+              const looksLikeUrl =
+                /^https?:\/\//i.test(trimmed) || /^[\w-]+(\.[\w-]+)+/.test(trimmed);
+              if (!looksLikeUrl) return null;
+              const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+              return (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  title="새 탭에서 열기"
+                  aria-label="URL 열기"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              );
+            })()}
+          </div>
         </FormField>
 
         {/* 5행: 메모 */}
