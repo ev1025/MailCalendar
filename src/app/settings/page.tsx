@@ -169,9 +169,8 @@ function SettingsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<"general" | "account" | "api">("general");
-  // 기본은 light — 사용자가 명시적으로 system/dark 고른 적 없으면 라이트.
-  // (OS dark mode 자동 추종은 사용자가 직접 "시스템" 선택 시에만.)
-  const [theme, setTheme] = useState<Theme>("light");
+  // 기본은 system — OS 설정 자동 추종.
+  const [theme, setTheme] = useState<Theme>("system");
   const [accent, setAccent] = useState<Accent>("default");
   const currentLocation = useWeatherLocation();
   const [locQuery, setLocQuery] = useState("");

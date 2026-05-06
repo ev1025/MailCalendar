@@ -5,6 +5,26 @@ import { supabase } from "@/lib/supabase";
 import { useCurrentUserId, useAppUsers } from "@/lib/current-user";
 import { notifyUsers } from "./use-notifications";
 
+// 공유자 목록은 자주 안 바뀌므로 localStorage 사용 — 브라우저 재시작 후에도
+// 첫 렌더부터 칩이 노출돼 캘린더가 밀리는 jank 완전 제거.
+function loadShareCache(userId: string): CalendarShare[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(`cal-shares:${userId}`);
+    return raw ? (JSON.parse(raw) as CalendarShare[]) : null;
+  } catch {
+    return null;
+  }
+}
+function saveShareCache(userId: string, shares: CalendarShare[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`cal-shares:${userId}`, JSON.stringify(shares));
+  } catch {
+    // ignore quota
+  }
+}
+
 export interface CalendarShare {
   id: string;
   owner_id: string;
@@ -16,8 +36,14 @@ export interface CalendarShare {
 export function useCalendarShares() {
   const currentUserId = useCurrentUserId();
   const { users } = useAppUsers();
-  const [shares, setShares] = useState<CalendarShare[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // localStorage 캐시 — 첫 렌더부터 즉시 hydrate → 칩 영역이 한 번에 보임.
+  const [shares, setShares] = useState<CalendarShare[]>(
+    () => (currentUserId ? loadShareCache(currentUserId) ?? [] : []),
+  );
+  const [loading, setLoading] = useState(
+    () => !currentUserId || loadShareCache(currentUserId) === null,
+  );
 
   const fetchShares = useCallback(async () => {
     if (!currentUserId) {
@@ -25,13 +51,25 @@ export function useCalendarShares() {
       setLoading(false);
       return;
     }
-    setLoading(true);
     const { data, error } = await supabase
       .from("calendar_shares")
       .select("*")
       .or(`owner_id.eq.${currentUserId},viewer_id.eq.${currentUserId}`);
-    if (!error && data) setShares(data as CalendarShare[]);
+    if (!error && data) {
+      setShares(data as CalendarShare[]);
+      saveShareCache(currentUserId, data as CalendarShare[]);
+    }
     setLoading(false);
+  }, [currentUserId]);
+
+  // 사용자 변경 시 캐시 hydrate.
+  useEffect(() => {
+    if (!currentUserId) return;
+    const cached = loadShareCache(currentUserId);
+    if (cached) {
+      setShares(cached);
+      setLoading(false);
+    }
   }, [currentUserId]);
 
   useEffect(() => {

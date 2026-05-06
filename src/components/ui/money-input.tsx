@@ -52,13 +52,14 @@ const MoneyInput = forwardRef<HTMLInputElement, Props>(function MoneyInput(
         }}
         placeholder={placeholderText}
         disabled={disabled}
-        // 우측 "원" suffix 자리만큼 padding-right 확보.
-        className={cn("pr-8 text-right tabular-nums", className)}
+        // 우측 "원" suffix 자리만큼 padding-right 확보. pr-6 (24px) 으로 좁혀서
+        // 같은 너비 안에 콤마 포함 7자리(예: 1,000,000) 까지 보임.
+        className={cn("pr-6 text-right tabular-nums", className)}
         {...rest}
       />
       <span
         aria-hidden
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none"
+        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground select-none"
       >
         원
       </span>

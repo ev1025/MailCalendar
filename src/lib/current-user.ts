@@ -23,7 +23,24 @@ export interface AppUser {
 // ─────────────────────────────────────────
 type UsersState = { users: AppUser[]; loading: boolean };
 const listeners = new Set<(s: UsersState) => void>();
-let cache: UsersState = { users: [], loading: true };
+
+// sessionStorage 캐시 — 페이지 진입마다 빈 배열 → fetch 완료 후 채워짐 jank 방지.
+// 같은 세션 내 모든 진입에서 즉시 hydrate.
+const APP_USERS_CACHE_KEY = "app-users";
+function loadInitial(): UsersState {
+  if (typeof window === "undefined") return { users: [], loading: true };
+  try {
+    const raw = window.sessionStorage.getItem(APP_USERS_CACHE_KEY);
+    if (raw) {
+      const cached = JSON.parse(raw) as AppUser[];
+      return { users: cached, loading: false };
+    }
+  } catch {
+    // ignore
+  }
+  return { users: [], loading: true };
+}
+let cache: UsersState = loadInitial();
 let initialFetchPromise: Promise<void> | null = null;
 
 function setCache(next: UsersState) {
@@ -32,13 +49,20 @@ function setCache(next: UsersState) {
 }
 
 async function fetchAppUsers(): Promise<void> {
-  setCache({ ...cache, loading: true });
+  setCache({ ...cache, loading: cache.users.length === 0 });
   const { data, error } = await supabase
     .from("app_users")
     .select("*")
     .order("created_at");
   if (!error && data) {
     setCache({ users: data as AppUser[], loading: false });
+    if (typeof window !== "undefined") {
+      try {
+        window.sessionStorage.setItem(APP_USERS_CACHE_KEY, JSON.stringify(data));
+      } catch {
+        // ignore
+      }
+    }
   } else {
     setCache({ ...cache, loading: false });
   }

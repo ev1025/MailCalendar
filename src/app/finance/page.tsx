@@ -428,15 +428,20 @@ function FinancePageInner() {
         variant="income"
         onAdd={async (item, repeatMonths) => {
           const r = await addFixed(item, repeatMonths);
-          if (!r.error && r.bulkDone) {
-            r.bulkDone
-              .then(() => refetchTransactions())
-              .catch((e) => {
-                console.error("[income recurring]", e);
-                toast.error("거래 자동 등록 실패 — 가계부에 반영되지 않을 수 있어요");
-              });
+          if (r.error) return { error: r.error };
+          // 수입은 await 로 bulk insert 완료까지 기다림 → 폼 닫히는 시점에는
+          // expenses 에 이미 들어가 있고 스코어카드에 즉시 반영. 보통 1~12행이라 체감 즉시.
+          if (r.bulkDone) {
+            try {
+              await r.bulkDone;
+              await refetchTransactions();
+            } catch (e) {
+              console.error("[income recurring]", e);
+              toast.error("거래 자동 등록 실패 — 가계부에 반영되지 않을 수 있어요");
+              return { error: e };
+            }
           }
-          return { error: r.error };
+          return { error: null };
         }}
         onUpdate={async (id, updates) => {
           const r = await updateFixed(id, updates);

@@ -36,16 +36,14 @@ export const viewport: Viewport = {
 /**
  * 다크모드 FOUC 제거 — React hydrate 전에 <html> 에 .dark 클래스를 적용.
  *
- * 정책: 사용자가 명시적으로 "dark" 또는 "system" 을 고른 경우에만 적용.
- *  - localStorage.theme === "dark" → .dark 적용
- *  - localStorage.theme === "system" → OS 가 dark 면 .dark 적용
- *  - 그 외(저장값 없음 / "light") → 라이트 (기본). OS 가 dark 여도 따라가지 않음.
- *
- * 처음 진입 사용자는 라이트로 시작 — 사용자 본인이 의도하지 않은 다크 적용 방지.
+ * 기본 동작: 시스템 모드(OS prefers-color-scheme 따라감).
+ *  - localStorage.theme === "light" → 라이트 강제
+ *  - localStorage.theme === "dark" → 다크 강제
+ *  - 그 외(저장값 없음 / "system") → OS 설정 따라감
  *
  * try/catch — localStorage 차단 환경에서도 무해.
  */
-const themeBootScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'){document.documentElement.classList.add('dark');}else if(t==='system'){if(window.matchMedia('(prefers-color-scheme: dark)').matches){document.documentElement.classList.add('dark');}}var a=localStorage.getItem('accent');if(a){document.documentElement.setAttribute('data-accent',a);}}catch(e){}})();`;
+const themeBootScript = `(function(){try{var t=localStorage.getItem('theme');var sysDark=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||((!t||t==='system')&&sysDark)){document.documentElement.classList.add('dark');}var a=localStorage.getItem('accent');if(a){document.documentElement.setAttribute('data-accent',a);}}catch(e){}})();`;
 
 export default function RootLayout({
   children,

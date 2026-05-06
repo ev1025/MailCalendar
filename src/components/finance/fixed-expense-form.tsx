@@ -273,7 +273,7 @@ export default function FixedExpenseForm({
               value={amount}
               onChange={setAmount}
               placeholder="50000"
-              className={`${FORM_INPUT_PRIMARY} w-[9.5rem]`}
+              className={`${FORM_INPUT_PRIMARY} w-[8.5rem]`}
             />
           </FormField>
           <FormField label="시작일" className="flex-1 min-w-0">
