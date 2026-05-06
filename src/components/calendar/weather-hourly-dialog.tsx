@@ -96,9 +96,12 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        // FormPage(z-[70]) 위에서도 보이도록 z-[80] 강제. backdrop 까지 함께 올림.
+        // FormPage(z-[70]) / 부모 DayDetail Dialog(z-50) 위에 모두 떠야 함.
         // 가로 스크롤 스트립을 충분히 보여주기 위해 max-w 살짝 키움.
         className="max-w-[calc(100%-1.5rem)] sm:max-w-lg p-0 gap-0 overflow-hidden z-[80]"
+        // overlay 도 함께 z-[80] — 부모 다이얼로그 콘텐츠 위로 깔리지 않으면
+        // 일정이 많은 DayDetail 의 popup ring/border 가 hourly popup 을 가림.
+        overlayClassName="z-[80]"
       >
         <div className="contents">
           <DialogHeader className="px-5 pt-5 pb-3 shrink-0">
