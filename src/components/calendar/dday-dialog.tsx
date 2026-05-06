@@ -126,7 +126,7 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
 
           {/* 카운트 그리드 — 2x2. 셀 색은 의미별: 일=강조(rose), 시간=중립(slate), 분=blue, 초=amber. */}
           {diff && (
-            <div className="mx-auto grid w-full max-w-[260px] grid-cols-2 gap-3 sm:max-w-[300px] sm:gap-4">
+            <div className="mx-auto grid w-full max-w-[260px] grid-cols-2 gap-2 sm:max-w-[300px] sm:gap-2">
               <CountCell value={diff.days} unit="일" tone="rose" />
               <CountCell value={diff.hours} unit="시간" tone="slate" />
               <CountCell value={diff.minutes} unit="분" tone="blue" />
