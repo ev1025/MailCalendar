@@ -8,7 +8,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Heart, CalendarDays } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { addDaysISO, ymd, todayYmd, daysBetween } from "@/lib/date-utils";
 
 /**
@@ -114,8 +113,6 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
 
   // D-day 계산기 — 기준일(date)부터 N일째 되는 날짜 계산. 예: 100, 1000일 기념일 산출.
   // 음수도 허용 → 기준일 N일 전 날짜. 기준일 미설정 시 비활성.
-  // 평소 닫혀 있고 사용자가 달력 아이콘 버튼을 눌러야 입력칸 노출.
-  const [calcOpen, setCalcOpen] = useState(false);
   const [calcDays, setCalcDays] = useState("");
   const calcResult = useMemo(() => {
     if (!target) return null;
@@ -183,61 +180,41 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
             </p>
           )}
 
-          {/* D-day 계산기 — 평소엔 가운데 희미한 달력 아이콘 토글 버튼만 노출.
-              클릭 시 입력칸 + 결과 카드 펼쳐짐. */}
+          {/* D-day 계산기 — 단일 pill 로 통합. 아이콘 + 직접 타입 input + "일째 되는 날" suffix.
+              토글 없이 항상 노출이지만 톤다운된 외형이라 시각적 부담 적음.
+              값 입력 시 아래에 결과 카드 펼쳐짐. */}
           {target && (
-            <div className="mt-6">
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setCalcOpen((o) => !o)}
-                  aria-label="D-day 계산기 열기"
-                  aria-expanded={calcOpen}
-                  // 테두리 + 살짝 톤 다운 — 버튼임이 한눈에 보이도록.
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background/60 px-3 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors tap-feedback"
-                >
-                  <CalendarDays className="h-3.5 w-3.5" />
-                  <span>D-day 계산기</span>
-                </button>
-              </div>
-              {calcOpen && (
-                <div className="mt-3 flex flex-col items-center border-t border-border/60 pt-4">
-                  {/* 입력박스 폭 절반(70px) — 100/1000 같은 짧은 숫자만 받으므로 충분.
-                      placeholder 는 한 단계 더 흐릿하게(/40) — 기본값 음영보다 약하게. */}
-                  <div className="relative w-[70px]">
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      autoFocus
-                      value={calcDays}
-                      onChange={(e) => setCalcDays(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
-                      }}
-                      placeholder="100"
-                      className="h-9 pr-9 text-right tabular-nums placeholder:text-muted-foreground/40"
-                    />
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
-                    >
-                      일째
-                    </span>
-                  </div>
-                  {calcResult && (
-                    <div className="mt-3 w-full rounded-xl bg-rose-500/10 px-4 py-3 text-center">
-                      <p className="text-base font-semibold tabular-nums text-rose-700 dark:text-rose-300">
-                        {formatKoreanDate(calcResult.date)}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
-                        {calcResult.diffFromToday === 0
-                          ? "바로 오늘"
-                          : calcResult.diffFromToday > 0
-                            ? `오늘로부터 ${calcResult.diffFromToday}일 후`
-                            : `${Math.abs(calcResult.diffFromToday)}일 전 지남`}
-                      </p>
-                    </div>
-                  )}
+            <div className="mt-6 flex flex-col items-center">
+              <label
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-background/40 pl-3 pr-3.5 text-xs text-muted-foreground transition-colors focus-within:border-ring focus-within:bg-background focus-within:text-foreground"
+              >
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={calcDays}
+                  onChange={(e) => setCalcDays(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+                  }}
+                  placeholder="100"
+                  aria-label="며칠째 되는 날을 계산할 일 수"
+                  className="w-12 bg-transparent text-right text-sm font-semibold tabular-nums text-foreground placeholder:font-normal placeholder:text-muted-foreground/40 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="shrink-0 text-xs">일째 되는 날</span>
+              </label>
+              {calcResult && (
+                <div className="mt-3 w-full max-w-[280px] rounded-xl bg-rose-500/10 px-4 py-3 text-center">
+                  <p className="text-base font-semibold tabular-nums text-rose-700 dark:text-rose-300">
+                    {formatKoreanDate(calcResult.date)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+                    {calcResult.diffFromToday === 0
+                      ? "바로 오늘"
+                      : calcResult.diffFromToday > 0
+                        ? `오늘로부터 ${calcResult.diffFromToday}일 후`
+                        : `${Math.abs(calcResult.diffFromToday)}일 전 지남`}
+                  </p>
                 </div>
               )}
             </div>
