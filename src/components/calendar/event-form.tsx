@@ -22,6 +22,7 @@ import { X } from "lucide-react";
 import TimePicker from "@/components/ui/time-picker";
 import ColorPickerPanel from "@/components/ui/color-picker";
 import WeatherIcon from "./weather-icon";
+import WeatherHourlyDialog from "./weather-hourly-dialog";
 import DatePicker from "@/components/ui/date-picker";
 import TagInput from "@/components/ui/tag-input";
 import { FormField } from "@/components/ui/form-field";
@@ -117,6 +118,8 @@ export default function EventForm({
 }: EventFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  // 헤더 우측 날씨 칩 클릭 → 시간별 상세.
+  const [hourlyOpen, setHourlyOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -235,7 +238,15 @@ export default function EventForm({
       title={event ? "일정 수정" : "새 일정"}
       headerExtra={
         weatherMap && startDate && weatherMap[startDate] ? (
-          <WeatherIcon weather={weatherMap[startDate]} showRange />
+          <button
+            type="button"
+            onClick={() => setHourlyOpen(true)}
+            className="rounded-md px-1.5 py-1 hover:bg-accent transition-colors"
+            aria-label="시간별 날씨 보기"
+            title="시간별 날씨 보기"
+          >
+            <WeatherIcon weather={weatherMap[startDate]} showRange />
+          </button>
         ) : null
       }
       onBack={
@@ -398,6 +409,13 @@ export default function EventForm({
           </div>
 
         </div>
+
+        {/* 헤더 날씨 칩 클릭 시 시간별 상세 다이얼로그. startDate 의 시간별 데이터. */}
+        <WeatherHourlyDialog
+          open={hourlyOpen}
+          onOpenChange={setHourlyOpen}
+          date={startDate}
+        />
     </FormPage>
   );
 }

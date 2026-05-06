@@ -31,6 +31,7 @@ import { useAppUsers, useCurrentUserId } from "@/lib/current-user";
 import { format, parseISO, isSameDay, isWithinInterval } from "date-fns";
 import { ko } from "date-fns/locale";
 import WeatherIcon from "./weather-icon";
+import WeatherHourlyDialog from "./weather-hourly-dialog";
 
 type EventWithOwner = CalendarEvent & { user_id?: string | null };
 
@@ -162,6 +163,8 @@ export default function DayDetail({
 }: DayDetailProps) {
   const { tags: travelTags } = useTravelTags(visibleUserIds);
   const currentUserId = useCurrentUserId();
+  // 날씨 칩 클릭 → 시간별 상세 다이얼로그.
+  const [hourlyOpen, setHourlyOpen] = useState(false);
   const { users } = useAppUsers();
   const usersById = new Map(users.map((u) => [u.id, u]));
   const tagColorMap: Record<string, string> = {};
@@ -203,10 +206,16 @@ export default function DayDetail({
               {dateLabel}
             </DialogTitle>
             {weather && (
-              <div className="shrink-0">
+              <button
+                type="button"
+                onClick={() => setHourlyOpen(true)}
+                className="shrink-0 -mr-1 rounded-md px-1 py-0.5 hover:bg-accent transition-colors"
+                aria-label="시간별 날씨 보기"
+                title="시간별 날씨 보기"
+              >
                 {/* compact(아이콘+온도 스택) 대신 가로형 — 한글 설명 좌측 표시. */}
                 <WeatherIcon weather={weather} showRange />
-              </div>
+              </button>
             )}
           </div>
         </DialogHeader>
@@ -255,6 +264,12 @@ export default function DayDetail({
           </Button>
         </div>
       </DialogContent>
+
+      <WeatherHourlyDialog
+        open={hourlyOpen}
+        onOpenChange={setHourlyOpen}
+        date={date}
+      />
     </Dialog>
   );
 }
