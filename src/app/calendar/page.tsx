@@ -363,7 +363,7 @@ function CalendarPageInner() {
             opacity: 0,
           }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col flex-1 min-h-0"
           onAnimationComplete={() => {
             // 다음 mountcheck 이 MonthPicker 직접 변경일 수 있으니 리셋.
