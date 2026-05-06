@@ -158,21 +158,23 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date }: Props)
                       <span className="mt-1 text-base font-bold tabular-nums leading-none">
                         {e.temperature}°
                       </span>
-                      {/* 강수확률 — 물방울 1개. 미래 데이터만 (과거는 hyphen). */}
-                      <span className="mt-1.5 flex items-center gap-0.5 text-[10px] tabular-nums text-blue-500 leading-none">
+                      {/* 강수확률 — 고정 폭(w-10) 안에서 아이콘 좌측 / 값 우측 정렬.
+                          카드별로 값 자릿수가 달라도(0%/30%/100%) 아이콘 위치가
+                          항상 같은 column 에 정렬되어 정돈된 느낌. */}
+                      <span className="mt-1.5 flex w-10 items-center justify-between text-[10px] tabular-nums leading-none text-blue-500">
                         {e.precipitation_probability != null ? (
                           <>
-                            <Droplet className="h-3 w-3" />
-                            {e.precipitation_probability}%
+                            <Droplet className="h-3 w-3 shrink-0" />
+                            <span>{e.precipitation_probability}%</span>
                           </>
                         ) : (
-                          <span className="text-muted-foreground/30">·</span>
+                          <span className="mx-auto text-muted-foreground/30">·</span>
                         )}
                       </span>
-                      {/* 풍속 — 보조 정보, 작게. */}
-                      <span className="mt-1 flex items-center gap-0.5 text-[10px] tabular-nums text-muted-foreground leading-none">
-                        <Wind className="h-2.5 w-2.5" />
-                        {e.wind_speed}
+                      {/* 풍속 — 동일 패턴. 같은 w-10 사용해 강수와 세로축 정렬 일치. */}
+                      <span className="mt-1 flex w-10 items-center justify-between text-[10px] tabular-nums leading-none text-muted-foreground">
+                        <Wind className="h-2.5 w-2.5 shrink-0" />
+                        <span>{e.wind_speed}</span>
                       </span>
                     </div>
                   );
