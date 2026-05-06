@@ -73,13 +73,14 @@ function CountCell({
       style={{ backgroundColor: bg }}
     >
       <span
-        className="text-3xl font-extrabold tabular-nums leading-none tracking-tight sm:text-4xl"
+        // Montserrat — 이전 iframe 디자인의 그 글자 (변수는 layout.tsx 에서 주입).
+        className="font-[family-name:var(--font-montserrat)] text-4xl font-black tabular-nums leading-none tracking-tight sm:text-5xl"
         style={{ color: NAVY }}
       >
         {value}
       </span>
       <span
-        className="mt-1 text-[10px] font-medium uppercase tracking-widest sm:text-[11px]"
+        className="font-[family-name:var(--font-montserrat)] mt-1.5 text-xs font-bold uppercase tracking-widest sm:text-sm"
         style={{ color: label }}
       >
         {unit}
@@ -160,8 +161,8 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
         >
           {/* 상단 라벨 */}
           {target && (
-            <div className="mb-5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
-              <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+            <div className="mb-5 flex items-center justify-center gap-1.5 text-sm text-muted-foreground sm:text-base">
+              <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
               <span className="tabular-nums">{labelDate}</span>
             </div>
           )}
