@@ -1,25 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 import { parseYmd } from "@/lib/date-utils";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import PlanTaskRow from "@/components/travel/plan-task-row";
 import PlanTaskSheet from "@/components/travel/plan-task-sheet";
 import PlanSegmentTabs, { type Segment } from "@/components/travel/plan-segment-tabs";
-import PlanLegCard from "@/components/travel/plan-leg-card";
 import PlanRouteMap from "@/components/travel/plan-route-map";
 import PlanDetailHeader from "@/components/travel/plan-detail-header";
 import PlanDateRange from "@/components/travel/plan-date-range";
-import PlanDaySummary from "@/components/travel/plan-day-summary";
+import PlanDaySection from "@/components/travel/plan-day-section";
 import { useTravelPlans } from "@/hooks/use-travel-plans";
 import { useTravelPlanTasks } from "@/hooks/use-travel-plan-tasks";
 import { sortTasks } from "@/lib/travel/sort-tasks";
 import { tasksToLegs } from "@/lib/travel/legs";
 import { invalidateRouteData } from "@/hooks/use-route-data";
 import { computeExpectedTimes } from "@/lib/travel/expected-time";
-import { addMinutes } from "@/lib/travel/time";
 import { useLegPaths, legPathKey } from "@/components/travel/use-leg-paths";
 import { colorForLeg } from "@/lib/travel/transit-colors";
 import { createPlanDragEndHandler } from "@/components/travel/use-plan-drag-and-drop";
@@ -29,17 +23,13 @@ import {
   closestCenter,
   PointerSensor,
   TouchSensor,
-  useDroppable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { toDragProps } from "@/lib/dnd-types";
 import { KO_WEEKDAYS as WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 
 interface Props {
@@ -66,58 +56,7 @@ function daysBetween(startIso: string, endIso: string): number {
   return Math.max(0, Math.round((e.getTime() - s.getTime()) / 86400000));
 }
 
-// 빈 일자에도 드롭 가능하도록 일자 섹션 전체를 droppable zone 으로 감쌈.
-function DayDropZone({ day, children }: { day: number; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `day-${day}` });
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex flex-col gap-2 rounded-md transition-colors ${
-        isOver ? "bg-primary/5 ring-2 ring-primary/30" : ""
-      }`}
-    >
-      {children}
-    </div>
-  );
-}
-
-// 개별 task 행 — DnD 연동용 래퍼
-function SortableTaskRow({
-  task,
-  onClick,
-  onDelete,
-  onToggleComplete,
-  expectedTime,
-}: {
-  task: TravelPlanTask;
-  onClick: () => void;
-  onDelete: () => void;
-  onToggleComplete?: () => void;
-  expectedTime?: string | null;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id });
-  const dragProps = toDragProps<HTMLButtonElement>({ attributes, listeners });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 10 : undefined,
-  };
-  return (
-    <div ref={setNodeRef} style={style}>
-      <PlanTaskRow
-        task={task}
-        onClick={onClick}
-        onDelete={onDelete}
-        onToggleComplete={onToggleComplete}
-        expectedTime={expectedTime}
-        dragListeners={dragProps.listeners}
-        dragAttributes={dragProps.attributes}
-      />
-    </div>
-  );
-}
+// DayDropZone / SortableTaskRow 는 PlanDaySection 내부로 이전됨.
 
 export default function PlanDetail({ planId, onBack }: Props) {
   const { plans, loading: plansLoading, updatePlan, duplicatePlan } = useTravelPlans();
@@ -420,94 +359,38 @@ export default function PlanDetail({ planId, onBack }: Props) {
                     return true;
                   })
                   .map((day) => {
-                  const rawDayTasks = tasksByDay[day] ?? [];
-                  // 경로별 선택 시: 해당 leg 의 출발·도착 task 만 노출.
-                  const dayTasks =
-                    segment.mode === "leg"
-                      ? (() => {
-                          const leg = legsWithCoords[segment.legIndex];
-                          if (!leg) return [];
-                          return rawDayTasks.filter(
-                            (t) => t.id === leg.fromTaskId || t.id === leg.toTaskId
-                          );
-                        })()
-                      : rawDayTasks;
-                  return (
-                    <section key={day} className="flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold">{formatDayLabel(day)}</h3>
-                        <div className="flex-1 h-px bg-border" />
-                      </div>
-                      {/* 일자별 한 줄 요약 — task 수 / 체류 / 이동 / 시작→종료 시각.
-                          사용자가 일자 윤곽을 한눈에 잡도록. 빈 일자엔 자동 숨김. */}
-                      <PlanDaySummary dayTasks={dayTasks} expectedTimes={expectedTimes} />
-                      <DayDropZone day={day}>
-                        {dayTasks.length > 0 && (
-                          <div className="flex flex-col gap-1.5">
-                            {/* enter/exit — task 추가시 위→아래 슬라이드, 삭제시 우측 페이드.
-                                dnd-kit 의 transform 은 SortableTaskRow 내부에 적용되어 외부 motion.div 와 충돌 없음. */}
-                            <AnimatePresence initial={false}>
-                            {dayTasks.map((t, i) => {
-                              const next = dayTasks[i + 1];
-                              const leg = next
-                                ? legsWithCoords.find(
-                                    (l) => l.fromTaskId === t.id && l.toTaskId === next.id
-                                  )
-                                : undefined;
-                              // 이 구간의 출발 시각 = 현재 task 의 [도착시간 + 체류]
-                              const arr = expectedTimes[t.id]?.time ?? null;
-                              const legDeparture =
-                                leg && arr ? addMinutes(arr, t.stay_minutes ?? 0) : null;
-                              return (
-                                <motion.div
-                                  key={t.id}
-                                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  exit={{ opacity: 0, x: 24, scale: 0.96 }}
-                                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                                  className="flex flex-col gap-1.5"
-                                >
-                                  <SortableTaskRow
-                                    task={t}
-                                    onClick={() => openEditSheet(t)}
-                                    onDelete={() => deleteTask(t.id)}
-                                    onToggleComplete={() =>
-                                      updateTask(t.id, {
-                                        completed_at: t.completed_at ? null : new Date().toISOString(),
-                                      })
-                                    }
-                                    expectedTime={
-                                      expectedTimes[t.id]?.predicted
-                                        ? expectedTimes[t.id]?.time ?? null
-                                        : null
-                                    }
-                                  />
-                                  {leg && (
-                                    <PlanLegCard
-                                      leg={leg}
-                                      legDeparture={legDeparture}
-                                      onUpdateTask={updateTask}
-                                    />
-                                  )}
-                                </motion.div>
-                              );
-                            })}
-                            </AnimatePresence>
-                          </div>
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openNewSheet(day)}
-                          className="self-start h-8 text-xs"
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1" /> 일정 추가
-                        </Button>
-                      </DayDropZone>
-                    </section>
-                  );
-                })}
+                    const rawDayTasks = tasksByDay[day] ?? [];
+                    // 경로별 선택 시: 해당 leg 의 출발·도착 task 만 노출.
+                    const dayTasks =
+                      segment.mode === "leg"
+                        ? (() => {
+                            const leg = legsWithCoords[segment.legIndex];
+                            if (!leg) return [];
+                            return rawDayTasks.filter(
+                              (t) => t.id === leg.fromTaskId || t.id === leg.toTaskId,
+                            );
+                          })()
+                        : rawDayTasks;
+                    return (
+                      <PlanDaySection
+                        key={day}
+                        day={day}
+                        dayTasks={dayTasks}
+                        formatDayLabel={formatDayLabel}
+                        legsWithCoords={legsWithCoords}
+                        expectedTimes={expectedTimes}
+                        onOpenEdit={openEditSheet}
+                        onDeleteTask={(id) => { deleteTask(id); }}
+                        onToggleComplete={(t) =>
+                          updateTask(t.id, {
+                            completed_at: t.completed_at ? null : new Date().toISOString(),
+                          })
+                        }
+                        onUpdateTask={updateTask}
+                        onOpenNew={openNewSheet}
+                      />
+                    );
+                  })}
               </div>
             </SortableContext>
           </DndContext>

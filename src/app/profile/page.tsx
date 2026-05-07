@@ -45,8 +45,10 @@ function ProfilePageInner() {
   const [saving, setSaving] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
-  const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [cropOpen, setCropOpen] = useState(false);
+  // cropSrc + cropOpen 두 state 가 따로 살면 4개의 조합이 가능했고 그 중 2개가 무효
+  // (src 만 있고 open=false / open 만 true 고 src 없음). 단일 discriminated state 로
+  // 합쳐 invalid combo 자체를 표현 불가능하게 함.
+  const [cropping, setCropping] = useState<{ src: string } | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
@@ -76,8 +78,7 @@ function ProfilePageInner() {
     }
     const reader = new FileReader();
     reader.onload = () => {
-      setCropSrc(reader.result as string);
-      setCropOpen(true);
+      setCropping({ src: reader.result as string });
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -271,9 +272,9 @@ function ProfilePageInner() {
       </div>
 
       <AvatarCropDialog
-        src={cropSrc}
-        open={cropOpen}
-        onOpenChange={setCropOpen}
+        src={cropping?.src ?? null}
+        open={!!cropping}
+        onOpenChange={(o) => { if (!o) setCropping(null); }}
         onConfirm={async (dataUrl) => {
           const prevUrl = avatarUrl;
           const { url, error } = await uploadToStorage("avatars", dataUrl, "jpg");
