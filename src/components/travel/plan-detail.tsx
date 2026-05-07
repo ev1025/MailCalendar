@@ -14,8 +14,8 @@ import { sortTasks } from "@/lib/travel/sort-tasks";
 import { tasksToLegs } from "@/lib/travel/legs";
 import { invalidateRouteData } from "@/hooks/use-route-data";
 import { computeExpectedTimes } from "@/lib/travel/expected-time";
-import { useLegPaths, legPathKey } from "@/components/travel/use-leg-paths";
-import { colorForLeg } from "@/lib/travel/transit-colors";
+import { useLegPaths } from "@/components/travel/use-leg-paths";
+import { usePlanMapData } from "@/hooks/use-plan-map-data";
 import { createPlanDragEndHandler } from "@/components/travel/use-plan-drag-and-drop";
 import type { TravelPlanTask } from "@/types";
 import {
@@ -136,57 +136,13 @@ export default function PlanDetail({ planId, onBack }: Props) {
 
   const legPaths = useLegPaths(visibleLegs);
 
-  const { pins, legs: mapLegs } = useMemo(() => {
-    const taskToPin = (t: TravelPlanTask) =>
-      t.place_lat != null && t.place_lng != null
-        ? { lat: t.place_lat, lng: t.place_lng, label: t.place_name, taskId: t.id }
-        : null;
-
-    let shownTasks: TravelPlanTask[];
-    if (segment.mode === "all") shownTasks = sorted;
-    else if (segment.mode === "day")
-      shownTasks = sorted.filter((t) => t.day_index === segment.dayIndex);
-    else {
-      const leg = legsWithCoords[segment.legIndex];
-      shownTasks = leg ? [leg.fromTask, leg.toTask] : [];
-    }
-    const shownPinsAll = shownTasks.map(taskToPin).filter(Boolean) as {
-      lat: number; lng: number; label: string; taskId: string;
-    }[];
-
-    const taskIdToIdx = new Map(shownPinsAll.map((p, i) => [p.taskId, i]));
-    type MapLegSpec = { fromIdx: number; toIdx: number; path?: [number, number][]; strokeColor?: string };
-    const legsForMap: MapLegSpec[] = [];
-    for (const l of visibleLegs) {
-      const fromIdx = taskIdToIdx.get(l.fromTaskId);
-      const toIdx = taskIdToIdx.get(l.toTaskId);
-      if (fromIdx === undefined || toIdx === undefined) continue;
-      legsForMap.push({
-        fromIdx,
-        toIdx,
-        strokeColor: colorForLeg(l.toTask.transport_mode, l.toTask.transport_route),
-        path:
-          l.toTask.transport_mode &&
-          l.fromTask.place_lat != null &&
-          l.fromTask.place_lng != null &&
-          l.toTask.place_lat != null &&
-          l.toTask.place_lng != null
-            ? legPaths[
-                legPathKey(
-                  l.fromTask.place_lat,
-                  l.fromTask.place_lng,
-                  l.toTask.place_lat,
-                  l.toTask.place_lng,
-                  l.toTask.transport_mode
-                )
-              ]
-            : undefined,
-      });
-    }
-
-    const shownPins = shownPinsAll.map(({ lat, lng, label }) => ({ lat, lng, label }));
-    return { pins: shownPins, legs: legsForMap };
-  }, [segment, sorted, legsWithCoords, visibleLegs, legPaths]);
+  const { pins, legs: mapLegs } = usePlanMapData(
+    segment,
+    sorted,
+    legsWithCoords,
+    visibleLegs,
+    legPaths,
+  );
 
   // 드래그 센서 — early return 전에 호출 (훅 규칙)
   const sensors = useSensors(
