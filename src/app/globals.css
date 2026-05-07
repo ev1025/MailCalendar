@@ -290,6 +290,15 @@
     * {
       -webkit-tap-highlight-color: transparent;
     }
+
+    /* iOS Safari 자동 zoom 방지 — 폰트 16px 미만 input 포커스 시 페이지 확대됨.
+       데스크탑(>=768)은 영향 없음. text-xs/text-sm 클래스로 시각 사이즈 줄였더라도
+       포커스 동안만 16px 로 확장하면 zoom 발화 안 함. */
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
   }
 
   /* 접근성: 시스템에서 모션 줄임 설정 시 모든 transition/animation 제거.

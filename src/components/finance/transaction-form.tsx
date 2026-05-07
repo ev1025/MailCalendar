@@ -210,7 +210,7 @@ export default function TransactionForm({
                     const cur = parseInt(amount || "0", 10) || 0;
                     setAmount(String(cur + p.value));
                   }}
-                  className="px-1.5 h-7 rounded-md border text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors tabular-nums"
+                  className="px-2.5 h-9 rounded-md border text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors tabular-nums"
                 >
                   {p.label}
                 </button>

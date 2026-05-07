@@ -14,6 +14,7 @@ import {
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDraggable,
@@ -351,7 +352,11 @@ export default function KnowledgeExplorer({
   };
 
   // DnD — 선택된 항목을 폴더로 드래그 이동
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // 모바일: 200ms 길게 눌러야 드래그 — 탭(폴더 진입)·세로 스크롤과 분리.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
   const [dragId, setDragId] = useState<string | null>(null);
   const onDragStart = (e: DragStartEvent) => {
     const id = String(e.active.id);

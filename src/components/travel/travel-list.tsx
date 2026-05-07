@@ -21,6 +21,7 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -236,7 +237,9 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
   }, []);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // 모바일: 200ms 길게 눌러야 드래그 시작 — 탭/세로 스크롤과 분리.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
   // 필터/정렬 — localStorage 에서 복원. 페이지 이동·재진입 후에도 유지.
   const [filterCategories, setFilterCategories] = useState<string[]>(

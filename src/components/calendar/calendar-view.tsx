@@ -17,6 +17,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDroppable,
@@ -193,7 +194,11 @@ export default function CalendarView({
 
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
   const [overDate, setOverDate] = useState<string | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    // 모바일: 200ms 길게 눌러야 드래그 — 탭(상세)·세로 스크롤과 분리.
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
 
   // 셀 높이 기반 동적 슬롯 수 — ResizeObserver로 주 행 높이 추적
   const rowRef = useRef<HTMLDivElement>(null);
