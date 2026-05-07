@@ -272,13 +272,13 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               );
 
               return (
-                <div className="relative flex flex-col px-5">
-                  {/* isNow 컬럼 강조 — top·곡선·bottom 세 행을 모두 감싸는 absolute. */}
+                <div className="relative flex flex-col pl-5">
+                  {/* isNow 컬럼 강조 — top·곡선·bottom 세 행을 모두 감싸는 absolute.
+                      left = pl-5(20) + 카드 step. */}
                   {nowIndex >= 0 && (
                     <div
                       className="absolute pointer-events-none rounded-xl bg-white/55 dark:bg-foreground/10 ring-1 ring-foreground/15 shadow-sm"
                       style={{
-                        // 컨테이너 padding(px-3=12) + 카드 step 만큼 우측 이동.
                         left: PAD_X + nowIndex * STEP,
                         width: CARD_W,
                         top: 0,
@@ -287,7 +287,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                     />
                   )}
 
-                  {/* top row — 시간 / 아이콘 / 기온. relative 로 isNow 위에 그려짐. */}
+                  {/* top row — 시간 / 아이콘 / 기온.
+                      우측 spacer(w-5) 로 right padding 보장 — 부모의 pr-X 가 chromium 의
+                      scrollWidth 계산에서 누락되는 이슈 회피. */}
                   <div className="relative flex gap-1">
                     {entries.map((e) => {
                       const hour = parseInt(e.time.slice(11, 13), 10);
@@ -311,16 +313,15 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                         </div>
                       );
                     })}
+                    <div className="shrink-0 w-5" aria-hidden />
                   </div>
 
-                  {/* 곡선 — 기온과 강수 사이의 가로 띠.
-                      stroke gradient: 위(따뜻) → 아래(차가운 톤)으로 기온 직관 표현.
-                      area fill 은 곡선 아래를 부드럽게 fade. */}
+                  {/* 곡선 — 기온과 강수 사이의 가로 띠. mr-5 로 우측 buffer. */}
                   <svg
                     width={totalW}
                     height={svgH}
                     viewBox={`0 0 ${totalW} ${svgH}`}
-                    className="relative block shrink-0 my-1"
+                    className="relative block shrink-0 my-1 mr-5"
                     aria-hidden
                   >
                     <defs>
@@ -347,7 +348,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                     ))}
                   </svg>
 
-                  {/* bottom row — 강수확률만. */}
+                  {/* bottom row — 강수확률 + 우측 spacer. */}
                   <div className="relative flex gap-1 pb-1.5">
                     {entries.map((e) => (
                       <div
@@ -360,6 +361,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                         </span>
                       </div>
                     ))}
+                    <div className="shrink-0 w-5" aria-hidden />
                   </div>
                 </div>
               );
