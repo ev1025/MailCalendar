@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Label } from "@/components/ui/label";
 import { FORM_LABEL } from "@/lib/form-classes";
 import { cn } from "@/lib/utils";
@@ -60,9 +61,20 @@ export function FormField({
         {hint && <div className="shrink-0">{hint}</div>}
       </div>
       {children}
-      {error && (
-        <p className="text-[11px] text-destructive leading-tight">{error}</p>
-      )}
+      <AnimatePresence initial={false}>
+        {error && (
+          <motion.p
+            key="error"
+            initial={{ opacity: 0, y: -4, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -4, height: 0 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden text-[11px] text-destructive leading-tight"
+          >
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

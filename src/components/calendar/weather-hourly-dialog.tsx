@@ -208,8 +208,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           )}
 
           {/* 2) 시간별 가로 스크롤 스트립. 보더 없이 살짝 다른 배경 톤만으로 구분.
-              overflow 분리 — outer rounded + inner overflow-x-auto 로 iOS Safari 호환. */}
-          <div className="w-full min-w-0 rounded-2xl bg-foreground/[0.04] overflow-hidden">
+              overflow 분리 — outer rounded + inner overflow-x-auto 로 iOS Safari 호환.
+              검은색 톤 강조 — light: black/8%, dark: white/6% 로 시각적 분리감 향상. */}
+          <div className="w-full min-w-0 rounded-2xl bg-black/[0.08] dark:bg-white/[0.06] overflow-hidden">
           <div className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3 px-5">

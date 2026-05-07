@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { parseYmd } from "@/lib/date-utils";
 import {
   Dialog,
@@ -243,23 +244,35 @@ export default function DayDetail({
             <div className="flex flex-col gap-1.5 max-h-[50vh] overflow-y-auto -mx-1 px-1">
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={dayEvents.map((ev) => ev.id)} strategy={verticalListSortingStrategy}>
-                  {dayEvents.map((ev) => {
-                    const evOwn = ev as EventWithOwner;
-                    const ownerId = evOwn.user_id ?? null;
-                    const isOwner = !ownerId || ownerId === currentUserId;
-                    const owner = ownerId ? usersById.get(ownerId) : undefined;
-                    return (
-                      <SortableItem
-                        key={ev.id}
-                        ev={evOwn}
-                        tagColorMap={tagColorMap}
-                        isOwner={isOwner}
-                        owner={owner}
-                        onEdit={(e) => { onOpenChange(false); onEditEvent?.(e); }}
-                        onDelete={onDeleteEvent}
-                      />
-                    );
-                  })}
+                  {/* enter/exit 애니메이션 — 추가시 위에서 부드럽게 슬라이드,
+                      삭제시 우측으로 fade-out. dnd-kit transform 은 SortableItem 의
+                      inner div 에 적용되므로 외부 motion.div 와 충돌 없음. */}
+                  <AnimatePresence initial={false}>
+                    {dayEvents.map((ev) => {
+                      const evOwn = ev as EventWithOwner;
+                      const ownerId = evOwn.user_id ?? null;
+                      const isOwner = !ownerId || ownerId === currentUserId;
+                      const owner = ownerId ? usersById.get(ownerId) : undefined;
+                      return (
+                        <motion.div
+                          key={ev.id}
+                          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, x: 24, scale: 0.96 }}
+                          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                        >
+                          <SortableItem
+                            ev={evOwn}
+                            tagColorMap={tagColorMap}
+                            isOwner={isOwner}
+                            owner={owner}
+                            onEdit={(e) => { onOpenChange(false); onEditEvent?.(e); }}
+                            onDelete={onDeleteEvent}
+                          />
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
                 </SortableContext>
               </DndContext>
             </div>
