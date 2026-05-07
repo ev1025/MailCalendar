@@ -1,13 +1,13 @@
 "use client";
 
 import { memo } from "react";
-import { Check, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowUpDown, Check, RotateCcw, Trash2 } from "lucide-react";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import { formatMinutes } from "@/lib/travel/providers";
 import { addMinutes, formatTime } from "@/lib/travel/time";
 import { openPlaceInNaverMap } from "@/lib/travel/naver-map-link";
 import { useTravelCategories } from "@/hooks/use-travel-categories";
-import type { TravelPlanTask } from "@/types";
+import type { TravelPlanTask, AltPlace } from "@/types";
 
 const NAVER_MAP_ICON = "https://ssl.pstatic.net/static/maps/assets/icons/favicon-32x32.png";
 
@@ -23,6 +23,9 @@ interface Props {
   onDelete?: () => void;
   /** 토글 시 호출 — completed_at 저장은 부모(plan-detail) 가 담당. */
   onToggleComplete?: () => void;
+  /** 대체 위치 후보 중 하나로 1순위 변경 — primary 와 alt_places[idx] swap.
+   *  부모(plan-detail) 가 updateTask 호출하며 place_*·alt_places 함께 업데이트. */
+  onSwapAlt?: (altIndex: number) => void;
   dragListeners?: React.HTMLAttributes<HTMLButtonElement>;
   dragAttributes?: React.HTMLAttributes<HTMLButtonElement>;
   expectedTime?: string | null;
@@ -33,6 +36,7 @@ function PlanTaskRowImpl({
   onClick,
   onDelete,
   onToggleComplete,
+  onSwapAlt,
   dragListeners,
   dragAttributes,
   expectedTime,
@@ -89,6 +93,15 @@ function PlanTaskRowImpl({
                     onClick: onToggleComplete,
                   }]
                 : []),
+              // 대체 위치 → 1순위 swap. 폼 안 거치고 즉시 전환.
+              ...((onSwapAlt && task.alt_places && task.alt_places.length > 0
+                ? task.alt_places
+                : []) as AltPlace[]
+              ).map((alt, i) => ({
+                icon: <ArrowUpDown className="h-3.5 w-3.5" />,
+                label: `${alt.name}로 변경`,
+                onClick: () => onSwapAlt!(i),
+              })),
               ...(task.place_name
                 ? [{
                     icon: (

@@ -178,7 +178,17 @@ export interface TravelPlanTask {
   // 사용자가 "여기 다녀왔음" 체크 시 ISO timestamp. null = 미완료.
   // 옵셔널 — 구 DB 에 컬럼 없으면 그래도 동작(완료 표시는 미동작).
   completed_at?: string | null;
+  // 대체 위치 후보 — 1순위(place_*)가 실패할 때 폼/드래그바에서 swap 할 수 있도록.
+  // [{ name, address, lat, lng }, ...] 배열. 옵셔널 — 컬럼 없는 구 DB 에서도 동작.
+  alt_places?: AltPlace[] | null;
   created_at: string;
+}
+
+export interface AltPlace {
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
 }
 
 /** transport_route JSONB 저장 형식 — lib/travel/providers RouteStep 과 동일. */

@@ -17,7 +17,7 @@ import { computeExpectedTimes } from "@/lib/travel/expected-time";
 import { useLegPaths } from "@/components/travel/use-leg-paths";
 import { usePlanMapData } from "@/hooks/use-plan-map-data";
 import { createPlanDragEndHandler } from "@/components/travel/use-plan-drag-and-drop";
-import type { TravelPlanTask } from "@/types";
+import type { TravelPlanTask, AltPlace } from "@/types";
 import {
   DndContext,
   closestCenter,
@@ -354,6 +354,35 @@ export default function PlanDetail({ planId, onBack }: Props) {
                             completed_at: t.completed_at ? null : new Date().toISOString(),
                           })
                         }
+                        onSwapAlt={(t, idx) => {
+                          // 1순위(primary) 와 alt_places[idx] swap. 좌표 변경되므로
+                          // 인접 leg 의 transport cache 도 함께 리셋(invalidateRouteData
+                          // 는 sheet save 와 동일 패턴 — 여기선 단순 swap 만, 다음
+                          // 렌더에서 useLegPaths 가 새 좌표로 다시 fetch).
+                          const alts = t.alt_places ?? [];
+                          const target = alts[idx];
+                          if (!target) return;
+                          const oldPrimary: AltPlace = {
+                            name: t.place_name,
+                            address: t.place_address,
+                            lat: t.place_lat,
+                            lng: t.place_lng,
+                          };
+                          const newAlts = [...alts];
+                          newAlts[idx] = oldPrimary;
+                          updateTask(t.id, {
+                            place_name: target.name,
+                            place_address: target.address,
+                            place_lat: target.lat,
+                            place_lng: target.lng,
+                            alt_places: newAlts,
+                            // 좌표 바뀌었으므로 transport cache 리셋
+                            transport_mode: null,
+                            transport_duration_sec: null,
+                            transport_manual: false,
+                            transport_durations: null,
+                          });
+                        }}
                         onUpdateTask={updateTask}
                         onOpenNew={openNewSheet}
                       />

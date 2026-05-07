@@ -31,6 +31,7 @@ interface SortableTaskRowProps {
   onClick: () => void;
   onDelete: () => void;
   onToggleComplete?: () => void;
+  onSwapAlt?: (altIndex: number) => void;
   expectedTime?: string | null;
 }
 
@@ -39,6 +40,7 @@ function SortableTaskRow({
   onClick,
   onDelete,
   onToggleComplete,
+  onSwapAlt,
   expectedTime,
 }: SortableTaskRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -57,6 +59,7 @@ function SortableTaskRow({
         onClick={onClick}
         onDelete={onDelete}
         onToggleComplete={onToggleComplete}
+        onSwapAlt={onSwapAlt}
         expectedTime={expectedTime}
         dragListeners={dragProps.listeners}
         dragAttributes={dragProps.attributes}
@@ -88,6 +91,7 @@ interface Props {
   onOpenEdit: (task: TravelPlanTask) => void;
   onDeleteTask: (id: string) => void;
   onToggleComplete: (task: TravelPlanTask) => void;
+  onSwapAlt: (task: TravelPlanTask, altIndex: number) => void;
   onUpdateTask: (id: string, updates: Partial<TravelPlanTask>) => Promise<{ error: unknown }>;
   onOpenNew: (day: number) => void;
 }
@@ -101,6 +105,7 @@ export default function PlanDaySection({
   onOpenEdit,
   onDeleteTask,
   onToggleComplete,
+  onSwapAlt,
   onUpdateTask,
   onOpenNew,
 }: Props) {
@@ -138,6 +143,7 @@ export default function PlanDaySection({
                       onClick={() => onOpenEdit(t)}
                       onDelete={() => onDeleteTask(t.id)}
                       onToggleComplete={() => onToggleComplete(t)}
+                      onSwapAlt={(idx) => onSwapAlt(t, idx)}
                       expectedTime={
                         expectedTimes[t.id]?.predicted
                           ? expectedTimes[t.id]?.time ?? null

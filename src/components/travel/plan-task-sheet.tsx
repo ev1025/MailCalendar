@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MapPin } from "lucide-react";
+import { ArrowUp, MapPin, Plus, X as XIcon } from "lucide-react";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +19,8 @@ import PlanPlacePicker from "@/components/travel/plan-place-picker";
 import NaverMap from "@/components/travel/naver-map";
 import { useTravelCategories, BUILTIN_TRAVEL_CATEGORIES } from "@/hooks/use-travel-categories";
 import { useEventTags } from "@/hooks/use-event-tags";
-import type { TravelPlanTask, PlaceInfo } from "@/types";
+import { Button } from "@/components/ui/button";
+import type { TravelPlanTask, PlaceInfo, AltPlace } from "@/types";
 
 // 일정 편집 UI — DeviceDialog 로 모바일/데스크탑 분기 자동 처리
 
@@ -50,6 +51,7 @@ interface SheetDraft {
   placeAddress: string | null;
   placeLat: number | null;
   placeLng: number | null;
+  altPlaces: AltPlace[]; // 대체 위치 후보들 (1순위 = primary place_*)
   category: string;     // 분류 (단일)
   tags: string[];       // 태그 (복수) — event_tags 공용 풀
   content: string;
@@ -121,6 +123,11 @@ export default function PlanTaskSheet({
   const [placeLng, setPlaceLng] = useState<number | null>(null);
   const [placeQuery, setPlaceQuery] = useState("");
   const [editingPlace, setEditingPlace] = useState(false);
+  // 대체 위치 후보들 — 1순위(primary)가 실패할 때 swap. 빈 배열이면 단일 장소.
+  const [altPlaces, setAltPlaces] = useState<AltPlace[]>([]);
+  // 대체 위치 추가용 picker 표시 여부 + 검색어.
+  const [altPickerOpen, setAltPickerOpen] = useState(false);
+  const [altQuery, setAltQuery] = useState("");
   // 분류 1개 (빈 문자열이면 미선택)
   const [category, setCategory] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -142,6 +149,7 @@ export default function PlanTaskSheet({
       setPlaceAddress(task.place_address);
       setPlaceLat(task.place_lat);
       setPlaceLng(task.place_lng);
+      setAltPlaces(task.alt_places ?? []);
       // 분류: 새 category 컬럼 우선, 없으면 null. 태그: tag 컬럼 (콤마구분).
       setCategory(task.category ?? "");
       setSelectedTags(
@@ -156,12 +164,15 @@ export default function PlanTaskSheet({
       setPlaceAddress(null);
       setPlaceLat(null);
       setPlaceLng(null);
+      setAltPlaces([]);
       setCategory("");
       setSelectedTags([]);
       setContent("");
     }
     setPlaceQuery("");
     setEditingPlace(false);
+    setAltPickerOpen(false);
+    setAltQuery("");
     // 작성 세션 draft 복원 (있으면)
     const d = readDraft(draftKey);
     if (d) {
@@ -172,6 +183,7 @@ export default function PlanTaskSheet({
       setPlaceAddress(d.placeAddress);
       setPlaceLat(d.placeLat);
       setPlaceLng(d.placeLng);
+      setAltPlaces(d.altPlaces ?? []);
       setCategory(d.category ?? "");
       setSelectedTags(d.tags ?? []);
       setContent(d.content);
@@ -187,6 +199,7 @@ export default function PlanTaskSheet({
         placeAddress: task?.place_address ?? null,
         placeLat: task?.place_lat ?? null,
         placeLng: task?.place_lng ?? null,
+        altPlaces: task?.alt_places ?? [],
         category: task?.category ?? "",
         tags: task?.tag ? task.tag.split(",").map((s) => s.trim()).filter(Boolean) : [],
         content: task?.content ?? "",
@@ -206,6 +219,7 @@ export default function PlanTaskSheet({
         placeAddress,
         placeLat,
         placeLng,
+        altPlaces,
         category,
         tags: selectedTags,
         content,
@@ -222,6 +236,7 @@ export default function PlanTaskSheet({
     placeAddress,
     placeLat,
     placeLng,
+    altPlaces,
     category,
     selectedTags,
     content,
@@ -291,6 +306,7 @@ export default function PlanTaskSheet({
         place_address: placeAddress,
         place_lat: placeLat,
         place_lng: placeLng,
+        alt_places: altPlaces.length > 0 ? altPlaces : null,
         tag: selectedTags.length > 0 ? selectedTags.join(",") : null,
         category: category.trim() || null,
         content: content.trim() || null,
@@ -314,6 +330,7 @@ export default function PlanTaskSheet({
       placeAddress,
       placeLat,
       placeLng,
+      altPlaces,
       category,
       tags: selectedTags,
       content,
@@ -431,6 +448,125 @@ export default function PlanTaskSheet({
               <div onClick={(e) => e.stopPropagation()}>
                 <NaverMap lat={placeLat} lng={placeLng} height={200} zoom={16} />
               </div>
+            )}
+          </div>
+
+          {/* 대체 위치 — 1순위(위 장소)가 실패할 때 swap 할 후보들.
+              picker 로 추가 / 각 후보 옆 ↑ 버튼으로 1순위와 swap / × 로 제거. */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs text-muted-foreground">
+                대체 위치 {altPlaces.length > 0 && `(${altPlaces.length})`}
+              </Label>
+              {altPlaces.length === 0 && !altPickerOpen && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAltPickerOpen(true);
+                    setAltQuery("");
+                  }}
+                  className="text-[11px] text-info hover:underline disabled:opacity-50"
+                  disabled={!placeName.trim() || placeLat == null}
+                  title={!placeName.trim() ? "1순위 장소를 먼저 선택하세요" : undefined}
+                >
+                  + 추가
+                </button>
+              )}
+            </div>
+
+            {/* 저장된 대체 후보 카드 */}
+            {altPlaces.length > 0 && (
+              <ul className="flex flex-col gap-1.5">
+                {altPlaces.map((alt, i) => (
+                  <li
+                    key={`${alt.name}-${i}`}
+                    className="flex items-center gap-2 rounded-md border bg-muted/30 pl-2 pr-1 py-1.5"
+                  >
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{alt.name}</div>
+                      {alt.address && (
+                        <div className="text-xs text-muted-foreground truncate">{alt.address}</div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={`${alt.name} 1순위로 변경`}
+                      title="1순위로 변경"
+                      onClick={() => {
+                        // primary 와 alt[i] swap
+                        const oldPrimary: AltPlace = {
+                          name: placeName,
+                          address: placeAddress,
+                          lat: placeLat,
+                          lng: placeLng,
+                        };
+                        setPlaceName(alt.name);
+                        setPlaceAddress(alt.address);
+                        setPlaceLat(alt.lat);
+                        setPlaceLng(alt.lng);
+                        setAltPlaces((prev) => {
+                          const next = [...prev];
+                          next[i] = oldPrimary;
+                          return next;
+                        });
+                      }}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`${alt.name} 제거`}
+                      onClick={() =>
+                        setAltPlaces((prev) => prev.filter((_, j) => j !== i))
+                      }
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <XIcon className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* picker — 토글로 노출. 추가 후 자동 닫힘. */}
+            {altPickerOpen ? (
+              <PlanPlacePicker
+                value={altQuery}
+                onChange={setAltQuery}
+                onPick={(p) => {
+                  setAltPlaces((prev) => [
+                    ...prev,
+                    { name: p.name, address: p.address, lat: p.lat, lng: p.lng },
+                  ]);
+                  setAltPickerOpen(false);
+                  setAltQuery("");
+                }}
+                onBlur={() => {
+                  setAltPickerOpen(false);
+                  setAltQuery("");
+                }}
+                autoFocus
+                placeholder="대체 장소 검색"
+              />
+            ) : (
+              altPlaces.length > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setAltPickerOpen(true);
+                    setAltQuery("");
+                  }}
+                  className="self-start h-8 text-xs"
+                  disabled={!placeName.trim() || placeLat == null}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  대체 위치 추가
+                </Button>
+              )
             )}
           </div>
 
