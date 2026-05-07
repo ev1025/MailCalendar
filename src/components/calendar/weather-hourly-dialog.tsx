@@ -220,22 +220,12 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           </div>
         )}
 
-        {/* strip 패널 — outer overflow-hidden(=viewport 가둠) + inner overflow-x-auto.
-            mask-image 로 좌우 20px 영역 fade — chromium 의 padding-right 누락 버그 우회.
-            scroll 위치 무관하게 패널 viewport 좌우 끝 카드는 항상 fade 되어 사라짐
-            → 시각적 "viewport margin" 효과 보장. */}
-        <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden">
-        <div
-          className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]"
-          style={{
-            // Apple Weather 스타일 — 좌·우 20px 부드럽게 fade. 카드가 panel 모서리에
-            // 닿기 전에 자연스럽게 사라져 항상 viewport 여백 효과.
-            maskImage:
-              "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)",
-          }}
-        >
+        {/* strip 패널 — px-5 py-3 을 패널 자체에 부여. scroll 자식은 panel 의
+            content box(= 패널 폭 - 40)만 채움. padding region 은 panel box 일부라
+            scroll 어느 위치에서도 visible 유지 — chromium 의 padding-on-scroll
+            누락 버그 회피. */}
+        <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden px-5 py-3">
+        <div className="overflow-x-auto overflow-y-hidden [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
