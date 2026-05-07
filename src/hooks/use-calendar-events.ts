@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import type { CalendarEvent } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
 import { getSessionCache, setSessionCache } from "@/lib/session-cache";
+import { monthBounds } from "@/lib/date-utils";
 
 export interface SharedEvent extends CalendarEvent {
   user_id?: string | null;
@@ -25,11 +26,11 @@ export function useCalendarEvents(
 ) {
   const currentUserId = useCurrentUserId();
 
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const startDate = monthBounds(year, month).start;
   const endDate =
     month === 12
       ? `${year + 1}-01-01`
-      : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+      : monthBounds(year, month + 1).start;
 
   // 캐시 키 — 같은 (월, 표시 사용자) 조합의 직전 결과를 즉시 hydrate.
   // 사용자 정렬해서 안정적인 키 생성.
@@ -103,11 +104,11 @@ export function useCalendarEvents(
     if (!currentUserId || visibleUserIds.length === 0) return;
     let cancelled = false;
     const prefetch = async (y: number, m: number) => {
-      const sd = `${y}-${String(m).padStart(2, "0")}-01`;
+      const sd = monthBounds(y, m).start;
       const ed =
         m === 12
           ? `${y + 1}-01-01`
-          : `${y}-${String(m + 1).padStart(2, "0")}-01`;
+          : monthBounds(y, m + 1).start;
       const k = `cal-events:${currentUserId}:${sd}:${ed}:${visibleKey}`;
       if (getSessionCache(k)) return;
       const { data } = await supabase

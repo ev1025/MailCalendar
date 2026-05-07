@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { parseYmd } from "@/lib/date-utils";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,13 +39,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toDragProps } from "@/lib/dnd-types";
+import { KO_WEEKDAYS as WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 
 interface Props {
   planId: string;
   onBack: () => void;
 }
-
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 const TRANSPORT_RESET = {
   transport_mode: null,
@@ -419,6 +419,9 @@ export default function PlanDetail({ planId, onBack }: Props) {
                       <DayDropZone day={day}>
                         {dayTasks.length > 0 && (
                           <div className="flex flex-col gap-1.5">
+                            {/* enter/exit — task 추가시 위→아래 슬라이드, 삭제시 우측 페이드.
+                                dnd-kit 의 transform 은 SortableTaskRow 내부에 적용되어 외부 motion.div 와 충돌 없음. */}
+                            <AnimatePresence initial={false}>
                             {dayTasks.map((t, i) => {
                               const next = dayTasks[i + 1];
                               const leg = next
@@ -431,7 +434,14 @@ export default function PlanDetail({ planId, onBack }: Props) {
                               const legDeparture =
                                 leg && arr ? addMinutes(arr, t.stay_minutes ?? 0) : null;
                               return (
-                                <div key={t.id} className="flex flex-col gap-1.5">
+                                <motion.div
+                                  key={t.id}
+                                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, x: 24, scale: 0.96 }}
+                                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                                  className="flex flex-col gap-1.5"
+                                >
                                   <SortableTaskRow
                                     task={t}
                                     onClick={() => openEditSheet(t)}
@@ -449,9 +459,10 @@ export default function PlanDetail({ planId, onBack }: Props) {
                                       onUpdateTask={updateTask}
                                     />
                                   )}
-                                </div>
+                                </motion.div>
                               );
                             })}
+                            </AnimatePresence>
                           </div>
                         )}
                         <Button

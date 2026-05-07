@@ -1,9 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { parseYmd } from "@/lib/date-utils";
+import { parseYmd, ymd } from "@/lib/date-utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarDays,
   TableProperties,
@@ -132,7 +132,7 @@ function CalendarPageInner() {
     for (let d = -1; d <= 3; d++) {
       const t = new Date(today);
       t.setDate(today.getDate() + d);
-      const ymdStr = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+      const ymdStr = ymd(t);
       if (weatherMap[ymdStr]) {
         prefetchHourlyWeather(ymdStr, weatherLoc.lat, weatherLoc.lon);
       }
@@ -334,6 +334,9 @@ function CalendarPageInner() {
         );
       })()}
 
+      {/* 달력 ↔ DB뷰 토글 시 cross-fade — 하드 컷 → 짧은(140ms) opacity 전환.
+          mode="wait" 로 이전 뷰가 완전히 사라진 후 새 뷰가 들어와 레이아웃 점프 방지. */}
+      <AnimatePresence mode="wait" initial={false}>
       {view === "calendar" ? (
         // 데스크톱은 document 스크롤이라 부모가 h-auto → flex-1 이 0 이 되어 달력이 쪼그라듦.
         // calendar-md-height 는 globals.css 에 직접 정의된 @media (min-width:768px) 규칙으로
@@ -343,7 +346,12 @@ function CalendarPageInner() {
         // currentTarget 의 dataset 으로 좌표 저장 → DOM 재구성·이벤트 위임 충돌 가능성.
         // ref 를 컴포넌트 클로저에 두고 capture 단계로 touchstart 받아 첫 좌표 안정화.
         // 가로 30px / 세로 30px 이내로 임계값 완화 + 단순 절댓값 비교.
-        <div
+        <motion.div
+          key="view-cal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.14 }}
           className="calendar-md-height"
           onTouchStartCapture={(e) => {
             const t = e.touches[0];
@@ -409,17 +417,26 @@ function CalendarPageInner() {
             onReorder={batchUpdateSortOrder}
           />
         </motion.div>
-        </div>
+        </motion.div>
       ) : (
-        <DatabaseView
-          events={events}
-          weatherMap={weatherMap}
-          tags={tags}
-          loading={eventsLoading}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <motion.div
+          key="view-db"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.14 }}
+        >
+          <DatabaseView
+            events={events}
+            weatherMap={weatherMap}
+            tags={tags}
+            loading={eventsLoading}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* 날짜 상세 모달 (달력 날짜 클릭 시) */}
       <DayDetail

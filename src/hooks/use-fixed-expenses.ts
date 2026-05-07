@@ -6,6 +6,7 @@ import type { ExpenseCategory } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
 import { generateRepeatDates } from "@/lib/calendar/repeat-helpers";
 import { getSessionCache, setSessionCache } from "@/lib/session-cache";
+import { ymd, monthBounds } from "@/lib/date-utils";
 
 export interface FixedExpense {
   id: string;
@@ -174,10 +175,10 @@ export function useFixedExpenses() {
           const m = today.getMonth();
           const lastDay = new Date(y, m + 1, 0).getDate();
           const day = Math.min(item.day_of_month, lastDay);
-          anchor = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          anchor = ymd(new Date(y, m, day));
         } else {
           // weekly/yearly/monthly-nth — anchor 없으면 today.
-          anchor = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+          anchor = ymd(today);
         }
       }
       const dates = generateRepeatDates(anchor, count, {
@@ -297,7 +298,7 @@ export function useFixedExpenses() {
     const fx = fixedExpenses.find((f) => f.id === id);
     if (!fx) return { error: "고정비를 찾을 수 없습니다" };
 
-    const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+    const startDate = monthBounds(year, month).start;
 
     // 1a) FK 기반 삭제 — fixed_expense_id 가 있는 거래.
     let qFk = supabase
@@ -381,7 +382,7 @@ export function useFixedExpenses() {
     const fx = fixedExpenses.find((f) => f.id === id);
     if (!fx) return { error: "고정비를 찾을 수 없습니다" };
 
-    const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+    const startDate = monthBounds(year, month).start;
 
     // 1+2 병렬: fixed_expense update + 매칭 거래 fetch (서로 독립).
     let txQ = supabase
@@ -431,7 +432,7 @@ export function useFixedExpenses() {
         const txMonth = parseInt(tx.date.slice(5, 7));
         const lastDay = new Date(txYear, txMonth, 0).getDate();
         const newDay = Math.min(updates.day_of_month!, lastDay);
-        u.date = `${txYear}-${String(txMonth).padStart(2, "0")}-${String(newDay).padStart(2, "0")}`;
+        u.date = ymd(new Date(txYear, txMonth - 1, newDay));
         return supabase.from("expenses").update(u).eq("id", tx.id);
       }),
     );
@@ -502,9 +503,7 @@ export function useFixedExpenses() {
         fx.day_of_month,
         new Date(year, month, 0).getDate()
       );
-      const date = `${year}-${String(month).padStart(2, "0")}-${String(
-        day
-      ).padStart(2, "0")}`;
+      const date = ymd(new Date(year, month - 1, day));
 
       const exists = existingTransactions.some(
         (t) =>
@@ -568,9 +567,9 @@ export function useFixedExpenses() {
 
     // 대상 기간 의 기존 거래 조회 → 날짜 set 으로 dedup. 이 fx 와 연결된 거래만
     // (FK 우선, legacy 는 amount+description 보조 매칭).
-    const startDate = `${baseYear}-${String(baseMonth).padStart(2, "0")}-01`;
+    const startDate = monthBounds(baseYear, baseMonth).start;
     const endT = new Date(baseYear, baseMonth - 1 + months, 1);
-    const endDate = `${endT.getFullYear()}-${String(endT.getMonth() + 1).padStart(2, "0")}-01`;
+    const endDate = monthBounds(endT.getFullYear(), endT.getMonth() + 1).start;
     let existQ = supabase
       .from("expenses")
       .select("amount, description, date, fixed_expense_id")
@@ -617,7 +616,7 @@ export function useFixedExpenses() {
       const mi = t.getMonth() + 1;
       const lastDay = new Date(yi, mi, 0).getDate();
       const day = Math.min(fx.day_of_month, lastDay);
-      const date = `${yi}-${String(mi).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const date = ymd(new Date(yi, mi - 1, day));
       // 이 fx 의 동일 date 거래가 이미 있으면 skip (FK 또는 legacy amount+desc 매칭).
       if (fxDates.has(date)) continue;
       txsToInsert.push({

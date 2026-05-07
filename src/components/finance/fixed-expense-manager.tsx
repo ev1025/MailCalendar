@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import FormPage from "@/components/ui/form-page";
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, ChevronDown } from "lucide-react";
@@ -284,9 +285,18 @@ export default function FixedExpenseManager({
                       />
                     </button>
 
-                    {/* 카테고리 내부 항목들 — 펼쳐진 경우만 */}
+                    {/* 카테고리 내부 항목들 — 펼쳐진 경우만.
+                        height + opacity 슬라이드 — 한꺼번에 팝하지 않고 부드럽게 열림. */}
+                    <AnimatePresence initial={false}>
                     {isOpen && (
-                      <ul className="border-t divide-y divide-border/60">
+                      <motion.ul
+                        key="content"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                        className="border-t divide-y divide-border/60 overflow-hidden"
+                      >
                         {group.items.map((fx) => (
                           <li
                             key={fx.id}
@@ -328,8 +338,9 @@ export default function FixedExpenseManager({
                             </button>
                           </li>
                         ))}
-                      </ul>
+                      </motion.ul>
                     )}
+                    </AnimatePresence>
                   </div>
                 );
               })}

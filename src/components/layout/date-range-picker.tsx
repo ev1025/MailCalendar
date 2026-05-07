@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { parseYmd } from "@/lib/date-utils";
+import { parseYmd, ymd as toISODate } from "@/lib/date-utils";
+import { KO_WEEKDAYS as WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,13 +31,6 @@ interface Props {
   /** YYYY-MM-DD (inclusive) */
   endDate: string;
   onChange: (start: string, end: string) => void;
-}
-
-function toISODate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
 }
 
 function parseISO(s: string): Date {
@@ -74,8 +68,6 @@ function formatRangeLabel(start: string, end: string): string {
     `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
   return `${fmt(s)} - ${fmt(e)}`;
 }
-
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 export default function DateRangePicker({ startDate, endDate, onChange }: Props) {
   const [open, setOpen] = useState(false);

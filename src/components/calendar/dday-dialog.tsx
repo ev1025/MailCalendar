@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Heart, CalendarDays } from "lucide-react";
 import { addDaysISO, ymd, todayYmd, daysBetween, parseYmd } from "@/lib/date-utils";
+import { KO_WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 
 /**
  * D-day 다이얼로그 — 사용자가 입력한 기념일(date+time)부터 경과 시간을 1초 단위로 표시.
@@ -133,7 +134,7 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
   const formatKoreanDate = (iso: string): string => {
     const d = parseYmd(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    const wk = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+    const wk = KO_WEEKDAYS[d.getDay()];
     return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${wk})`;
   };
 

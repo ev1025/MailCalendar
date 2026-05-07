@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import type { Expense, ExpenseCategory } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
 import { getSessionCache, setSessionCache } from "@/lib/session-cache";
+import { ymd, parseYmd, monthBounds } from "@/lib/date-utils";
 
 /**
  * 가계부 거래 조회 훅.
@@ -22,12 +23,12 @@ export function useTransactions(startDate: string, endDate?: string) {
   // endDate 가 주어지면 그 다음날 (exclusive 상한). 없으면 startDate 의 다음 달 1일.
   const endExclusive = (() => {
     if (endDate) {
-      const d = new Date(endDate + "T00:00:00");
+      const d = parseYmd(endDate);
       d.setDate(d.getDate() + 1);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      return ymd(d);
     }
-    const d = new Date(startDate + "T00:00:00");
-    return `${d.getFullYear()}-${String(d.getMonth() + 2).padStart(2, "0")}-01`;
+    const d = parseYmd(startDate);
+    return monthBounds(d.getFullYear(), d.getMonth() + 2).start;
   })();
 
   // 캐시 — 같은 (사용자, 기간) 의 직전 결과 즉시 hydrate → 빈 화면 깜빡임 제거.
@@ -128,9 +129,9 @@ export function useTransactions(startDate: string, endDate?: string) {
       const t = new Date(baseY, baseM - 1 + delta, 1);
       const ny = t.getFullYear();
       const nm = t.getMonth() + 1;
-      const sd = `${ny}-${String(nm).padStart(2, "0")}-01`;
+      const sd = monthBounds(ny, nm).start;
       const ed = new Date(ny, nm, 1);
-      const edStr = `${ed.getFullYear()}-${String(ed.getMonth() + 1).padStart(2, "0")}-01`;
+      const edStr = monthBounds(ed.getFullYear(), ed.getMonth() + 1).start;
       const k = `tx:${userId ?? ""}:${sd}:${edStr}`;
       if (getSessionCache(k)) return;
       let q = supabase
@@ -185,12 +186,12 @@ export function useTransactions(startDate: string, endDate?: string) {
         : `inst_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const baseAmount = Math.floor(base.amount / months);
     const remainder = base.amount - baseAmount * months;
-    const startDate = new Date(base.date + "T00:00:00");
+    const startDate = parseYmd(base.date);
 
     const rows = Array.from({ length: months }, (_, i) => {
       const d = new Date(startDate);
       d.setMonth(d.getMonth() + i);
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const dateStr = ymd(d);
       const amt = i === months - 1 ? baseAmount + remainder : baseAmount;
       const titledLabel = `${i + 1}/${months}`;
       const title = base.title ? `${base.title} (${titledLabel})` : `할부 ${titledLabel}`;

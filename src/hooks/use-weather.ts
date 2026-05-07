@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { WeatherData } from "@/types";
 import { useWeatherLocation } from "@/hooks/use-weather-location";
+import { monthBounds } from "@/lib/date-utils";
 
 const LS_KEY = "weather_cache_v3";
 
@@ -52,11 +53,7 @@ function isForecastExpired(cachedAt: string): boolean {
 export function useWeather(year: number, month: number) {
   const location = useWeatherLocation();
 
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const endDate = `${year}-${String(month).padStart(2, "0")}-${String(
-    lastDay
-  ).padStart(2, "0")}`;
+  const { start: startDate, end: endDate } = monthBounds(year, month);
 
   const locKey = `${location.lat.toFixed(3)},${location.lon.toFixed(3)}`;
 
@@ -156,9 +153,7 @@ export function useWeather(year: number, month: number) {
       const t = new Date(year, month - 1 + delta, 1);
       const ny = t.getFullYear();
       const nm = t.getMonth() + 1;
-      const sd = `${ny}-${String(nm).padStart(2, "0")}-01`;
-      const lastD = new Date(ny, nm, 0).getDate();
-      const ed = `${ny}-${String(nm).padStart(2, "0")}-${String(lastD).padStart(2, "0")}`;
+      const { start: sd, end: ed } = monthBounds(ny, nm);
       const cache = loadCache(locKey);
       // 이 월의 모든 날짜가 캐시에 있고 forecast 미만료 인지 검사 — 모두 OK 면 skip.
       const cur = new Date(sd + "T00:00:00");

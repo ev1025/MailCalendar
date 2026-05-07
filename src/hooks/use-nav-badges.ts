@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
 import { useAutoRefetch } from "@/hooks/use-auto-refetch";
+import { todayYmd } from "@/lib/date-utils";
 
 /**
  * 하단 네비/사이드바에 노출할 뱃지 카운트.
@@ -22,7 +23,7 @@ export function useNavBadges() {
   const refetch = async () => {
     if (!userId) return;
     const today = new Date();
-    const ymd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const ymd = todayYmd();
     const dayOfMonth = today.getDate();
 
     // 1) 오늘 포함 일정 — start_date <= today AND (end_date IS NULL ? start_date == today : end_date >= today)

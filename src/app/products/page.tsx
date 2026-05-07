@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import SearchInput from "@/components/ui/search-input";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import { useUrlStringParam } from "@/hooks/use-url-param";
+import { todayYmd } from "@/lib/date-utils";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { toDragProps } from "@/lib/dnd-types";
@@ -265,10 +266,7 @@ function ProductsPageInner() {
   };
 
   // expense_categories 룩업 (분류 → 가계부 카테고리 매핑).
-  const todayIso = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  })();
+  const todayIso = todayYmd();
   const { categories: expCategories } = useTransactions(todayIso, todayIso);
   const [statsTick, setStatsTick] = useState(0);
   const [search, setSearch] = useState("");

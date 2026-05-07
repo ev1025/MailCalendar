@@ -26,6 +26,7 @@ import {
 } from "@dnd-kit/core";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { parseYmd } from "@/lib/date-utils";
+import { KO_WEEKDAYS as WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 import type { CalendarEvent, WeatherData } from "@/types";
 import WeatherIcon from "./weather-icon";
 import { useHolidayMap } from "@/lib/holidays";
@@ -38,7 +39,6 @@ const BAR_H = 11;
 const BAR_GAP = 1;
 const BAR_STEP = BAR_H + BAR_GAP;
 const BAR_FONT = 7;
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 interface CalendarViewProps {
   year: number;

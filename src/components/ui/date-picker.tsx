@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { KO_WEEKDAYS as WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 import KoreanLunarCalendar from "korean-lunar-calendar";
 
 interface DatePickerProps {
@@ -29,8 +30,6 @@ interface DatePickerProps {
   placeholder?: string;
   min?: string; // "YYYY-MM-DD" — 이 날짜보다 과거는 선택 불가
 }
-
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 // 음력 월의 일수 (해당 연/월/윤달 여부를 넣어 day=1부터 순회하여 유효한 마지막 day를 찾음)
 function getLunarMonthDays(year: number, month: number, isLeap: boolean): number {

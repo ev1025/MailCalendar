@@ -12,6 +12,7 @@ import { Droplet, ArrowUp, ArrowDown } from "lucide-react";
 import { useWeatherLocation } from "@/hooks/use-weather-location";
 import { getWeatherIconUrl } from "@/lib/weather";
 import { parseYmd } from "@/lib/date-utils";
+import { KO_WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 import type { WeatherData } from "@/types";
 
 /**
@@ -118,7 +119,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
     if (!date) return "";
     const d = parseYmd(date);
     if (Number.isNaN(d.getTime())) return date;
-    const wk = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+    const wk = KO_WEEKDAYS[d.getDay()];
     return `${d.getMonth() + 1}월 ${d.getDate()}일 (${wk})`;
   }, [date]);
 
