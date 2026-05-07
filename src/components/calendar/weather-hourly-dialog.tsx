@@ -147,72 +147,61 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
       <DialogContent
         showBackButton={false}
         // FormPage(z-[70]) / 부모 DayDetail Dialog(z-50) 위에 모두 떠야 함.
-        // 부모 DayDetail 의 일정이 많아도 가려지도록 max-w xl 까지 확장.
-        // 모바일은 calc(100%-1rem) — 거의 풀너비.
+        // 모바일은 calc(100%-1rem) — 거의 풀너비. sm:max-w-xl.
+        // 그라디언트는 style 로 — bg-popover 를 background shorthand 가 덮어씀.
         className="max-w-[calc(100%-1rem)] sm:max-w-xl p-0 gap-0 overflow-hidden z-[80]"
-        // overlay 도 함께 z-[80] — 부모 다이얼로그 콘텐츠 위로 깔리지 않으면
-        // 일정이 많은 DayDetail 의 popup ring/border 가 hourly popup 을 가림.
         overlayClassName="z-[80]"
-        // overlay 클릭 시 명시적 close — Base UI dismissible 이 nested 환경에서
-        // 동작 안 하는 케이스 보강. stopPropagation 으로 부모(DayDetail) 까지
-        // 전파 안 되게 막아 부모 닫힘 cascade 방지.
         onOverlayClick={(e) => {
           e.stopPropagation();
           onOpenChange(false);
         }}
+        style={{
+          // 다이얼로그 자체에 그라디언트 — 내부 패널 없이 전체 배경으로 색감 통일.
+          // 상단 파랑(헤더 영역) → 중앙 거의 투명 → 하단 따뜻 톤(strip 영역).
+          // popover 의 솔리드 색을 fallback 으로 깔아 가독성 보장.
+          background:
+            "linear-gradient(180deg, oklch(0.7 0.13 250 / 0.14) 0%, oklch(0.7 0.13 250 / 0.04) 45%, oklch(0.75 0.13 30 / 0.07) 100%), var(--popover)",
+        }}
       >
-        <div className="contents">
-          <DialogHeader className="px-4 pt-5 pb-3 shrink-0">
-            <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
-          </DialogHeader>
+        <DialogHeader className="px-4 pt-5 pb-3 shrink-0">
+          <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
+        </DialogHeader>
 
-          {/* 단일 통합 패널 — 두 박스로 분리하지 않고 한 카드 안에서
-              헤어라인 디바이더로만 hero·strip 영역 구분. 배경은 위→아래 한 방향
-              세로 그라디언트(상단 파랑 → 하단 따뜻 톤)로 두 영역에 연속적인 색감 부여. */}
-          <div className="px-4 pb-4">
-          <div
-            className="relative w-full min-w-0 rounded-2xl overflow-hidden"
-            style={{
-              background:
-                "linear-gradient(180deg, oklch(0.7 0.13 250 / 0.14) 0%, oklch(0.7 0.13 250 / 0.04) 45%, oklch(0.75 0.13 30 / 0.06) 100%), oklch(from var(--card) l c h / 0.5)",
-            }}
-          >
-
-          {/* hero — 아이콘 + 큰 기온, 한 줄 메타(설명 · ↑최고 · ↓최저).
-              세로 stack 압축으로 strip 과 시각 무게 균형 맞춤. */}
-          {weather && (
-            <div className="flex w-full items-center gap-4 px-5 pt-4 pb-3.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={getWeatherIconUrl(weather.weather_icon)}
-                alt={weather.weather_description}
-                className="h-14 w-14 shrink-0 drop-shadow-sm"
-              />
-              <div className="flex flex-col gap-1 min-w-0 flex-1">
-                <span className="text-3xl font-bold tabular-nums leading-none text-foreground">
-                  {Math.round((weather.temperature_max + weather.temperature_min) / 2)}°
+        {/* hero — 아이콘 + 큰 기온, 한 줄 메타(설명 · ↑최고 · ↓최저).
+            다이얼로그 그라디언트 위에 직접 얹음(별도 패널 없음). */}
+        {weather && (
+          <div className="flex w-full items-center gap-4 px-5 pb-3.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={getWeatherIconUrl(weather.weather_icon)}
+              alt={weather.weather_description}
+              className="h-14 w-14 shrink-0 drop-shadow-sm"
+            />
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
+              <span className="text-3xl font-bold tabular-nums leading-none text-foreground">
+                {Math.round((weather.temperature_max + weather.temperature_min) / 2)}°
+              </span>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs tabular-nums">
+                <span className="text-foreground/70">{weather.weather_description}</span>
+                <span className="text-foreground/30">·</span>
+                <span className="flex items-center gap-0.5 text-rose-500 dark:text-rose-400">
+                  <ArrowUp className="h-3 w-3" />
+                  {weather.temperature_max}°
                 </span>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs tabular-nums">
-                  <span className="text-muted-foreground">{weather.weather_description}</span>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="flex items-center gap-0.5 text-red-500">
-                    <ArrowUp className="h-3 w-3" />
-                    {weather.temperature_max}°
-                  </span>
-                  <span className="flex items-center gap-0.5 text-blue-500">
-                    <ArrowDown className="h-3 w-3" />
-                    {weather.temperature_min}°
-                  </span>
-                </div>
+                <span className="flex items-center gap-0.5 text-sky-500 dark:text-sky-400">
+                  <ArrowDown className="h-3 w-3" />
+                  {weather.temperature_min}°
+                </span>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* hero ↔ strip 사이 헤어라인 — 풀폭이 아닌 좌우 여백 두어 절단감 줄임. */}
-          {weather && <div className="mx-5 h-px bg-foreground/8 dark:bg-foreground/12" />}
+        {/* hero ↔ strip 사이 헤어라인 — 좌우 여백 둔 절제된 디바이더. */}
+        {weather && <div className="mx-5 h-px bg-foreground/10" />}
 
-          {/* strip — 같은 패널 내부에서 가로 스크롤만 처리. */}
-          <div className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]">
+        {/* strip — 다이얼로그 그라디언트 위에 직접 가로 스크롤. */}
+        <div className="overflow-x-auto overflow-y-hidden py-3 pb-4 [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3 px-5">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -242,31 +231,29 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                     <div
                       key={e.time}
                       className={`flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5 min-w-[54px] ${
-                        isNow ? "bg-primary/10 ring-1 ring-primary/20" : ""
+                        // 그라디언트 배경 위에서 isNow 강조 — primary 보다는 white/fg 로
+                        // 자연스럽게 떠오르는 느낌. 라이트모드에선 흰 카드, 다크모드는 fg/8.
+                        isNow ? "bg-white/55 dark:bg-foreground/10 ring-1 ring-foreground/15 shadow-sm" : ""
                       }`}
                     >
-                      {/* 시각 — 오전/오후 N시. 살짝 축소. */}
-                      <span className="text-[10px] font-medium tabular-nums text-muted-foreground whitespace-nowrap">
+                      {/* 시각 — 그라디언트 위에선 muted 가 너무 흐릿해 fg/65 로 한 단계 진하게. */}
+                      <span className="text-[10px] font-medium tabular-nums text-foreground/65 whitespace-nowrap">
                         {formatHourKo(hour)}
                       </span>
-                      {/* 아이콘 — 한 단계 작게(36px → 32px). */}
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={getWeatherIconUrl(e.weather_icon)}
                         alt={e.weather_description}
                         className="h-8 w-8"
                       />
-                      {/* 기온 — 가장 강조이지만 한 단계 축소. */}
-                      <span className="mt-0.5 text-sm font-bold tabular-nums leading-none">
+                      {/* 기온 — 가장 강조. */}
+                      <span className="mt-0.5 text-sm font-bold tabular-nums leading-none text-foreground">
                         {e.temperature}°
                       </span>
-                      {/* 강수확률 — 아이콘과 값 사이 gap-0.5 로 가까이. 사이즈 한 단계 더 축소.
-                          데이터 없는 날(과거 등) 도 "0%" 로 통일 표기 — 사용자 일관성.
-                          물방울 = 채워진 sky-400(하늘색), 숫자 = muted-foreground 로
-                          시각적 위계 분리(아이콘=악센트, 숫자=중립). */}
+                      {/* 강수확률 — 채워진 sky-400 + 숫자 fg/55. */}
                       <span className="mt-1 flex items-center gap-0.5 text-[8px] tabular-nums leading-none">
-                        <Droplet className="h-2 w-2 shrink-0 text-sky-400" fill="currentColor" />
-                        <span className="text-muted-foreground">{e.precipitation_probability ?? 0}%</span>
+                        <Droplet className="h-2 w-2 shrink-0 text-sky-500 dark:text-sky-400" fill="currentColor" />
+                        <span className="text-foreground/55">{e.precipitation_probability ?? 0}%</span>
                       </span>
                     </div>
                   );
@@ -274,9 +261,6 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               </div>
             )}
           </div>
-          </div>
-          </div>
-        </div>
       </DialogContent>
     </Dialog>
   );
