@@ -165,13 +165,15 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
           </DialogHeader>
 
-          {/* 두 섹션을 둥근 사각형 프레임으로 분리해 구조화된 인상. 모바일 viewport
-              안에서만 프레임이 보이도록 컴팩트한 padding/사이즈. */}
-          <div className="flex flex-col gap-2 px-3 pb-3">
+          {/* 두 섹션을 둥근 사각형 프레임으로 분리해 구조화된 인상.
+              w-full + min-w-0 로 부모 grid 트랙 안에 가둠 — 자식 콘텐츠(스트립 cards)가
+              아무리 길어도 프레임 자체는 viewport 폭만큼만 그려지게.
+              overflow 와 결합되어 프레임 안에서만 가로 스크롤. */}
+          <div className="flex w-full min-w-0 flex-col gap-2 px-3 pb-3">
 
           {/* 1) 일일 요약 — 컴팩트 padding/icon. */}
           {weather && (
-            <div className="flex items-center gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.03] px-3 py-2">
+            <div className="flex w-full items-center gap-3 rounded-2xl border border-foreground/20 bg-foreground/[0.05] px-3 py-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={getWeatherIconUrl(weather.weather_icon)}
@@ -197,9 +199,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           )}
 
           {/* 2) 시간별 가로 스크롤 스트립. 동일 프레임 디자인.
-              overflow-x-auto + rounded + border 를 한 div 에 같이 두면 iOS Safari
-              에서 터치 가로 스크롤이 안 먹음 → 프레임(보더) 과 스크롤(overflow) div 를 분리. */}
-          <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] overflow-hidden">
+              w-full + overflow-hidden 으로 viewport 폭만 차지. 안쪽 div 에 overflow-x-auto
+              + touch-action:pan-x 로 가로 스크롤 — iOS Safari 호환. */}
+          <div className="w-full min-w-0 rounded-2xl border border-foreground/20 bg-foreground/[0.05] overflow-hidden">
           <div className="overflow-x-auto overflow-y-hidden py-2 [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3 px-5">

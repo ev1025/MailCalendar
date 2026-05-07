@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { motion } from "motion/react";
 import { Loader2, ArrowDown } from "lucide-react";
 
 /**
@@ -91,24 +92,36 @@ export default function PullToRefresh({
   const indicatorY = refreshing ? threshold : pull;
   const opacity = Math.min(pull / threshold, 1);
 
+  // 아이콘 스케일 — pull 진행률에 비례. ready 상태일 때 1.2 로 살짝 부풀음.
+  const iconScale = ready ? 1.2 : 0.6 + Math.min(pull / threshold, 1) * 0.4;
+
   return (
     <div ref={containerRef} className={`relative ${className ?? ""}`}>
-      {/* 인디케이터 — absolute 로 떠 있어 콘텐츠 흐름 영향 없음. */}
+      {/* 인디케이터 — absolute 로 떠 있어 콘텐츠 흐름 영향 없음.
+          높이/opacity 는 손가락 이동에 즉각 반응(transition X), 릴리즈/리프레시
+          시작 시점에만 spring 으로 자리잡음. */}
       <div
         aria-hidden={!refreshing && pull === 0}
         className="pointer-events-none absolute left-0 right-0 top-0 z-10 flex items-center justify-center md:hidden"
         style={{
           height: indicatorY,
           opacity,
-          transition: refreshing || pull === 0 ? "all 200ms ease-out" : undefined,
+          transition: refreshing || pull === 0 ? "height 250ms cubic-bezier(0.34,1.56,0.64,1), opacity 200ms ease-out" : undefined,
         }}
       >
         {refreshing ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         ) : (
-          <ArrowDown
-            className={`h-4 w-4 text-muted-foreground transition-transform ${ready ? "rotate-180" : ""}`}
-          />
+          <motion.div
+            animate={{ scale: iconScale, rotate: ready ? 180 : 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 22 }}
+          >
+            <ArrowDown
+              className={`h-4 w-4 transition-colors ${
+                ready ? "text-primary" : "text-muted-foreground"
+              }`}
+            />
+          </motion.div>
         )}
       </div>
       {children}
