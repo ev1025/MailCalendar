@@ -191,7 +191,7 @@ export default function DatePicker({ value, onChange, className, placeholder = "
           <div className="flex flex-col gap-2">
             {/* 헤더: 년/월 각각 클릭 + 윤달 표시 */}
             <div className="flex items-center justify-between">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goPrev}>
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goPrev}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="flex items-center gap-0.5">
@@ -202,7 +202,7 @@ export default function DatePicker({ value, onChange, className, placeholder = "
                   {isLunar ? lunarMonth : viewMonth + 1}월{isLunar && isLeapMonth ? " (윤달)" : ""}
                 </button>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goNext}>
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goNext}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>

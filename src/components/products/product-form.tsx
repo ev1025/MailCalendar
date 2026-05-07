@@ -260,7 +260,7 @@ export default function ProductForm({
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex h-9 w-9 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   title="새 탭에서 열기"
                   aria-label="URL 열기"
                   onClick={(e) => e.stopPropagation()}

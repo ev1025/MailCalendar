@@ -970,14 +970,21 @@ export default function TagInput({
                         key={c}
                         type="button"
                         onClick={() => setEditColor(c)}
-                        className={`h-7 w-7 rounded-full transition-all ${
+                        // h-9(36px) — iOS HIG 근접. 색칠된 부분만 8x8 보이고 클릭 영역은 9x9.
+                        className={`relative inline-flex items-center justify-center h-9 w-9 rounded-full transition-all ${
                           editColor.toLowerCase() === c.toLowerCase()
-                            ? "ring-2 ring-offset-2 ring-primary scale-110"
+                            ? "ring-2 ring-offset-2 ring-primary"
                             : "hover:scale-110"
                         }`}
-                        style={{ backgroundColor: c }}
-                        aria-label={c}
-                      />
+                        aria-label={`색상 ${c}`}
+                        aria-pressed={editColor.toLowerCase() === c.toLowerCase()}
+                      >
+                        <span
+                          aria-hidden
+                          className="block h-7 w-7 rounded-full"
+                          style={{ backgroundColor: c }}
+                        />
+                      </button>
                     ))}
                     <button
                       type="button"

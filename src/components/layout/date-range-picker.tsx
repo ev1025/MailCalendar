@@ -215,7 +215,7 @@ export default function DateRangePicker({ startDate, endDate, onChange }: Props)
             <button
               type="button"
               onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-              className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent"
+              className="h-9 w-9 flex items-center justify-center rounded hover:bg-accent"
               aria-label="이전 달"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -226,7 +226,7 @@ export default function DateRangePicker({ startDate, endDate, onChange }: Props)
             <button
               type="button"
               onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-              className="h-7 w-7 flex items-center justify-center rounded hover:bg-accent"
+              className="h-9 w-9 flex items-center justify-center rounded hover:bg-accent"
               aria-label="다음 달"
             >
               <ChevronRight className="h-4 w-4" />
