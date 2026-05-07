@@ -25,6 +25,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useState, useMemo, useRef, useEffect } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import type { CalendarEvent, WeatherData } from "@/types";
 import WeatherIcon from "./weather-icon";
 import { useHolidayMap } from "@/lib/holidays";
@@ -297,7 +298,7 @@ export default function CalendarView({
       let ne: string | null = null;
       if (ev.end_date) {
         const dur = differenceInDays(parseISO(ev.end_date), parseISO(ev.start_date));
-        const nd = new Date(t + "T00:00:00");
+        const nd = parseYmd(t);
         nd.setDate(nd.getDate() + dur);
         ne = format(nd, "yyyy-MM-dd");
       }

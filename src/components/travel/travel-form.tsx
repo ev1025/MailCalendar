@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import FormPage from "@/components/ui/form-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -500,7 +501,7 @@ export default function TravelForm({
               <Label className="text-xs text-muted-foreground">가본 날</Label>
               <div className="flex flex-wrap gap-1.5">
                 {item.visited_dates.map((d) => {
-                  const dt = new Date(d + "T00:00:00");
+                  const dt = parseYmd(d);
                   const label = `${dt.getFullYear()}.${String(dt.getMonth() + 1).padStart(2, "0")}.${String(dt.getDate()).padStart(2, "0")}`;
                   return (
                     <div key={d} className="group/vd relative">

@@ -165,32 +165,41 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
           </DialogHeader>
 
-          {/* 두 섹션을 둥근 사각형 프레임으로 분리해 구조화된 인상.
-              w-full + min-w-0 로 부모 grid 트랙 안에 가둠 — 자식 콘텐츠(스트립 cards)가
-              아무리 길어도 프레임 자체는 viewport 폭만큼만 그려지게.
-              overflow 와 결합되어 프레임 안에서만 가로 스크롤. */}
-          <div className="flex w-full min-w-0 flex-col gap-2 px-3 pb-3">
+          {/* 두 섹션을 살짝 다른 톤의 카드로 분리해 구조화된 인상 (보더 없이). */}
+          <div className="flex w-full min-w-0 flex-col gap-3 px-4 pb-4">
 
-          {/* 1) 일일 요약 — 컴팩트 padding/icon. */}
+          {/* 1) 일일 요약 — "오늘의 날씨" 미니 hero card.
+              현재 기온을 가장 크게(text-5xl), 한글 설명·최고/최저는 우측 보조.
+              큰 아이콘은 왼쪽, primary tint 의 부드러운 그라디언트 배경. */}
           {weather && (
-            <div className="flex w-full items-center gap-3 rounded-2xl border border-foreground/20 bg-foreground/[0.05] px-3 py-2">
+            <div
+              className="relative flex w-full items-center gap-4 rounded-2xl px-5 py-4 overflow-hidden"
+              style={{
+                background:
+                  "radial-gradient(circle at 0% 0%, oklch(0.7 0.13 250 / 0.18), transparent 60%), radial-gradient(circle at 100% 100%, oklch(0.75 0.13 30 / 0.12), transparent 55%), oklch(from var(--card) l c h / 0.6)",
+              }}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={getWeatherIconUrl(weather.weather_icon)}
                 alt={weather.weather_description}
-                className="h-12 w-12 shrink-0"
+                className="h-16 w-16 shrink-0 drop-shadow-sm"
               />
               <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                <span className="text-sm font-medium text-foreground truncate">
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   {weather.weather_description}
                 </span>
-                <div className="flex items-center gap-3 text-sm tabular-nums">
+                <span className="text-3xl font-bold tabular-nums leading-none text-foreground">
+                  {Math.round((weather.temperature_max + weather.temperature_min) / 2)}°
+                </span>
+                <div className="mt-1 flex items-center gap-2 text-xs tabular-nums">
                   <span className="flex items-center gap-0.5 text-red-500">
-                    <ArrowUp className="h-3.5 w-3.5" />
+                    <ArrowUp className="h-3 w-3" />
                     {weather.temperature_max}°
                   </span>
+                  <span className="text-muted-foreground/40">·</span>
                   <span className="flex items-center gap-0.5 text-blue-500">
-                    <ArrowDown className="h-3.5 w-3.5" />
+                    <ArrowDown className="h-3 w-3" />
                     {weather.temperature_min}°
                   </span>
                 </div>
@@ -198,11 +207,10 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             </div>
           )}
 
-          {/* 2) 시간별 가로 스크롤 스트립. 동일 프레임 디자인.
-              w-full + overflow-hidden 으로 viewport 폭만 차지. 안쪽 div 에 overflow-x-auto
-              + touch-action:pan-x 로 가로 스크롤 — iOS Safari 호환. */}
-          <div className="w-full min-w-0 rounded-2xl border border-foreground/20 bg-foreground/[0.05] overflow-hidden">
-          <div className="overflow-x-auto overflow-y-hidden py-2 [touch-action:pan-x]">
+          {/* 2) 시간별 가로 스크롤 스트립. 보더 없이 살짝 다른 배경 톤만으로 구분.
+              overflow 분리 — outer rounded + inner overflow-x-auto 로 iOS Safari 호환. */}
+          <div className="w-full min-w-0 rounded-2xl bg-foreground/[0.04] overflow-hidden">
+          <div className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3 px-5">
                 {Array.from({ length: 8 }).map((_, i) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import {
   Select,
   SelectContent,
@@ -100,7 +101,7 @@ export function MonthlyNthButton({
 }) {
   const startInfo = (() => {
     if (!startDate) return null;
-    const d = new Date(startDate + "T00:00:00");
+    const d = parseYmd(startDate);
     if (Number.isNaN(d.getTime())) return null;
     return { week: Math.ceil(d.getDate() / 7), weekday: d.getDay() };
   })();

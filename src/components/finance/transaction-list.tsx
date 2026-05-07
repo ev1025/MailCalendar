@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import { AnimatePresence, motion } from "motion/react";
 import { Trash2, Pencil } from "lucide-react";
 import {
@@ -54,7 +55,7 @@ export default function TransactionList({
       {sortedDates.map((date) => (
         <div key={date}>
           <h3 className="mb-2 text-sm font-medium text-muted-foreground tabular-nums">
-            {format(new Date(date + "T00:00:00"), "M월 d일 (EEEE)", {
+            {format(parseYmd(date), "M월 d일 (EEEE)", {
               locale: ko,
             })}
           </h3>
@@ -224,7 +225,7 @@ export default function TransactionList({
               fields={[
                 {
                   label: "일자",
-                  value: format(new Date(deletingTx.date + "T00:00:00"), "yyyy년 M월 d일 (EEE)", { locale: ko }),
+                  value: format(parseYmd(deletingTx.date), "yyyy년 M월 d일 (EEE)", { locale: ko }),
                   valueClassName: "tabular-nums",
                 },
                 {

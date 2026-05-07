@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import { Trash2, Copy, CalendarPlus, CalendarMinus, Check } from "lucide-react";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import ListToolbar from "@/components/ui/list-toolbar";
@@ -165,7 +166,7 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
     if (!p.end_date) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const end = new Date(p.end_date + "T00:00:00");
+    const end = parseYmd(p.end_date);
     return end.getTime() < today.getTime();
   };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +40,7 @@ function toISODate(d: Date): string {
 }
 
 function parseISO(s: string): Date {
-  return new Date(s + "T00:00:00");
+  return parseYmd(s);
 }
 
 function startOfMonth(d: Date): Date {

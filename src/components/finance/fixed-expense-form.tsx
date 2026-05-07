@@ -19,7 +19,7 @@ import { FormField } from "@/components/ui/form-field";
 import DatePicker from "@/components/ui/date-picker";
 import RepeatCountControls from "@/components/calendar/repeat-count-controls";
 import { FORM_INPUT_PRIMARY, FORM_INPUT_COMPACT, FORM_LABEL } from "@/lib/form-classes";
-import { todayYmd, ymd, nthWeekday } from "@/lib/date-utils";
+import { todayYmd, ymd, nthWeekday, parseYmd } from "@/lib/date-utils";
 import { usePaymentMethods } from "@/hooks/use-payment-methods";
 import type { ExpenseCategory } from "@/types";
 import type { FixedExpense } from "@/hooks/use-fixed-expenses";
@@ -163,7 +163,7 @@ export default function FixedExpenseForm({
   // 그 외: anchorDate 그대로.
   const repeatStartDate = (() => {
     if (repeat === "monthly" && monthlyNth) {
-      const a = new Date(anchorDate + "T00:00:00");
+      const a = parseYmd(anchorDate);
       if (Number.isNaN(a.getTime())) return anchorDate;
       const thisMonth = nthWeekday(a.getFullYear(), a.getMonth(), monthlyNth.weekday, monthlyNth.week);
       if (thisMonth.getTime() >= a.getTime()) return ymd(thisMonth);
@@ -201,7 +201,7 @@ export default function FixedExpenseForm({
     }
 
     // day_of_month 는 anchorDate 에서 파생 (구 컬럼 호환). anchor_date 는 항상 저장.
-    const anchorObj = new Date(anchorDate + "T00:00:00");
+    const anchorObj = parseYmd(anchorDate);
     const dayOfMonth = Number.isNaN(anchorObj.getTime()) ? 1 : anchorObj.getDate();
 
     const { error } = await onSave(

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PlanTaskRow from "@/components/travel/plan-task-row";
@@ -53,14 +54,14 @@ const TRANSPORT_RESET = {
 } as const;
 
 function addDaysISO(iso: string, days: number): string {
-  const d = new Date(iso + "T00:00:00");
+  const d = parseYmd(iso);
   d.setDate(d.getDate() + days);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function daysBetween(startIso: string, endIso: string): number {
-  const s = new Date(startIso + "T00:00:00");
-  const e = new Date(endIso + "T00:00:00");
+  const s = parseYmd(startIso);
+  const e = parseYmd(endIso);
   return Math.max(0, Math.round((e.getTime() - s.getTime()) / 86400000));
 }
 
@@ -161,7 +162,7 @@ export default function PlanDetail({ planId, onBack }: Props) {
     const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     const baseIso = plan?.start_date ?? todayIso;
     const iso = addDaysISO(baseIso, dayIndex);
-    const d = new Date(iso + "T00:00:00");
+    const d = parseYmd(iso);
     return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
   };
 

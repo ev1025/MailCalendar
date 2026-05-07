@@ -18,7 +18,7 @@ import CategoryChart from "@/components/finance/category-chart";
 import FixedExpenseManager from "@/components/finance/fixed-expense-manager";
 import { Skeleton } from "@/components/ui/skeleton";
 import PullToRefresh from "@/components/ui/pull-to-refresh";
-import { monthBounds } from "@/lib/date-utils";
+import { monthBounds, parseYmd } from "@/lib/date-utils";
 import { formatMoney } from "@/lib/format-money";
 import {
   Dialog,
@@ -49,7 +49,7 @@ function FinancePageInner() {
   const [endDate, setEndDate] = useUrlStringParam("e", defaultEnd);
 
   // 고정비 자동 적용 시 사용할 (year, month) — startDate 가 속한 달 기준.
-  const startObj = new Date(startDate + "T00:00:00");
+  const startObj = parseYmd(startDate);
   const year = startObj.getFullYear();
   const month = startObj.getMonth() + 1;
 

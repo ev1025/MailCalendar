@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import { ArrowUp, ArrowDown, Filter, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import FilterPanel from "@/components/ui/filter-panel";
@@ -25,7 +26,7 @@ type SortDir = "asc" | "desc";
 type SortKey = { field: SortField; dir: SortDir };
 
 function parseDay(dateStr: string) {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = parseYmd(dateStr);
   return {
     month: d.getMonth() + 1,
     day: d.getDate(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import {
   Dialog,
   DialogContent,
@@ -183,7 +184,7 @@ export default function DayDetail({
 
   if (!date) return null;
 
-  const d = new Date(date + "T00:00:00");
+  const d = parseYmd(date);
   const dateLabel = format(d, "yyyy년 M월 d일 (EEEE)", { locale: ko });
 
   const dayEvents = events.filter((ev) => {

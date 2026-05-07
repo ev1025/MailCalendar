@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,7 @@ interface EventDetailProps {
 }
 
 function formatDateShort(dateStr: string) {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = parseYmd(dateStr);
   const yy = String(d.getFullYear()).slice(2);
   return `${yy}/${d.getMonth() + 1}/${d.getDate()}(${format(d, "EEE", { locale: ko })})`;
 }

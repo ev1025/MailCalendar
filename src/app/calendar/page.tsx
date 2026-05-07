@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import { parseYmd } from "@/lib/date-utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import {
@@ -170,10 +171,10 @@ function CalendarPageInner() {
 
   // 달력에서 날짜 클릭 → 일정 또는 공휴일 있으면 상세, 없으면 새 일정
   const handleDateClick = (date: string) => {
-    const d = new Date(date + "T00:00:00");
+    const d = parseYmd(date);
     const hasEvents = events.some((ev) => {
-      const start = new Date(ev.start_date + "T00:00:00");
-      const end = ev.end_date ? new Date(ev.end_date + "T00:00:00") : start;
+      const start = parseYmd(ev.start_date);
+      const end = ev.end_date ? parseYmd(ev.end_date) : start;
       return d >= start && d <= end;
     });
     const hasHoliday = !!getHolidayMap(d.getFullYear())[date];
@@ -429,7 +430,7 @@ function CalendarPageInner() {
         weather={weatherMap[selectedDate]}
         tags={tags}
         visibleUserIds={visibleUserIds}
-        holiday={selectedDate ? getHolidayMap(new Date(selectedDate + "T00:00:00").getFullYear())[selectedDate] : undefined}
+        holiday={selectedDate ? getHolidayMap(parseYmd(selectedDate).getFullYear())[selectedDate] : undefined}
         onAddEvent={handleAddFromDay}
         onEditEvent={(ev) => { setDayDetailOpen(false); setEditing(ev); setFormOpen(true); }}
         onDeleteEvent={async (id) => { await handleDelete(id); }}
