@@ -220,12 +220,13 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           </div>
         )}
 
-        {/* strip 패널 — px-5 py-3 을 패널 자체에 부여. scroll 자식은 panel 의
-            content box(= 패널 폭 - 40)만 채움. padding region 은 panel box 일부라
-            scroll 어느 위치에서도 visible 유지 — chromium 의 padding-on-scroll
-            누락 버그 회피. */}
-        <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden px-5 py-3">
-        <div className="overflow-x-auto overflow-y-hidden [touch-action:pan-x]">
+        {/* strip 패널 — Apple Weather 스타일 edge fade.
+            mask-image 가 좌우 ~28px 를 transparent → opaque 로 fade → 카드가
+            panel 모서리에 닿기 전 자연스럽게 사라짐. scroll 위치 무관하게 적용.
+            Tailwind arbitrary value 로 표현 — 일부 브라우저에서 inline style
+            mask-image 누락되는 케이스 회피. */}
+        <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden py-3">
+        <div className="overflow-x-auto overflow-y-hidden [touch-action:pan-x] [mask-image:linear-gradient(to_right,transparent_0,black_28px,black_calc(100%-28px),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0,black_28px,black_calc(100%-28px),transparent_100%)]">
             {loading && (
               <div className="flex gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
