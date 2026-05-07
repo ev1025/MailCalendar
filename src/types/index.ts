@@ -175,6 +175,9 @@ export interface TravelPlanTask {
   // transit 모드로 선택된 조합 경로의 상세 (도보·버스·지하철 혼합 step 배열).
   // 사용자가 picker 대중교통 탭에서 특정 경로를 고르면 여기 저장.
   transport_route?: TransportRouteStep[] | null;
+  // 사용자가 "여기 다녀왔음" 체크 시 ISO timestamp. null = 미완료.
+  // 옵셔널 — 구 DB 에 컬럼 없으면 그래도 동작(완료 표시는 미동작).
+  completed_at?: string | null;
   created_at: string;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { Trash2 } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import { formatMinutes } from "@/lib/travel/providers";
 import { addMinutes, formatTime } from "@/lib/travel/time";
@@ -21,6 +21,8 @@ interface Props {
   task: TravelPlanTask;
   onClick: () => void;
   onDelete?: () => void;
+  /** 토글 시 호출 — completed_at 저장은 부모(plan-detail) 가 담당. */
+  onToggleComplete?: () => void;
   dragListeners?: React.HTMLAttributes<HTMLButtonElement>;
   dragAttributes?: React.HTMLAttributes<HTMLButtonElement>;
   expectedTime?: string | null;
@@ -30,10 +32,12 @@ function PlanTaskRowImpl({
   task,
   onClick,
   onDelete,
+  onToggleComplete,
   dragListeners,
   dragAttributes,
   expectedTime,
 }: Props) {
+  const isCompleted = !!task.completed_at;
   const { colors: categoryColors } = useTravelCategories();
   const categoryColor = task.category ? categoryColors[task.category] : undefined;
   // expectedTime 은 체인 계산 결과 (중간 task) 또는 null (첫 task).
@@ -57,7 +61,9 @@ function PlanTaskRowImpl({
           onClick();
         }
       }}
-      className="group flex items-stretch gap-0 rounded-md border bg-card hover:bg-accent/50 transition-colors cursor-pointer select-none"
+      className={`group flex items-stretch gap-0 rounded-md border bg-card hover:bg-accent/50 transition-colors cursor-pointer select-none ${
+        isCompleted ? "opacity-55" : ""
+      }`}
     >
       {/* 드래그바 — 탭하면 메뉴, 드래그하면 이동. RowActionPopover 통일 패턴. */}
       {dragListeners !== undefined && (
@@ -94,6 +100,27 @@ function PlanTaskRowImpl({
             ]}
           />
         </div>
+      )}
+
+      {/* 완료 체크 — 원형 토글. 클릭은 행 onClick(편집) 막고 onToggleComplete 만 발화.
+          미완료: 회색 보더 빈 원, 완료: primary 채움 + 체크 아이콘. */}
+      {onToggleComplete && (
+        <button
+          type="button"
+          aria-label={isCompleted ? "미완료로 표시" : "다녀왔음으로 표시"}
+          aria-pressed={isCompleted}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete();
+          }}
+          className={`shrink-0 self-center mx-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${
+            isCompleted
+              ? "bg-primary border-primary text-primary-foreground"
+              : "border-foreground/30 hover:border-primary/60 hover:bg-primary/5"
+          }`}
+        >
+          {isCompleted && <Check className="h-3 w-3" strokeWidth={3} />}
+        </button>
       )}
 
       {/* 본문 — 좌우 2개 컨테이너.
@@ -144,7 +171,11 @@ function PlanTaskRowImpl({
                 {task.category}
               </span>
             )}
-            <span className="text-xs md:text-sm font-medium truncate">
+            <span
+              className={`text-xs md:text-sm font-medium truncate ${
+                isCompleted ? "line-through" : ""
+              }`}
+            >
               {task.place_name || "(장소 미입력)"}
             </span>
           </div>

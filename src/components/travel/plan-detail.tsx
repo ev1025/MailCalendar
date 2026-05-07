@@ -12,6 +12,7 @@ import PlanLegCard from "@/components/travel/plan-leg-card";
 import PlanRouteMap from "@/components/travel/plan-route-map";
 import PlanDetailHeader from "@/components/travel/plan-detail-header";
 import PlanDateRange from "@/components/travel/plan-date-range";
+import PlanDaySummary from "@/components/travel/plan-day-summary";
 import { useTravelPlans } from "@/hooks/use-travel-plans";
 import { useTravelPlanTasks } from "@/hooks/use-travel-plan-tasks";
 import { sortTasks } from "@/lib/travel/sort-tasks";
@@ -85,11 +86,13 @@ function SortableTaskRow({
   task,
   onClick,
   onDelete,
+  onToggleComplete,
   expectedTime,
 }: {
   task: TravelPlanTask;
   onClick: () => void;
   onDelete: () => void;
+  onToggleComplete?: () => void;
   expectedTime?: string | null;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -107,6 +110,7 @@ function SortableTaskRow({
         task={task}
         onClick={onClick}
         onDelete={onDelete}
+        onToggleComplete={onToggleComplete}
         expectedTime={expectedTime}
         dragListeners={dragProps.listeners}
         dragAttributes={dragProps.attributes}
@@ -116,7 +120,7 @@ function SortableTaskRow({
 }
 
 export default function PlanDetail({ planId, onBack }: Props) {
-  const { plans, loading: plansLoading, updatePlan } = useTravelPlans();
+  const { plans, loading: plansLoading, updatePlan, duplicatePlan } = useTravelPlans();
   const plan = plans.find((p) => p.id === planId);
   const { tasks, addTask, updateTask, deleteTask } = useTravelPlanTasks(planId);
 
@@ -169,6 +173,18 @@ export default function PlanDetail({ planId, onBack }: Props) {
   const totalDays = plan?.start_date && plan?.end_date
     ? daysBetween(plan.start_date, plan.end_date) + 1
     : 0;
+
+  // 헤더 합계 — 첫 task 는 출발지라 transport 없음. 모든 task 의 transport 시간 합산.
+  const tripTotals = useMemo(() => {
+    const totalTransitMin = Math.round(
+      sorted.reduce((sum, t) => sum + (t.transport_duration_sec ?? 0), 0) / 60,
+    );
+    return {
+      totalDays,
+      totalTasks: sorted.length,
+      totalTransitMin,
+    };
+  }, [sorted, totalDays]);
 
   const visibleLegs = useMemo(() => {
     if (segment.mode === "all") return legsWithCoords;
@@ -359,6 +375,12 @@ export default function PlanDetail({ planId, onBack }: Props) {
         title={plan.title}
         onBack={onBack}
         onRename={(next) => updatePlan(plan.id, { title: next })}
+        onDuplicate={async () => {
+          const res = await duplicatePlan(plan.id);
+          // 복제 후 원본에 머무름 — 사용자가 의도해서 명시 이동 가능. 토스트는 hook 측에서 묵음.
+          void res;
+        }}
+        totals={tripTotals}
       />
 
       <div>
@@ -416,6 +438,9 @@ export default function PlanDetail({ planId, onBack }: Props) {
                         <h3 className="text-sm font-semibold">{formatDayLabel(day)}</h3>
                         <div className="flex-1 h-px bg-border" />
                       </div>
+                      {/* 일자별 한 줄 요약 — task 수 / 체류 / 이동 / 시작→종료 시각.
+                          사용자가 일자 윤곽을 한눈에 잡도록. 빈 일자엔 자동 숨김. */}
+                      <PlanDaySummary dayTasks={dayTasks} expectedTimes={expectedTimes} />
                       <DayDropZone day={day}>
                         {dayTasks.length > 0 && (
                           <div className="flex flex-col gap-1.5">
@@ -446,6 +471,11 @@ export default function PlanDetail({ planId, onBack }: Props) {
                                     task={t}
                                     onClick={() => openEditSheet(t)}
                                     onDelete={() => deleteTask(t.id)}
+                                    onToggleComplete={() =>
+                                      updateTask(t.id, {
+                                        completed_at: t.completed_at ? null : new Date().toISOString(),
+                                      })
+                                    }
                                     expectedTime={
                                       expectedTimes[t.id]?.predicted
                                         ? expectedTimes[t.id]?.time ?? null

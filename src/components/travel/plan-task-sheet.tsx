@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { MapPin } from "lucide-react";
 import FormPage from "@/components/ui/form-page";
 import { Input } from "@/components/ui/input";
@@ -106,6 +107,9 @@ export default function PlanTaskSheet({
   const { tags: allEventTags, addTag: addEventTag, deleteTag: deleteEventTag, updateTagColor: updateEventTagColor } =
     useEventTags();
 
+  // 시트 열릴 때의 초기 폼 값 — isDirty 비교용. open 트리거 useEffect 에서 갱신.
+  const initialRef = useRef<SheetDraft | null>(null);
+
   const [dayIndex, setDayIndex] = useState(defaultDayIndex);
   const [startTime, setStartTime] = useState("");
   const [stayMinutes, setStayMinutes] = useState("");
@@ -172,6 +176,22 @@ export default function PlanTaskSheet({
       setSelectedTags(d.tags ?? []);
       setContent(d.content);
     }
+    // initialRef 는 task 가 있을 때 task 값, 없으면 빈 폼. draft 복원 후라도 비교 기준은
+    // "이번 세션 시작 시점의 폼 값" 이라 setTimeout 으로 다음 tick 에 캡처.
+    setTimeout(() => {
+      initialRef.current = {
+        dayIndex: task ? task.day_index : defaultDayIndex,
+        startTime: task?.start_time ? task.start_time.slice(0, 5) : "",
+        stayMinutes: task ? String(task.stay_minutes || "") : "",
+        placeName: task?.place_name ?? "",
+        placeAddress: task?.place_address ?? null,
+        placeLat: task?.place_lat ?? null,
+        placeLng: task?.place_lng ?? null,
+        category: task?.category ?? "",
+        tags: task?.tag ? task.tag.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        content: task?.content ?? "",
+      };
+    }, 0);
   }, [open, task, defaultDayIndex, draftKey]);
 
   // 시트 열려있는 동안 편집 내용을 500ms debounce 로 localStorage 에 저장
@@ -283,8 +303,31 @@ export default function PlanTaskSheet({
     }
   };
 
-  // 취소 — draft 유지(다시 열면 복원), onSave 호출 없음
+  // 취소 — draft 유지(다시 열면 복원). isDirty 면 toast 로 비차단 안내 +
+  // "초기화" 액션을 통해 사용자가 실수로 닫았을 때 명시적으로 폐기하도록.
   const handleCancel = () => {
+    const cur: SheetDraft = {
+      dayIndex,
+      startTime,
+      stayMinutes,
+      placeName,
+      placeAddress,
+      placeLat,
+      placeLng,
+      category,
+      tags: selectedTags,
+      content,
+    };
+    const init = initialRef.current;
+    const isDirty = init ? JSON.stringify(cur) !== JSON.stringify(init) : false;
+    if (isDirty) {
+      toast("수정사항이 임시 저장됐어요. 다시 열면 이어서 작성할 수 있어요.", {
+        action: {
+          label: "초기화",
+          onClick: () => clearDraft(draftKey),
+        },
+      });
+    }
     onOpenChange(false);
   };
 
