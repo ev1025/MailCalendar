@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { parseYmd } from "@/lib/date-utils";
+import { parseYmd, daysBetween } from "@/lib/date-utils";
 import { Trash2, Copy, CalendarPlus, CalendarMinus, Check } from "lucide-react";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import ListToolbar from "@/components/ui/list-toolbar";
@@ -80,9 +80,7 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
     >
       <h3 className="text-sm font-semibold truncate pr-8">{plan.title}</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        {plan.start_date || plan.end_date
-          ? `${plan.start_date ?? "-"} ~ ${plan.end_date ?? "-"}`
-          : "기간 미정"}
+        {formatPlanPeriod(plan.start_date, plan.end_date)}
       </p>
       <div className="absolute right-2 top-1/2 -translate-y-1/2 md:opacity-0 md:group-hover:opacity-100 transition">
         <RowActionPopover
@@ -518,4 +516,21 @@ function formatPlanRange(plan: TravelPlan): string {
   if (a === "-" && b === "-") return "기간 미정";
   if (b === "-" || a === b) return a;
   return `${a} ~ ${b}`;
+}
+
+/** 카드 본문의 기간 표시 — 풀 ISO 날짜 + 일수.
+ *  - 둘 다 null: "기간 미정"
+ *  - 같은 날 (당일치기): "YYYY-MM-DD (1일)"
+ *  - 시작만: "YYYY-MM-DD ~"
+ *  - 끝만: "~ YYYY-MM-DD"
+ *  - 둘 다: "YYYY-MM-DD ~ YYYY-MM-DD (N일)" (N = end-start+1) */
+function formatPlanPeriod(start: string | null, end: string | null): string {
+  if (!start && !end) return "기간 미정";
+  if (start && end) {
+    if (start === end) return `${start} (1일)`;
+    const days = daysBetween(start, end) + 1;
+    return `${start} ~ ${end} (${days}일)`;
+  }
+  if (start) return `${start} ~`;
+  return `~ ${end}`;
 }
