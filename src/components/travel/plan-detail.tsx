@@ -59,7 +59,7 @@ function daysBetween(startIso: string, endIso: string): number {
 // DayDropZone / SortableTaskRow 는 PlanDaySection 내부로 이전됨.
 
 export default function PlanDetail({ planId, onBack }: Props) {
-  const { plans, loading: plansLoading, updatePlan, duplicatePlan } = useTravelPlans();
+  const { plans, loading: plansLoading, updatePlan } = useTravelPlans();
   const plan = plans.find((p) => p.id === planId);
   const { tasks, addTask, updateTask, deleteTask } = useTravelPlanTasks(planId);
 
@@ -112,18 +112,6 @@ export default function PlanDetail({ planId, onBack }: Props) {
   const totalDays = plan?.start_date && plan?.end_date
     ? daysBetween(plan.start_date, plan.end_date) + 1
     : 0;
-
-  // 헤더 합계 — 첫 task 는 출발지라 transport 없음. 모든 task 의 transport 시간 합산.
-  const tripTotals = useMemo(() => {
-    const totalTransitMin = Math.round(
-      sorted.reduce((sum, t) => sum + (t.transport_duration_sec ?? 0), 0) / 60,
-    );
-    return {
-      totalDays,
-      totalTasks: sorted.length,
-      totalTransitMin,
-    };
-  }, [sorted, totalDays]);
 
   const visibleLegs = useMemo(() => {
     if (segment.mode === "all") return legsWithCoords;
@@ -270,12 +258,6 @@ export default function PlanDetail({ planId, onBack }: Props) {
         title={plan.title}
         onBack={onBack}
         onRename={(next) => updatePlan(plan.id, { title: next })}
-        onDuplicate={async () => {
-          const res = await duplicatePlan(plan.id);
-          // 복제 후 원본에 머무름 — 사용자가 의도해서 명시 이동 가능. 토스트는 hook 측에서 묵음.
-          void res;
-        }}
-        totals={tripTotals}
       />
 
       <div>

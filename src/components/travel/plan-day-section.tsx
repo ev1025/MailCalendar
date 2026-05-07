@@ -8,7 +8,6 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PlanTaskRow from "@/components/travel/plan-task-row";
 import PlanLegCard from "@/components/travel/plan-leg-card";
-import PlanDaySummary from "@/components/travel/plan-day-summary";
 import { addMinutes } from "@/lib/travel/time";
 import { toDragProps } from "@/lib/dnd-types";
 import type { TravelPlanTask } from "@/types";
@@ -111,7 +110,6 @@ export default function PlanDaySection({
         <h3 className="text-sm font-semibold">{formatDayLabel(day)}</h3>
         <div className="flex-1 h-px bg-border" />
       </div>
-      <PlanDaySummary dayTasks={dayTasks} expectedTimes={expectedTimes} />
       <DayDropZone day={day}>
         {dayTasks.length > 0 && (
           <div className="flex flex-col gap-1.5">

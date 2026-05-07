@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { Check, Trash2 } from "lucide-react";
+import { Check, RotateCcw, Trash2 } from "lucide-react";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import { formatMinutes } from "@/lib/travel/providers";
 import { addMinutes, formatTime } from "@/lib/travel/time";
@@ -65,7 +65,8 @@ function PlanTaskRowImpl({
         isCompleted ? "opacity-55" : ""
       }`}
     >
-      {/* 드래그바 — 탭하면 메뉴, 드래그하면 이동. RowActionPopover 통일 패턴. */}
+      {/* 드래그바 — 탭하면 메뉴, 드래그하면 이동. RowActionPopover 통일 패턴.
+          다녀왔음 토글은 메뉴 항목으로 — 행에 별도 체크박스 두지 않음. */}
       {dragListeners !== undefined && (
         <div
           onClick={(e) => e.stopPropagation()}
@@ -76,6 +77,15 @@ function PlanTaskRowImpl({
             dragAttributes={dragAttributes as React.HTMLAttributes<HTMLElement> | undefined}
             dragListeners={dragListeners as React.HTMLAttributes<HTMLElement> | undefined}
             items={[
+              ...(onToggleComplete
+                ? [{
+                    icon: isCompleted
+                      ? <RotateCcw className="h-3.5 w-3.5" />
+                      : <Check className="h-3.5 w-3.5" />,
+                    label: isCompleted ? "미완료로 표시" : "다녀왔음",
+                    onClick: onToggleComplete,
+                  }]
+                : []),
               ...(task.place_name
                 ? [{
                     icon: (
@@ -100,27 +110,6 @@ function PlanTaskRowImpl({
             ]}
           />
         </div>
-      )}
-
-      {/* 완료 체크 — 원형 토글. 클릭은 행 onClick(편집) 막고 onToggleComplete 만 발화.
-          미완료: 회색 보더 빈 원, 완료: primary 채움 + 체크 아이콘. */}
-      {onToggleComplete && (
-        <button
-          type="button"
-          aria-label={isCompleted ? "미완료로 표시" : "다녀왔음으로 표시"}
-          aria-pressed={isCompleted}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleComplete();
-          }}
-          className={`shrink-0 self-center mx-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${
-            isCompleted
-              ? "bg-primary border-primary text-primary-foreground"
-              : "border-foreground/30 hover:border-primary/60 hover:bg-primary/5"
-          }`}
-        >
-          {isCompleted && <Check className="h-3 w-3" strokeWidth={3} />}
-        </button>
       )}
 
       {/* 본문 — 좌우 2개 컨테이너.
