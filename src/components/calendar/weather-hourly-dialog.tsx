@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +86,40 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
   const [entries, setEntries] = useState<HourlyEntry[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 스크롤 양 끝에서는 fade 끄기 — 끝까지 보이는 카드가 없는데 페이드되면 어색함.
+  // scroll 위치 감지해 atStart/atEnd 상태 갱신, mask gradient 동적 구성.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setAtStart(el.scrollLeft <= 0);
+      // 1px 여유 — 부동소수점/줌 단계에서 정확히 같지 않아도 끝으로 인식.
+      setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 1);
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, [open, entries]);
+
+  // mask gradient 동적 구성 — 끝에서는 해당 쪽 fade 제거.
+  const stripMask = useMemo(() => {
+    const stops: string[] = [];
+    if (atStart) stops.push("black 0");
+    else stops.push("transparent 0", "black 56px");
+    if (atEnd) stops.push("black 100%");
+    else stops.push("black calc(100% - 56px)", "transparent 100%");
+    return `linear-gradient(to right, ${stops.join(", ")})`;
+  }, [atStart, atEnd]);
 
   useEffect(() => {
     if (!open || !date) return;
@@ -225,7 +259,11 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             영역 외부에 추가 hard padding — 카드가 fade 시작 전에도 모서리와
             여유 두도록. */}
         <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden py-3 px-3">
-        <div className="overflow-x-auto overflow-y-hidden [touch-action:pan-x] [mask-image:linear-gradient(to_right,transparent_0,black_56px,black_calc(100%-56px),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0,black_56px,black_calc(100%-56px),transparent_100%)]">
+        <div
+          ref={scrollRef}
+          style={{ ["--strip-mask" as string]: stripMask } as React.CSSProperties}
+          className="overflow-x-auto overflow-y-hidden [touch-action:pan-x] [mask-image:var(--strip-mask)] [-webkit-mask-image:var(--strip-mask)]"
+        >
             {loading && (
               <div className="flex gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
