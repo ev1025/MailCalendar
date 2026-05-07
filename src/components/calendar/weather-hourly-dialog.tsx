@@ -191,9 +191,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             내부 가로 스크롤이 패널을 뚫고 나오지 않게 차단. */}
         <div className="flex w-full min-w-0 flex-col gap-2 px-4 pb-4">
 
-        {/* hero 패널 — 아이콘 + 큰 기온 + 한 줄 메타. */}
+        {/* hero — 사각형 패널 없이 다이얼로그 그라디언트 위에 직접. */}
         {weather && (
-          <div className="flex w-full min-w-0 items-center gap-4 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] px-5 py-3.5">
+          <div className="flex w-full min-w-0 items-center gap-4 px-5 py-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={getWeatherIconUrl(weather.weather_icon)}
@@ -244,39 +244,83 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             )}
 
             {!loading && entries && entries.length > 0 && (() => {
-              // 카드 그리드 좌표 — 카드 폭 54px + gap 4px = step 58. 곡선 좌표를 같은 격자에
-              // 정렬해서 각 곡선 정점이 해당 카드의 정중앙 위에 오도록.
+              // 카드 그리드 좌표 — 카드 폭 54px + gap 4px = step 58.
               const CARD_W = 54;
               const GAP = 4;
               const STEP = CARD_W + GAP;
+              const PAD_X = 12; // 컨테이너의 px-3
               const totalW = entries.length * STEP - GAP;
-              const CHART_H = 32; // 곡선이 그려질 세로 영역
-              const PAD_TOP = 6;
+              // 곡선이 들어갈 작은 가로 띠 — 기온/강수 행 사이.
+              const CHART_H = 18;
+              const CHART_VPAD = 4;
+              const svgH = CHART_H + CHART_VPAD * 2;
               const temps = entries.map((e) => e.temperature);
               const minT = Math.min(...temps);
               const maxT = Math.max(...temps);
               const range = Math.max(1, maxT - minT);
               const points = entries.map((e, i) => ({
                 x: i * STEP + CARD_W / 2,
-                y: PAD_TOP + (1 - (e.temperature - minT) / range) * CHART_H,
+                y: CHART_VPAD + (1 - (e.temperature - minT) / range) * CHART_H,
               }));
               const linePath = smoothPath(points);
-              // area: 곡선 → 우측 하단 → 좌측 하단 → 닫기. 곡선 아래 fill 영역.
               const lastP = points[points.length - 1];
               const firstP = points[0];
-              const baselineY = PAD_TOP + CHART_H + 2;
+              const baselineY = svgH;
               const areaPath = `${linePath} L ${lastP.x},${baselineY} L ${firstP.x},${baselineY} Z`;
-              const svgH = baselineY;
+              const nowIndex = entries.findIndex(
+                (e) => parseInt(e.time.slice(11, 13), 10) === nowHour,
+              );
 
               return (
-                <div className="flex flex-col px-3">
-                  {/* 곡선: 라이트모드는 진한 따뜻 톤, 다크모드는 부드러운 sky 톤.
-                      stroke + 그 아래 area fill 로 깊이감. */}
+                <div className="relative flex flex-col px-3">
+                  {/* isNow 컬럼 강조 — top·곡선·bottom 세 행을 모두 감싸는 absolute. */}
+                  {nowIndex >= 0 && (
+                    <div
+                      className="absolute pointer-events-none rounded-xl bg-white/55 dark:bg-foreground/10 ring-1 ring-foreground/15 shadow-sm"
+                      style={{
+                        // 컨테이너 padding(px-3=12) + 카드 step 만큼 우측 이동.
+                        left: PAD_X + nowIndex * STEP,
+                        width: CARD_W,
+                        top: 0,
+                        bottom: 0,
+                      }}
+                    />
+                  )}
+
+                  {/* top row — 시간 / 아이콘 / 기온. relative 로 isNow 위에 그려짐. */}
+                  <div className="relative flex gap-1">
+                    {entries.map((e) => {
+                      const hour = parseInt(e.time.slice(11, 13), 10);
+                      return (
+                        <div
+                          key={`top-${e.time}`}
+                          className="flex shrink-0 flex-col items-center gap-0.5 px-1.5 pt-1.5 min-w-[54px]"
+                        >
+                          <span className="text-[10px] font-medium tabular-nums text-foreground/65 whitespace-nowrap">
+                            {formatHourKo(hour)}
+                          </span>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={getWeatherIconUrl(e.weather_icon)}
+                            alt={e.weather_description}
+                            className="h-8 w-8"
+                          />
+                          <span className="mt-0.5 text-sm font-bold tabular-nums leading-none text-foreground">
+                            {e.temperature}°
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* 곡선 — 기온과 강수 사이의 가로 띠.
+                      stroke gradient: 위(따뜻) → 아래(차가운 톤)으로 기온 직관 표현.
+                      area fill 은 곡선 아래를 부드럽게 fade. */}
                   <svg
                     width={totalW}
                     height={svgH}
                     viewBox={`0 0 ${totalW} ${svgH}`}
-                    className="block shrink-0"
+                    className="relative block shrink-0 my-1"
                     aria-hidden
                   >
                     <defs>
@@ -298,49 +342,24 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
-                    {/* 각 데이터 점 — 작은 도트로 시인성 강화. */}
                     {points.map((p, i) => (
-                      <circle
-                        key={i}
-                        cx={p.x}
-                        cy={p.y}
-                        r={1.6}
-                        className="fill-foreground/60"
-                      />
+                      <circle key={i} cx={p.x} cy={p.y} r={1.6} className="fill-foreground/60" />
                     ))}
                   </svg>
 
-                  {/* 카드 그리드 — 동일 STEP 격자. */}
-                  <div className="flex gap-1">
-                    {entries.map((e) => {
-                      const hour = parseInt(e.time.slice(11, 13), 10);
-                      const isNow = hour === nowHour;
-                      return (
-                        <div
-                          key={e.time}
-                          className={`flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5 min-w-[54px] ${
-                            isNow ? "bg-white/55 dark:bg-foreground/10 ring-1 ring-foreground/15 shadow-sm" : ""
-                          }`}
-                        >
-                          <span className="text-[10px] font-medium tabular-nums text-foreground/65 whitespace-nowrap">
-                            {formatHourKo(hour)}
-                          </span>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={getWeatherIconUrl(e.weather_icon)}
-                            alt={e.weather_description}
-                            className="h-8 w-8"
-                          />
-                          <span className="mt-0.5 text-sm font-bold tabular-nums leading-none text-foreground">
-                            {e.temperature}°
-                          </span>
-                          <span className="mt-1 flex items-center gap-0.5 text-[8px] tabular-nums leading-none">
-                            <Droplet className="h-2 w-2 shrink-0 text-sky-500 dark:text-sky-400" fill="currentColor" />
-                            <span className="text-foreground/55">{e.precipitation_probability ?? 0}%</span>
-                          </span>
-                        </div>
-                      );
-                    })}
+                  {/* bottom row — 강수확률만. */}
+                  <div className="relative flex gap-1 pb-1.5">
+                    {entries.map((e) => (
+                      <div
+                        key={`bot-${e.time}`}
+                        className="flex shrink-0 justify-center min-w-[54px]"
+                      >
+                        <span className="flex items-center gap-0.5 text-[8px] tabular-nums leading-none">
+                          <Droplet className="h-2 w-2 shrink-0 text-sky-500 dark:text-sky-400" fill="currentColor" />
+                          <span className="text-foreground/55">{e.precipitation_probability ?? 0}%</span>
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
