@@ -34,7 +34,8 @@ import { KO_WEEKDAYS as WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 
 interface Props {
   planId: string;
-  onBack: () => void;
+  /** 헤더 ← 버튼 클릭 시 이동 URL — Next Link 로 navigate. */
+  backHref: string;
 }
 
 const TRANSPORT_RESET = {
@@ -58,7 +59,7 @@ function daysBetween(startIso: string, endIso: string): number {
 
 // DayDropZone / SortableTaskRow 는 PlanDaySection 내부로 이전됨.
 
-export default function PlanDetail({ planId, onBack }: Props) {
+export default function PlanDetail({ planId, backHref }: Props) {
   const { plans, loading: plansLoading, updatePlan } = useTravelPlans();
   const plan = plans.find((p) => p.id === planId);
   const { tasks, addTask, updateTask, deleteTask } = useTravelPlanTasks(planId);
@@ -286,7 +287,7 @@ export default function PlanDetail({ planId, onBack }: Props) {
     <div className="flex flex-col">
       <PlanDetailHeader
         title={plan.title}
-        onBack={onBack}
+        backHref={backHref}
         onRename={(next) => updatePlan(plan.id, { title: next })}
       />
 

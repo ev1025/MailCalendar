@@ -31,13 +31,12 @@ function TravelPlansPageInner() {
   const { visibleUserIds } = useVisibleUserIds();
 
   // 상세 모드 — query 만 바뀌므로 페이지 자체는 그대로 유지.
+  // 헤더 ← 버튼은 Next Link replace 로 이동 — router.push 가 query-only 변경 시
+  // 일부 환경에서 트리거 안 되던 이슈 회피.
   if (planId) {
     return (
       <div className="flex flex-col min-h-0">
-        <PlanDetail
-          planId={planId}
-          onBack={() => router.push("/travel/plans", { scroll: false })}
-        />
+        <PlanDetail planId={planId} backHref="/travel/plans" />
       </div>
     );
   }

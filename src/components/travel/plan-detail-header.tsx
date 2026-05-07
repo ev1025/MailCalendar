@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -10,11 +11,13 @@ import { Input } from "@/components/ui/input";
 
 interface Props {
   title: string;
-  onBack: () => void;
+  /** 뒤로가기 URL — Next Link 로 navigate. router.push 가 query-only
+   *  변경 시 일부 환경에서 트리거 안 되던 이슈 회피. */
+  backHref: string;
   onRename: (nextTitle: string) => void;
 }
 
-export default function PlanDetailHeader({ title, onBack, onRename }: Props) {
+export default function PlanDetailHeader({ title, backHref, onRename }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
 
   const commit = () => {
@@ -26,14 +29,15 @@ export default function PlanDetailHeader({ title, onBack, onRename }: Props) {
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-2 border-b px-3 h-12 bg-background/95 backdrop-blur">
-      <button
-        type="button"
-        onClick={onBack}
+      <Link
+        href={backHref}
+        replace
+        scroll={false}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground -ml-1"
         aria-label="계획 목록으로"
       >
         <ArrowLeft className="h-5 w-5" />
-      </button>
+      </Link>
       {draft != null ? (
         <Input
           autoFocus
