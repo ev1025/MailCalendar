@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Droplet, ArrowUp, ArrowDown } from "lucide-react";
 import { useWeatherLocation } from "@/hooks/use-weather-location";
 import { getWeatherIconUrl } from "@/lib/weather";
+import { parseYmd } from "@/lib/date-utils";
 import type { WeatherData } from "@/types";
 
 /**
@@ -115,7 +116,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
 
   const dateLabel = useMemo(() => {
     if (!date) return "";
-    const d = new Date(date + "T00:00:00");
+    const d = parseYmd(date);
     if (Number.isNaN(d.getTime())) return date;
     const wk = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
     return `${d.getMonth() + 1}월 ${d.getDate()}일 (${wk})`;
@@ -164,20 +165,20 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
           </DialogHeader>
 
-          {/* 두 섹션을 둥근 사각형 프레임으로 분리해 구조화된 인상.
-              border-foreground/10 + bg-foreground/[0.03] — 흑투명 톤으로 라이트/다크 양쪽 자연. */}
-          <div className="flex flex-col gap-3 px-3 pb-4">
+          {/* 두 섹션을 둥근 사각형 프레임으로 분리해 구조화된 인상. 모바일 viewport
+              안에서만 프레임이 보이도록 컴팩트한 padding/사이즈. */}
+          <div className="flex flex-col gap-2 px-3 pb-3">
 
-          {/* 1) 일일 요약 — 큰 아이콘 + 한글 설명 + 최고/최저 기온. */}
+          {/* 1) 일일 요약 — 컴팩트 padding/icon. */}
           {weather && (
-            <div className="flex items-center gap-4 rounded-2xl border border-foreground/10 bg-foreground/[0.03] px-4 py-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-foreground/10 bg-foreground/[0.03] px-3 py-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={getWeatherIconUrl(weather.weather_icon)}
                 alt={weather.weather_description}
-                className="h-16 w-16 shrink-0"
+                className="h-12 w-12 shrink-0"
               />
-              <div className="flex flex-col gap-1 min-w-0 flex-1">
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                 <span className="text-sm font-medium text-foreground truncate">
                   {weather.weather_description}
                 </span>
@@ -195,8 +196,11 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             </div>
           )}
 
-          {/* 2) 시간별 가로 스크롤 스트립. 동일 프레임 디자인. */}
-          <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] py-3">
+          {/* 2) 시간별 가로 스크롤 스트립. 동일 프레임 디자인.
+              overflow-x-auto + rounded + border 를 한 div 에 같이 두면 iOS Safari
+              에서 터치 가로 스크롤이 안 먹음 → 프레임(보더) 과 스크롤(overflow) div 를 분리. */}
+          <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.03] overflow-hidden">
+          <div className="overflow-x-auto overflow-y-hidden py-2 [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3 px-5">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -255,6 +259,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                 })}
               </div>
             )}
+          </div>
           </div>
           </div>
         </div>

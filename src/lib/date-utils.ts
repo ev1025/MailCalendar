@@ -9,6 +9,12 @@ export function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** "YYYY-MM-DD" → Date (로컬 자정 00:00:00). 잘못된 입력은 Invalid Date 반환.
+ *  앱 전반에서 반복되던 `new Date(str + "T00:00:00")` 패턴 통합. */
+export function parseYmd(str: string): Date {
+  return new Date(str + "T00:00:00");
+}
+
 /** 오늘 날짜를 "YYYY-MM-DD" 로. */
 export function todayYmd(): string {
   return ymd(new Date());
