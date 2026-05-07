@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import PanelDialog from "@/components/ui/panel-dialog";
 import { Button } from "@/components/ui/button";
-import { UserPlus, X, Users } from "lucide-react";
+import { UserPlus, X, Users, Check } from "lucide-react";
 import { useCalendarShares } from "@/hooks/use-calendar-shares";
 import { useAppUsers, useCurrentUserId } from "@/lib/current-user";
 import { toast } from "sonner";
@@ -45,23 +45,35 @@ function Avatar({
   );
 }
 
-function SectionHeader({ title, count }: { title: string; count?: number }) {
-  return (
-    <div className="flex items-center gap-2 mb-2 px-1">
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        {title}
-      </h3>
-      {count !== undefined && count > 0 && (
-        <span className="text-[11px] text-muted-foreground/60">{count}</span>
-      )}
-    </div>
-  );
+/**
+ * 한 사용자의 공유 상태 — 다섯 가지 중 하나.
+ *  - sharing: 양방향 또는 단방향 공유 중(accepted)
+ *  - incoming: 상대가 내게 공유 요청(pending) — 수락/거절
+ *  - outgoing: 내가 상대에게 보낸 요청(pending) — 응답 대기
+ *  - none: 관계 없음 — 초대 가능
+ */
+type ShareState =
+  | { kind: "sharing"; shareIds: string[] /* 해제 시 모두 cancel */ }
+  | { kind: "incoming"; shareId: string }
+  | { kind: "outgoing"; shareId: string }
+  | { kind: "none" };
+
+interface UserRow {
+  user: { id: string; emoji: string | null; avatar_url: string | null; name: string; color: string };
+  state: ShareState;
 }
 
+const STATE_PRIORITY: Record<ShareState["kind"], number> = {
+  incoming: 0,  // 받은 요청 — 사용자 액션 필요
+  sharing: 1,   // 공유 중
+  outgoing: 2,  // 보낸 요청 (대기)
+  none: 3,      // 초대 가능
+};
+
 /**
- * 캘린더 공유 관리자 — 탭 분리 없는 단일 화면.
- * 받은 요청 → 공유 중 → 보낸 요청 → 초대 가능 순서로 섹션 노출.
- * 항목 없으면 섹션 자체 숨김. 초대 가능만은 항상 표시.
+ * 캘린더 공유 관리자 — 사용자별 단일 리스트.
+ * 한 사용자가 여러 섹션에 중복 표시되던 문제 수정 — 각 사용자는 정확히 하나의 상태를 가짐.
+ * 우선순위: 받은 요청 → 공유 중 → 보낸 요청 → 초대 가능.
  */
 export default function ShareManager({ open, onOpenChange }: Props) {
   const { users } = useAppUsers();
@@ -69,22 +81,38 @@ export default function ShareManager({ open, onOpenChange }: Props) {
   const { outgoing, incoming, invite, accept, reject, cancel } =
     useCalendarShares();
   const [cancelTarget, setCancelTarget] = useState<
-    | { id: string; name: string; mode: "reject-incoming" | "remove-accepted" | "cancel-outgoing" }
+    | { ids: string[]; name: string; mode: "reject-incoming" | "remove-accepted" | "cancel-outgoing" }
     | null
   >(null);
 
-  const getUser = (id: string) => users.find((u) => u.id === id);
-  const others = users.filter((u) => u.id !== currentUserId);
-
-  const incomingPending = incoming.filter((s) => s.status === "pending");
-  const incomingAccepted = incoming.filter((s) => s.status === "accepted");
-  const outgoingPending = outgoing.filter((s) => s.status === "pending");
-  const outgoingAccepted = outgoing.filter((s) => s.status === "accepted");
-
-  // 초대 가능: 보낸 요청에 이미 들어 있지 않은 사용자
-  const invitable = others.filter(
-    (u) => !outgoing.find((s) => s.viewer_id === u.id)
-  );
+  // 모든 다른 사용자에 대해 단일 상태 산출 — 공유중 ⊃ 받은요청 ⊃ 보낸요청 ⊃ 없음.
+  const rows = useMemo<UserRow[]>(() => {
+    const others = users.filter((u) => u.id !== currentUserId);
+    const list: UserRow[] = others.map((u) => {
+      // 양방향 모두 검사. 한 사람과 중복 share 가 있을 수 있어 모두 수집.
+      const inAcc = incoming.filter((s) => s.owner_id === u.id && s.status === "accepted");
+      const outAcc = outgoing.filter((s) => s.viewer_id === u.id && s.status === "accepted");
+      if (inAcc.length > 0 || outAcc.length > 0) {
+        return {
+          user: u,
+          state: {
+            kind: "sharing",
+            shareIds: [...inAcc.map((s) => s.id), ...outAcc.map((s) => s.id)],
+          },
+        };
+      }
+      const inPen = incoming.find((s) => s.owner_id === u.id && s.status === "pending");
+      if (inPen) return { user: u, state: { kind: "incoming", shareId: inPen.id } };
+      const outPen = outgoing.find((s) => s.viewer_id === u.id && s.status === "pending");
+      if (outPen) return { user: u, state: { kind: "outgoing", shareId: outPen.id } };
+      return { user: u, state: { kind: "none" } };
+    });
+    return list.sort((a, b) => {
+      const p = STATE_PRIORITY[a.state.kind] - STATE_PRIORITY[b.state.kind];
+      if (p !== 0) return p;
+      return a.user.name.localeCompare(b.user.name);
+    });
+  }, [users, currentUserId, incoming, outgoing]);
 
   const handleInvite = async (viewerId: string) => {
     const { error } = await invite(viewerId);
@@ -107,203 +135,117 @@ export default function ShareManager({ open, onOpenChange }: Props) {
         : `${cancelTarget?.name}님에게 보낸 초대를 취소합니다.`;
   const confirmLabel = cancelTarget?.mode === "reject-incoming" ? "거절" : "확인";
 
+  if (rows.length === 0) {
+    return (
+      <PanelDialog open={open} onOpenChange={onOpenChange} title="캘린더 공유">
+        <div className="px-4 py-4">
+          <EmptyState text="공유 가능한 사용자가 없어요" />
+        </div>
+      </PanelDialog>
+    );
+  }
+
   return (
     <PanelDialog open={open} onOpenChange={onOpenChange} title="캘린더 공유">
-      {/* 본문 — 섹션별 분리. */}
       <div className="px-4 py-4">
-          {incomingPending.length === 0 &&
-          incomingAccepted.length === 0 &&
-          outgoingPending.length === 0 &&
-          outgoingAccepted.length === 0 &&
-          invitable.length === 0 ? (
-            <EmptyState text={others.length === 0 ? "공유 가능한 사용자가 없어요" : "공유 활동이 없어요"} />
-          ) : (
-            <div className="flex flex-col gap-5">
-              {/* 받은 요청 */}
-              {incomingPending.length > 0 && (
-                <section>
-                  <SectionHeader title="받은 요청" count={incomingPending.length} />
-                  <ul className="flex flex-col gap-2">
-                    {incomingPending.map((s) => {
-                      const owner = getUser(s.owner_id);
-                      if (!owner) return null;
-                      return (
-                        <li
-                          key={s.id}
-                          className="flex items-center gap-3 rounded-xl border bg-card p-3"
-                        >
-                          <Avatar user={owner} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold truncate">
-                              {owner.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              내 캘린더 보기 요청
-                            </p>
-                          </div>
-                          <div className="flex gap-1.5 shrink-0">
-                            <Button
-                              size="sm"
-                              className="h-9 px-3 text-xs"
-                              onClick={() => accept(s.id)}
-                            >
-                              수락
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-9 px-3 text-xs"
-                              onClick={() =>
-                                setCancelTarget({
-                                  id: s.id,
-                                  name: owner.name,
-                                  mode: "reject-incoming",
-                                })
-                              }
-                            >
-                              거절
-                            </Button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              )}
-
-              {/* 공유 중 — 양방향 동일 포맷. 부가 라벨(보는 중/공유 중) 제거하고
-                  같은 사용자 한 번만 표시 (양쪽 다 accepted 일 때 dedupe). */}
-              {(() => {
-                type AccItem = { id: string; userId: string; name: string };
-                const seen = new Set<string>();
-                const items: AccItem[] = [];
-                for (const s of incomingAccepted) {
-                  const u = getUser(s.owner_id);
-                  if (!u || seen.has(u.id)) continue;
-                  seen.add(u.id);
-                  items.push({ id: s.id, userId: u.id, name: u.name });
-                }
-                for (const s of outgoingAccepted) {
-                  const u = getUser(s.viewer_id);
-                  if (!u || seen.has(u.id)) continue;
-                  seen.add(u.id);
-                  items.push({ id: s.id, userId: u.id, name: u.name });
-                }
-                if (items.length === 0) return null;
-                return (
-                  <section>
-                    <SectionHeader title="공유 중" count={items.length} />
-                    <ul className="flex flex-col gap-2">
-                      {items.map((it) => {
-                        const u = getUser(it.userId);
-                        if (!u) return null;
-                        return (
-                          <li
-                            key={it.userId}
-                            className="flex items-center gap-3 rounded-xl border bg-card p-3"
-                          >
-                            <Avatar user={u} />
-                            <span className="flex-1 text-sm font-semibold truncate">
-                              {it.name}
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-9 px-3 text-xs text-muted-foreground hover:text-destructive shrink-0"
-                              onClick={() =>
-                                setCancelTarget({
-                                  id: it.id,
-                                  name: it.name,
-                                  mode: "remove-accepted",
-                                })
-                              }
-                            >
-                              해제
-                            </Button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </section>
-                );
-              })()}
-
-              {/* 보낸 요청 (대기) */}
-              {outgoingPending.length > 0 && (
-                <section>
-                  <SectionHeader title="보낸 요청" count={outgoingPending.length} />
-                  <ul className="flex flex-col gap-2">
-                    {outgoingPending.map((s) => {
-                      const viewer = getUser(s.viewer_id);
-                      if (!viewer) return null;
-                      return (
-                        <li
-                          key={s.id}
-                          className="flex items-center gap-3 rounded-xl border bg-card p-3"
-                        >
-                          <Avatar user={viewer} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold truncate">
-                              {viewer.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              응답 대기 중
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
-                            onClick={() =>
-                              setCancelTarget({
-                                id: s.id,
-                                name: viewer.name,
-                                mode: "cancel-outgoing",
-                              })
-                            }
-                            aria-label="초대 취소"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              )}
-
-              {/* 초대 가능 — 항상 노출 */}
-              <section>
-                <SectionHeader title="초대 가능" count={invitable.length} />
-                {invitable.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">
-                    {others.length === 0 ? "다른 사용자가 없어요" : "이미 모두 초대했어요"}
+        <ul className="flex flex-col gap-2">
+          {rows.map(({ user, state }) => (
+            <li
+              key={user.id}
+              className="flex items-center gap-3 rounded-xl border bg-card p-3"
+            >
+              <Avatar user={user} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{user.name}</p>
+                {state.kind === "sharing" && (
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <Check className="h-3 w-3" />
+                    공유 중
                   </p>
-                ) : (
-                  <ul className="flex flex-col gap-2">
-                    {invitable.map((u) => (
-                      <li
-                        key={u.id}
-                        className="flex items-center gap-3 rounded-xl border bg-card p-3"
-                      >
-                        <Avatar user={u} />
-                        <span className="flex-1 text-sm font-semibold truncate">
-                          {u.name}
-                        </span>
-                        <Button
-                          size="sm"
-                          className="h-9 px-3 text-xs shrink-0"
-                          onClick={() => handleInvite(u.id)}
-                        >
-                          <UserPlus className="mr-1 h-3.5 w-3.5" />
-                          초대
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
                 )}
-              </section>
-            </div>
-          )}
+                {state.kind === "incoming" && (
+                  <p className="text-[11px] text-primary">
+                    내 캘린더 보기 요청
+                  </p>
+                )}
+                {state.kind === "outgoing" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    응답 대기 중
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {state.kind === "sharing" && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 px-3 text-xs text-muted-foreground hover:text-destructive"
+                    onClick={() =>
+                      setCancelTarget({
+                        ids: state.shareIds,
+                        name: user.name,
+                        mode: "remove-accepted",
+                      })
+                    }
+                  >
+                    해제
+                  </Button>
+                )}
+                {state.kind === "incoming" && (
+                  <>
+                    <Button
+                      size="sm"
+                      className="h-9 px-3 text-xs"
+                      onClick={() => accept(state.shareId)}
+                    >
+                      수락
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 px-3 text-xs"
+                      onClick={() =>
+                        setCancelTarget({
+                          ids: [state.shareId],
+                          name: user.name,
+                          mode: "reject-incoming",
+                        })
+                      }
+                    >
+                      거절
+                    </Button>
+                  </>
+                )}
+                {state.kind === "outgoing" && (
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={() =>
+                      setCancelTarget({
+                        ids: [state.shareId],
+                        name: user.name,
+                        mode: "cancel-outgoing",
+                      })
+                    }
+                    aria-label="초대 취소"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                {state.kind === "none" && (
+                  <Button
+                    size="sm"
+                    className="h-9 px-3 text-xs"
+                    onClick={() => handleInvite(user.id)}
+                  >
+                    <UserPlus className="mr-1 h-3.5 w-3.5" />
+                    초대
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <ConfirmDialog
@@ -315,14 +257,14 @@ export default function ShareManager({ open, onOpenChange }: Props) {
         description={confirmDesc}
         confirmLabel={confirmLabel}
         destructive
-        // ShareManager Dialog 위에 떠야 하므로 z 올림
         contentClassName="z-[80]"
         onConfirm={async () => {
           if (!cancelTarget) return;
           if (cancelTarget.mode === "reject-incoming") {
-            await reject(cancelTarget.id);
+            await Promise.all(cancelTarget.ids.map((id) => reject(id)));
           } else {
-            await cancel(cancelTarget.id);
+            // sharing 해제 / outgoing 취소 둘 다 cancel — 양방향 share 가 둘 다 있을 수도 있어 모두 처리.
+            await Promise.all(cancelTarget.ids.map((id) => cancel(id)));
           }
           setCancelTarget(null);
         }}
