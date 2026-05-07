@@ -166,10 +166,15 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
         </DialogHeader>
 
-        {/* hero — 아이콘 + 큰 기온, 한 줄 메타(설명 · ↑최고 · ↓최저).
-            다이얼로그 그라디언트 위에 직접 얹음(별도 패널 없음). */}
+        {/* 그라디언트 배경 위에 두 개의 검은 반투명 패널(hero · strip).
+            wrapper 의 px-4 가 viewport 안쪽 좌우 여백을 잡아주고, 각 패널은 w-full
+            + min-w-0 으로 wrapper 폭을 절대 안 넘김. strip 은 overflow-hidden 으로
+            내부 가로 스크롤이 패널을 뚫고 나오지 않게 차단. */}
+        <div className="flex w-full min-w-0 flex-col gap-2 px-4 pb-4">
+
+        {/* hero 패널 — 아이콘 + 큰 기온 + 한 줄 메타. */}
         {weather && (
-          <div className="flex w-full items-center gap-4 px-5 pb-3.5">
+          <div className="flex w-full min-w-0 items-center gap-4 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] px-5 py-3.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={getWeatherIconUrl(weather.weather_icon)}
@@ -196,11 +201,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           </div>
         )}
 
-        {/* hero ↔ strip 사이 헤어라인 — 좌우 여백 둔 절제된 디바이더. */}
-        {weather && <div className="mx-5 h-px bg-foreground/10" />}
-
-        {/* strip — 다이얼로그 그라디언트 위에 직접 가로 스크롤. */}
-        <div className="overflow-x-auto overflow-y-hidden py-3 pb-4 [touch-action:pan-x]">
+        {/* strip 패널 — outer overflow-hidden(=viewport 가둠) + inner overflow-x-auto. */}
+        <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden">
+        <div className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3 px-5">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -260,6 +263,8 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               </div>
             )}
           </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
