@@ -87,12 +87,17 @@ export default function PlanDetail({ planId, onBack }: Props) {
     [legs]
   );
   // 날짜 범위가 지정돼 있으면 그 범위를 엄격히 따라 [0, totalDays-1] 만 노출.
+  // 시작만 있고 종료 없으면 1일짜리 여행으로 취급(days=[0]).
   // 범위 밖 day_index 를 가진 task(orphan) 는 tasksByDay 에서 마지막 날로 clamp
   // 해 시각적으로 누락되지 않게. 범위가 없으면 task 가 쓰는 day_index 합집합.
   const days = useMemo(() => {
     if (plan?.start_date && plan?.end_date) {
       const total = daysBetween(plan.start_date, plan.end_date);
       return Array.from({ length: total + 1 }, (_, i) => i);
+    }
+    if (plan?.start_date) {
+      // 종료일 미선택 → 1일 여행
+      return [0];
     }
     const set = new Set<number>();
     for (const t of sorted) set.add(t.day_index);
@@ -109,9 +114,12 @@ export default function PlanDetail({ planId, onBack }: Props) {
     return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
   };
 
+  // 시작·종료 둘 다 → 차이 + 1, 시작만 → 1일, 둘 다 없음 → 0.
   const totalDays = plan?.start_date && plan?.end_date
     ? daysBetween(plan.start_date, plan.end_date) + 1
-    : 0;
+    : plan?.start_date
+      ? 1
+      : 0;
 
   const visibleLegs = useMemo(() => {
     if (segment.mode === "all") return legsWithCoords;

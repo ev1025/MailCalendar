@@ -520,17 +520,15 @@ function formatPlanRange(plan: TravelPlan): string {
 
 /** 카드 본문의 기간 표시 — 풀 ISO 날짜 + 일수.
  *  - 둘 다 null: "기간 미정"
- *  - 같은 날 (당일치기): "YYYY-MM-DD (1일)"
- *  - 시작만: "YYYY-MM-DD ~"
- *  - 끝만: "~ YYYY-MM-DD"
- *  - 둘 다: "YYYY-MM-DD ~ YYYY-MM-DD (N일)" (N = end-start+1) */
+ *  - 시작만 (또는 시작=종료): "YYYY-MM-DD (1일)" — ~ 안 붙음
+ *  - 끝만: "YYYY-MM-DD (1일)" — 동일 처리
+ *  - 둘 다 (다른 날): "YYYY-MM-DD ~ YYYY-MM-DD (N일)" (N = end-start+1) */
 function formatPlanPeriod(start: string | null, end: string | null): string {
   if (!start && !end) return "기간 미정";
-  if (start && end) {
-    if (start === end) return `${start} (1일)`;
-    const days = daysBetween(start, end) + 1;
-    return `${start} ~ ${end} (${days}일)`;
+  // 한쪽만 있거나 양쪽이 같으면 1일짜리 여행
+  if (!start || !end || start === end) {
+    return `${start ?? end} (1일)`;
   }
-  if (start) return `${start} ~`;
-  return `~ ${end}`;
+  const days = daysBetween(start, end) + 1;
+  return `${start} ~ ${end} (${days}일)`;
 }

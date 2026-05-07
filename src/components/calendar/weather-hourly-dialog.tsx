@@ -221,12 +221,21 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
         )}
 
         {/* strip 패널 — outer overflow-hidden(=viewport 가둠) + inner overflow-x-auto.
-            inner 의 px-5 가 panel-viewport 기준 좌우 여백 — padding 은 element box 의
-            일부지만 content-box 밖이라 스크롤 어느 위치에서든 항상 visible.
-            (이전엔 scrolled content 안에 pl-5 + 우측 spacer 를 두어 스크롤 끝에서만
-            여백 보이고 중간엔 카드가 panel 모서리에 붙던 문제 회피.) */}
+            mask-image 로 좌우 20px 영역 fade — chromium 의 padding-right 누락 버그 우회.
+            scroll 위치 무관하게 패널 viewport 좌우 끝 카드는 항상 fade 되어 사라짐
+            → 시각적 "viewport margin" 효과 보장. */}
         <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden">
-        <div className="overflow-x-auto overflow-y-hidden py-3 px-5 [touch-action:pan-x]">
+        <div
+          className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]"
+          style={{
+            // Apple Weather 스타일 — 좌·우 20px 부드럽게 fade. 카드가 panel 모서리에
+            // 닿기 전에 자연스럽게 사라져 항상 viewport 여백 효과.
+            maskImage:
+              "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)",
+          }}
+        >
             {loading && (
               <div className="flex gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
