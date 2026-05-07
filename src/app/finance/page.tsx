@@ -290,12 +290,6 @@ function FinancePageInner() {
     });
   }, [baseTransactions, categoryFilter]);
 
-  // 필터링된 거래의 합계 (UI 표시용)
-  const filteredTotal = useMemo(
-    () => filteredTransactions.reduce((sum, tx) => sum + (tx.type === "expense" ? tx.amount : 0), 0),
-    [filteredTransactions],
-  );
-
   const handleSave = async (
     data: {
       title: string | null;
@@ -402,8 +396,8 @@ function FinancePageInner() {
             />
           </div>
 
-          {/* 거래 목록 헤더 — 한 줄에 [필터 칩 + 건수·합계] | [고정비 포함 체크박스]
-              항상 노출되어 정보 일관. 필터 칩은 카테고리 색을 적용해 차트와 시각 연결. */}
+          {/* 거래 목록 헤더 — 한 줄에 [필터 칩] | [고정비 포함 체크박스].
+              건수·합계 텍스트는 사용자 요청으로 제거(중복 정보 — 스코어카드에 이미 노출). */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               {categoryFilter && (
@@ -422,12 +416,6 @@ function FinancePageInner() {
                   <X className="h-3 w-3 opacity-70" />
                 </button>
               )}
-              <span className="text-xs text-muted-foreground tabular-nums truncate">
-                총 {filteredTransactions.length}건
-                {filteredTotal > 0 && (
-                  <> · {formatMoney(filteredTotal)}</>
-                )}
-              </span>
             </div>
 
             {/* 고정비 포함 체크박스 — 명시적 의미. Pin 아이콘 메타포 모호함 제거. */}
