@@ -165,8 +165,10 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
           </DialogHeader>
 
-          {/* 두 섹션을 살짝 다른 톤의 카드로 분리해 구조화된 인상 (보더 없이). */}
-          <div className="flex w-full min-w-0 flex-col gap-3 px-4 pb-4">
+          {/* 두 섹션을 같은 색 가족(파랑+따뜻한 색)으로 묶어 한 화면처럼 통일.
+              hero 는 진한 그라디언트, strip 은 같은 그라디언트의 옅은 버전 →
+              위아래 분리가 아닌 "한 패널의 강·약 영역" 으로 읽히게. */}
+          <div className="flex w-full min-w-0 flex-col gap-2 px-4 pb-4">
 
           {/* 1) 일일 요약 — "오늘의 날씨" 미니 hero card.
               현재 기온을 가장 크게(text-5xl), 한글 설명·최고/최저는 우측 보조.
@@ -176,7 +178,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               className="relative flex w-full items-center gap-4 rounded-2xl px-5 py-4 overflow-hidden"
               style={{
                 background:
-                  "radial-gradient(circle at 0% 0%, oklch(0.7 0.13 250 / 0.18), transparent 60%), radial-gradient(circle at 100% 100%, oklch(0.75 0.13 30 / 0.12), transparent 55%), oklch(from var(--card) l c h / 0.6)",
+                  "radial-gradient(circle at 0% 0%, oklch(0.7 0.13 250 / 0.16), transparent 60%), radial-gradient(circle at 100% 100%, oklch(0.75 0.13 30 / 0.10), transparent 55%), oklch(from var(--card) l c h / 0.5)",
               }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -207,10 +209,16 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             </div>
           )}
 
-          {/* 2) 시간별 가로 스크롤 스트립. 보더 없이 살짝 다른 배경 톤만으로 구분.
-              overflow 분리 — outer rounded + inner overflow-x-auto 로 iOS Safari 호환.
-              검은색 톤 강조 — light: black/8%, dark: white/6% 로 시각적 분리감 향상. */}
-          <div className="w-full min-w-0 rounded-2xl bg-black/[0.08] dark:bg-white/[0.06] overflow-hidden">
+          {/* 2) 시간별 가로 스크롤 스트립.
+              hero 와 같은 색 가족(파랑+따뜻한 색) 의 옅은 그라디언트 — hero 는 진하게,
+              strip 은 흐리게 + 방향 반대로 두면 두 패널이 "한 화면의 강·약" 으로 읽힘. */}
+          <div
+            className="relative w-full min-w-0 rounded-2xl overflow-hidden"
+            style={{
+              background:
+                "radial-gradient(circle at 100% 0%, oklch(0.7 0.13 250 / 0.10), transparent 55%), radial-gradient(circle at 0% 100%, oklch(0.75 0.13 30 / 0.07), transparent 55%), oklch(from var(--card) l c h / 0.4)",
+            }}
+          >
           <div className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3 px-5">
