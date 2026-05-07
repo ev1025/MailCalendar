@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { parseYmd } from "@/lib/date-utils";
 import PlanTaskSheet from "@/components/travel/plan-task-sheet";
 import PlanSegmentTabs, { type Segment } from "@/components/travel/plan-segment-tabs";
@@ -74,6 +74,28 @@ export default function PlanDetail({ planId, onBack }: Props) {
 
   const sorted = useMemo(() => sortTasks(tasks), [tasks]);
   const expectedTimes = useMemo(() => computeExpectedTimes(sorted), [sorted]);
+
+  // 페이지 마운트 후 첫 미완료 task 로 자동 스크롤 — 여행 중 다녀온 곳 다음에
+  // 어디로 갈지 한눈에 보이도록. 완료가 하나도 없으면 동작 안 함(처음 진입 시
+  // 맨 위 그대로). 한 페이지 세션에서 한 번만 발화.
+  const autoScrolledRef = useRef(false);
+  useEffect(() => {
+    if (autoScrolledRef.current) return;
+    if (sorted.length === 0) return;
+    const hasCompleted = sorted.some((t) => t.completed_at);
+    if (!hasCompleted) return;
+    const firstPending = sorted.find((t) => !t.completed_at);
+    if (!firstPending) return;
+    autoScrolledRef.current = true;
+    // DOM 렌더 후 다음 frame 에 scroll — task row 가 마운트된 후 querySelector.
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(
+        `[data-plan-task-id="${firstPending.id}"]`,
+      );
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [sorted]);
+
   const legs = useMemo(() => tasksToLegs(sorted), [sorted]);
   const legsWithCoords = useMemo(
     () =>

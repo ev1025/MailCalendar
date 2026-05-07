@@ -61,6 +61,9 @@ function PlanTaskRowImpl({
           onClick();
         }
       }}
+      // data-plan-task-id — 페이지 마운트 시 첫 미완료 task 로 자동 스크롤할 때
+      // querySelector 로 찾기 위한 마커.
+      data-plan-task-id={task.id}
       className={`group flex items-stretch gap-0 rounded-md border bg-card hover:bg-accent/50 transition-colors cursor-pointer select-none ${
         isCompleted ? "opacity-55" : ""
       }`}
@@ -82,7 +85,7 @@ function PlanTaskRowImpl({
                     icon: isCompleted
                       ? <RotateCcw className="h-3.5 w-3.5" />
                       : <Check className="h-3.5 w-3.5" />,
-                    label: isCompleted ? "미완료로 표시" : "다녀왔음",
+                    label: isCompleted ? "완료 취소" : "방문 완료",
                     onClick: onToggleComplete,
                   }]
                 : []),
