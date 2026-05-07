@@ -419,12 +419,15 @@ function CalendarPageInner() {
         </motion.div>
         </motion.div>
       ) : (
+        // DatabaseView 내부 overflow-auto 가 동작하려면 부모에 defined height 필요.
+        // calendar-md-height(데스크톱 80vh) 동일 적용 — 모바일은 natural scroll.
         <motion.div
           key="view-db"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.14 }}
+          className="calendar-md-height"
         >
           <DatabaseView
             events={events}

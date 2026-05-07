@@ -186,9 +186,9 @@ export default function DatabaseView({
   ];
 
   return (
-    // 데스크탑에선 좌우 max-w 5xl + mx-auto 로 폭 제한 (여행 목록 페이지와 동일).
-    // 모바일은 w-full 그대로.
-    <div className="flex flex-col gap-3 h-full min-h-0 w-full md:max-w-5xl md:mx-auto">
+    // 데스크탑은 80vh 부모(calendar-md-height) 안에서 내부 스크롤 — h-full + flex-1.
+    // 모바일은 부모 높이 없음 → 자연스러운 document 스크롤.
+    <div className="flex flex-col gap-3 w-full md:h-full md:min-h-0 md:max-w-5xl md:mx-auto">
       {/* 검색 + 태그 필터 */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
@@ -265,7 +265,7 @@ export default function DatabaseView({
           )}
         </div>
       ) : (
-        <div className={`flex-1 min-h-0 overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
+        <div className={`md:flex-1 md:min-h-0 md:overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
           <div className="rounded-lg border">
           <table
             ref={tableRef}
@@ -313,15 +313,30 @@ export default function DatabaseView({
                   className="cursor-pointer hover:bg-accent/50 transition-colors border-b last:border-b-0"
                   onClick={() => onEdit(ev)}
                 >
-                  {/* 날짜 — 4/15(수) ~ 4/17(금), 검정색 */}
+                  {/* 날짜 — 4/15(수) ~ 4/17(금). 일=빨강, 토=파랑 (한국 달력 관례). */}
                   <td className="px-2 py-1.5 border-r whitespace-nowrap overflow-hidden">
                     {(() => {
                       const s = parseDay(ev.start_date);
                       const e = ev.end_date && ev.end_date !== ev.start_date ? parseDay(ev.end_date) : null;
+                      const dowColor = (dow: number) =>
+                        dow === 0
+                          ? "text-red-500 dark:text-red-400"
+                          : dow === 6
+                            ? "text-blue-500 dark:text-blue-400"
+                            : "text-foreground";
                       return (
-                        <span className="text-[10px] text-foreground tabular-nums">
-                          {s.month}/{s.day}({s.weekday})
-                          {e && ` ~ ${e.month}/${e.day}(${e.weekday})`}
+                        <span className="text-[10px] tabular-nums">
+                          <span className={dowColor(s.dow)}>
+                            {s.month}/{s.day}({s.weekday})
+                          </span>
+                          {e && (
+                            <>
+                              <span className="text-foreground"> ~ </span>
+                              <span className={dowColor(e.dow)}>
+                                {e.month}/{e.day}({e.weekday})
+                              </span>
+                            </>
+                          )}
                         </span>
                       );
                     })()}
