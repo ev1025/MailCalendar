@@ -226,7 +226,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             {loading && (
               <div className="flex gap-3 px-5">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32 w-16 shrink-0 rounded-xl" />
+                  <Skeleton key={i} className="h-28 w-14 shrink-0 rounded-xl" />
                 ))}
               </div>
             )}
@@ -248,7 +248,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               const CARD_W = 54;
               const GAP = 4;
               const STEP = CARD_W + GAP;
-              const PAD_X = 12; // 컨테이너의 px-3
+              const PAD_X = 20; // 컨테이너의 px-5 — 양 끝 카드와 패널 모서리 사이 숨통
               const totalW = entries.length * STEP - GAP;
               // 곡선이 들어갈 작은 가로 띠 — 기온/강수 행 사이.
               const CHART_H = 18;
@@ -272,7 +272,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               );
 
               return (
-                <div className="relative flex flex-col px-3">
+                <div className="relative flex flex-col px-5">
                   {/* isNow 컬럼 강조 — top·곡선·bottom 세 행을 모두 감싸는 absolute. */}
                   {nowIndex >= 0 && (
                     <div
