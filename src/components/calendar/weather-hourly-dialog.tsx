@@ -134,6 +134,25 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
   // 이전엔 document pointerdown 으로 직접 outside 감지했지만, 그 클릭이 부모
   // DayDetail 의 backdrop 까지 그대로 전달되어 둘 다 닫히는 문제 발생 → 제거.
 
+  /** Catmull-Rom → cubic Bezier 변환으로 부드러운 path 생성.
+   *  포인트 사이를 자연스러운 곡선으로 잇고, 양 끝은 가상 점으로 보간. */
+  const smoothPath = (pts: { x: number; y: number }[]): string => {
+    if (pts.length < 2) return "";
+    let d = `M ${pts[0].x},${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    }
+    return d;
+  };
+
   /** "오전 12시 / 오전 N시 / 오후 12시 / 오후 N시" 한국식 12h 시각 라벨. */
   const formatHourKo = (h: number): string => {
     if (h === 0) return "오전 12시";
@@ -174,7 +193,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
 
         {/* hero 패널 — 아이콘 + 큰 기온 + 한 줄 메타. */}
         {weather && (
-          <div className="flex w-full min-w-0 items-center gap-4 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] px-5 py-3.5">
+          <div className="flex w-full min-w-0 items-center gap-4 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] px-5 py-3.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={getWeatherIconUrl(weather.weather_icon)}
@@ -202,7 +221,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
         )}
 
         {/* strip 패널 — outer overflow-hidden(=viewport 가둠) + inner overflow-x-auto. */}
-        <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden">
+        <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden">
         <div className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]">
             {loading && (
               <div className="flex gap-3 px-5">
@@ -224,44 +243,108 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               </p>
             )}
 
-            {!loading && entries && entries.length > 0 && (
-              <div className="flex gap-1 px-3">
-                {entries.map((e) => {
-                  const hour = parseInt(e.time.slice(11, 13), 10);
-                  const isNow = hour === nowHour;
-                  return (
-                    <div
-                      key={e.time}
-                      className={`flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5 min-w-[54px] ${
-                        // 그라디언트 배경 위에서 isNow 강조 — primary 보다는 white/fg 로
-                        // 자연스럽게 떠오르는 느낌. 라이트모드에선 흰 카드, 다크모드는 fg/8.
-                        isNow ? "bg-white/55 dark:bg-foreground/10 ring-1 ring-foreground/15 shadow-sm" : ""
-                      }`}
-                    >
-                      {/* 시각 — 그라디언트 위에선 muted 가 너무 흐릿해 fg/65 로 한 단계 진하게. */}
-                      <span className="text-[10px] font-medium tabular-nums text-foreground/65 whitespace-nowrap">
-                        {formatHourKo(hour)}
-                      </span>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={getWeatherIconUrl(e.weather_icon)}
-                        alt={e.weather_description}
-                        className="h-8 w-8"
+            {!loading && entries && entries.length > 0 && (() => {
+              // 카드 그리드 좌표 — 카드 폭 54px + gap 4px = step 58. 곡선 좌표를 같은 격자에
+              // 정렬해서 각 곡선 정점이 해당 카드의 정중앙 위에 오도록.
+              const CARD_W = 54;
+              const GAP = 4;
+              const STEP = CARD_W + GAP;
+              const totalW = entries.length * STEP - GAP;
+              const CHART_H = 32; // 곡선이 그려질 세로 영역
+              const PAD_TOP = 6;
+              const temps = entries.map((e) => e.temperature);
+              const minT = Math.min(...temps);
+              const maxT = Math.max(...temps);
+              const range = Math.max(1, maxT - minT);
+              const points = entries.map((e, i) => ({
+                x: i * STEP + CARD_W / 2,
+                y: PAD_TOP + (1 - (e.temperature - minT) / range) * CHART_H,
+              }));
+              const linePath = smoothPath(points);
+              // area: 곡선 → 우측 하단 → 좌측 하단 → 닫기. 곡선 아래 fill 영역.
+              const lastP = points[points.length - 1];
+              const firstP = points[0];
+              const baselineY = PAD_TOP + CHART_H + 2;
+              const areaPath = `${linePath} L ${lastP.x},${baselineY} L ${firstP.x},${baselineY} Z`;
+              const svgH = baselineY;
+
+              return (
+                <div className="flex flex-col px-3">
+                  {/* 곡선: 라이트모드는 진한 따뜻 톤, 다크모드는 부드러운 sky 톤.
+                      stroke + 그 아래 area fill 로 깊이감. */}
+                  <svg
+                    width={totalW}
+                    height={svgH}
+                    viewBox={`0 0 ${totalW} ${svgH}`}
+                    className="block shrink-0"
+                    aria-hidden
+                  >
+                    <defs>
+                      <linearGradient id="hourly-stroke" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="oklch(0.7 0.18 30)" />
+                        <stop offset="100%" stopColor="oklch(0.78 0.13 250)" />
+                      </linearGradient>
+                      <linearGradient id="hourly-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="oklch(0.78 0.13 30)" stopOpacity="0.28" />
+                        <stop offset="100%" stopColor="oklch(0.78 0.13 30)" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d={areaPath} fill="url(#hourly-fill)" />
+                    <path
+                      d={linePath}
+                      stroke="url(#hourly-stroke)"
+                      strokeWidth={2}
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {/* 각 데이터 점 — 작은 도트로 시인성 강화. */}
+                    {points.map((p, i) => (
+                      <circle
+                        key={i}
+                        cx={p.x}
+                        cy={p.y}
+                        r={1.6}
+                        className="fill-foreground/60"
                       />
-                      {/* 기온 — 가장 강조. */}
-                      <span className="mt-0.5 text-sm font-bold tabular-nums leading-none text-foreground">
-                        {e.temperature}°
-                      </span>
-                      {/* 강수확률 — 채워진 sky-400 + 숫자 fg/55. */}
-                      <span className="mt-1 flex items-center gap-0.5 text-[8px] tabular-nums leading-none">
-                        <Droplet className="h-2 w-2 shrink-0 text-sky-500 dark:text-sky-400" fill="currentColor" />
-                        <span className="text-foreground/55">{e.precipitation_probability ?? 0}%</span>
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    ))}
+                  </svg>
+
+                  {/* 카드 그리드 — 동일 STEP 격자. */}
+                  <div className="flex gap-1">
+                    {entries.map((e) => {
+                      const hour = parseInt(e.time.slice(11, 13), 10);
+                      const isNow = hour === nowHour;
+                      return (
+                        <div
+                          key={e.time}
+                          className={`flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-1.5 py-1.5 min-w-[54px] ${
+                            isNow ? "bg-white/55 dark:bg-foreground/10 ring-1 ring-foreground/15 shadow-sm" : ""
+                          }`}
+                        >
+                          <span className="text-[10px] font-medium tabular-nums text-foreground/65 whitespace-nowrap">
+                            {formatHourKo(hour)}
+                          </span>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={getWeatherIconUrl(e.weather_icon)}
+                            alt={e.weather_description}
+                            className="h-8 w-8"
+                          />
+                          <span className="mt-0.5 text-sm font-bold tabular-nums leading-none text-foreground">
+                            {e.temperature}°
+                          </span>
+                          <span className="mt-1 flex items-center gap-0.5 text-[8px] tabular-nums leading-none">
+                            <Droplet className="h-2 w-2 shrink-0 text-sky-500 dark:text-sky-400" fill="currentColor" />
+                            <span className="text-foreground/55">{e.precipitation_probability ?? 0}%</span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           </div>
         </div>
