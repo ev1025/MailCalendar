@@ -268,10 +268,12 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                         {e.temperature}°
                       </span>
                       {/* 강수확률 — 아이콘과 값 사이 gap-0.5 로 가까이. 사이즈 한 단계 더 축소.
-                          데이터 없는 날(과거 등) 도 "0%" 로 통일 표기 — 사용자 일관성. */}
-                      <span className="mt-1 flex items-center gap-0.5 text-[8px] tabular-nums leading-none text-blue-500">
-                        <Droplet className="h-2 w-2 shrink-0" />
-                        <span>{e.precipitation_probability ?? 0}%</span>
+                          데이터 없는 날(과거 등) 도 "0%" 로 통일 표기 — 사용자 일관성.
+                          물방울 = 채워진 sky-400(하늘색), 숫자 = muted-foreground 로
+                          시각적 위계 분리(아이콘=악센트, 숫자=중립). */}
+                      <span className="mt-1 flex items-center gap-0.5 text-[8px] tabular-nums leading-none">
+                        <Droplet className="h-2 w-2 shrink-0 text-sky-400" fill="currentColor" />
+                        <span className="text-muted-foreground">{e.precipitation_probability ?? 0}%</span>
                       </span>
                     </div>
                   );
