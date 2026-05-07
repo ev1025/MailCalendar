@@ -220,11 +220,15 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           </div>
         )}
 
-        {/* strip 패널 — outer overflow-hidden(=viewport 가둠) + inner overflow-x-auto. */}
+        {/* strip 패널 — outer overflow-hidden(=viewport 가둠) + inner overflow-x-auto.
+            inner 의 px-5 가 panel-viewport 기준 좌우 여백 — padding 은 element box 의
+            일부지만 content-box 밖이라 스크롤 어느 위치에서든 항상 visible.
+            (이전엔 scrolled content 안에 pl-5 + 우측 spacer 를 두어 스크롤 끝에서만
+            여백 보이고 중간엔 카드가 panel 모서리에 붙던 문제 회피.) */}
         <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden">
-        <div className="overflow-x-auto overflow-y-hidden py-3 [touch-action:pan-x]">
+        <div className="overflow-x-auto overflow-y-hidden py-3 px-5 [touch-action:pan-x]">
             {loading && (
-              <div className="flex gap-3 px-5">
+              <div className="flex gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <Skeleton key={i} className="h-28 w-14 shrink-0 rounded-xl" />
                 ))}
@@ -248,7 +252,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               const CARD_W = 54;
               const GAP = 4;
               const STEP = CARD_W + GAP;
-              const PAD_X = 20; // 컨테이너의 px-5 — 양 끝 카드와 패널 모서리 사이 숨통
+              // 부모 inner content 에는 padding 없음(scroll container 가 px-5 담당) →
+              // isNow 절대 위치 = i*STEP (PAD_X 보정 불필요).
+              const PAD_X = 0;
               const totalW = entries.length * STEP - GAP;
               // 곡선이 들어갈 작은 가로 띠 — 기온/강수 행 사이.
               const CHART_H = 18;
@@ -272,7 +278,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
               );
 
               return (
-                <div className="relative flex flex-col pl-5">
+                <div className="relative flex flex-col">
                   {/* isNow 컬럼 강조 — top·곡선·bottom 세 행을 모두 감싸는 absolute.
                       left = pl-5(20) + 카드 step. */}
                   {nowIndex >= 0 && (
@@ -313,15 +319,14 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                         </div>
                       );
                     })}
-                    <div className="shrink-0 w-5" aria-hidden />
                   </div>
 
-                  {/* 곡선 — 기온과 강수 사이의 가로 띠. mr-5 로 우측 buffer. */}
+                  {/* 곡선 — 기온과 강수 사이의 가로 띠. */}
                   <svg
                     width={totalW}
                     height={svgH}
                     viewBox={`0 0 ${totalW} ${svgH}`}
-                    className="relative block shrink-0 my-1 mr-5"
+                    className="relative block shrink-0 my-1"
                     aria-hidden
                   >
                     <defs>
@@ -361,7 +366,6 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                         </span>
                       </div>
                     ))}
-                    <div className="shrink-0 w-5" aria-hidden />
                   </div>
                 </div>
               );
