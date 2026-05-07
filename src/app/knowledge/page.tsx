@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useMemo } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { FolderPlus, FilePlus } from "lucide-react";
 import { useKnowledgeFolders } from "@/hooks/use-knowledge-folders";
 import {
@@ -431,76 +432,108 @@ function KnowledgePageInner() {
         </aside>
 
         <main className="flex flex-1 flex-col overflow-hidden">
+          {/* editor ↔ reader 전환 cross-fade (140ms). 같은 view 내 콘텐츠 변경은
+              key 가 같아 애니메이션 발화 안 함. AnimatePresence mode="wait" 로
+              레이아웃 점프 방지. 빈 상태 분기는 외부 — 모바일 대시보드 분기 보호. */}
           {pendingNew && editing ? (
-            <NoteEditorView
-              // pendingNew 상태 — DB 에 없는 가상 item. content 는 빈 문자열,
-              // key 는 고정된 "__pending__" 로 타이핑 중 RichEditor 가 remount 되지 않게.
-              item={{
-                id: "__pending__",
-                folder_id: pendingNew.folderId,
-                title: "",
-                content: "",
-                excerpt: null,
-                tags: null,
-                pinned: false,
-                type: "note",
-                url: null,
-                created_at: "",
-                updated_at: "",
-              }}
-              title={editTitle}
-              onTitleChange={(v) => {
-                setEditTitle(v);
-                setDirty(true);
-              }}
-              onContentChange={(html) => {
-                setEditContent(html);
-                setDirty(true);
-              }}
-              onSave={handleSave}
-              onSaveDraft={handleSaveDraft}
-              onExit={handleExitEditor}
-              onCancel={handleCancel}
-              dirty={dirty}
-              autoSavedAt={autoSavedAt}
-              drafts={drafts}
-              onLoadDraft={handleLoadDraft}
-              onDeleteDraft={deleteDraft}
-              draftsOpen={draftsOpen}
-              onDraftsOpenChange={setDraftsOpen}
-            />
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key="editor-pending"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.14 }}
+                className="flex flex-1 flex-col overflow-hidden"
+              >
+                <NoteEditorView
+                  item={{
+                    id: "__pending__",
+                    folder_id: pendingNew.folderId,
+                    title: "",
+                    content: "",
+                    excerpt: null,
+                    tags: null,
+                    pinned: false,
+                    type: "note",
+                    url: null,
+                    created_at: "",
+                    updated_at: "",
+                  }}
+                  title={editTitle}
+                  onTitleChange={(v) => {
+                    setEditTitle(v);
+                    setDirty(true);
+                  }}
+                  onContentChange={(html) => {
+                    setEditContent(html);
+                    setDirty(true);
+                  }}
+                  onSave={handleSave}
+                  onSaveDraft={handleSaveDraft}
+                  onExit={handleExitEditor}
+                  onCancel={handleCancel}
+                  dirty={dirty}
+                  autoSavedAt={autoSavedAt}
+                  drafts={drafts}
+                  onLoadDraft={handleLoadDraft}
+                  onDeleteDraft={deleteDraft}
+                  draftsOpen={draftsOpen}
+                  onDraftsOpenChange={setDraftsOpen}
+                />
+              </motion.div>
+            </AnimatePresence>
           ) : selectedItem ? (
-            editing ? (
-              <NoteEditorView
-                item={selectedItem}
-                title={editTitle}
-                onTitleChange={(v) => {
-                  setEditTitle(v);
-                  setDirty(true);
-                }}
-                onContentChange={(html) => {
-                  setEditContent(html);
-                  setDirty(true);
-                }}
-                onSave={handleSave}
-                onSaveDraft={handleSaveDraft}
-                onExit={handleExitEditor}
-              onCancel={handleCancel}
-                dirty={dirty}
-                autoSavedAt={autoSavedAt}
-                drafts={drafts}
-                onLoadDraft={handleLoadDraft}
-                onDeleteDraft={deleteDraft}
-                draftsOpen={draftsOpen}
-                onDraftsOpenChange={setDraftsOpen}
-              />
-            ) : (
-              <NoteReaderView
-                item={selectedItem}
-                onEdit={() => setEditing(true)}
-                onExit={handleExitReader}
-              />
-            )
+            <AnimatePresence mode="wait" initial={false}>
+              {editing ? (
+                <motion.div
+                  key={`editor-${selectedItem.id}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.14 }}
+                  className="flex flex-1 flex-col overflow-hidden"
+                >
+                  <NoteEditorView
+                    item={selectedItem}
+                    title={editTitle}
+                    onTitleChange={(v) => {
+                      setEditTitle(v);
+                      setDirty(true);
+                    }}
+                    onContentChange={(html) => {
+                      setEditContent(html);
+                      setDirty(true);
+                    }}
+                    onSave={handleSave}
+                    onSaveDraft={handleSaveDraft}
+                    onExit={handleExitEditor}
+                    onCancel={handleCancel}
+                    dirty={dirty}
+                    autoSavedAt={autoSavedAt}
+                    drafts={drafts}
+                    onLoadDraft={handleLoadDraft}
+                    onDeleteDraft={deleteDraft}
+                    draftsOpen={draftsOpen}
+                    onDraftsOpenChange={setDraftsOpen}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={`reader-${selectedItem.id}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.14 }}
+                  className="flex flex-1 flex-col overflow-hidden"
+                >
+                  <NoteReaderView
+                    item={selectedItem}
+                    onEdit={() => setEditing(true)}
+                    onExit={handleExitReader}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           ) : (
             <>
               {/* 데스크톱: 노트 미선택 시 빈 상태 */}

@@ -121,6 +121,93 @@ function FinancePageInner() {
     [expenseFixedExpenses],
   );
 
+  // FixedExpenseManager 두 인스턴스(income/expense) 가 공유하는 핸들러 묶음.
+  // 이전엔 두 인스턴스가 각각 ~50줄 동일 핸들러를 인라인 정의 → -100줄 리팩토링.
+  const sharedManagerProps = useMemo(
+    () => ({
+      categories,
+      defaultYear: year,
+      defaultMonth: month,
+      onUpdate: async (id: string, updates: Parameters<typeof updateFixed>[1]) => {
+        const r = await updateFixed(id, updates);
+        if (!r.error) await refetchTransactions();
+        return r;
+      },
+      onDelete: async (id: string) => {
+        const r = await deleteFixed(id);
+        if (!r.error) await refetchTransactions();
+        return r;
+      },
+      onDeleteWithScope: async (id: string, y: number, m: number) => {
+        const r = await deleteFixedWithScope(id, y, m);
+        if (!r.error) await refetchTransactions();
+        return r;
+      },
+      onUpdateWithScope: async (
+        id: string,
+        updates: Parameters<typeof updateFixedWithScope>[1],
+        y: number,
+        m: number,
+      ) => {
+        const r = await updateFixedWithScope(id, updates, y, m);
+        if (!r.error) await refetchTransactions();
+        return r;
+      },
+      onEnsureFixedMonths: async (
+        id: string,
+        repeat: number,
+        fromY?: number,
+        fromM?: number,
+      ) => {
+        const r = await ensureFixedMonths(id, repeat, fromY, fromM);
+        if (!r.error) await refetchTransactions();
+        return r;
+      },
+      onAddCategory: addCategory,
+      onDeleteCategory: deleteCategory,
+      onUpdateCategoryColor: updateCategoryColor,
+    }),
+    // 핸들러 함수 ref 들이 안정적이라 변경 빈도 낮음. category·month 변경시만 갱신.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categories, year, month],
+  );
+
+  // 수입 add — bulk insert 까지 await + 실패 시 toast. 폼이 즉시 닫혀도 거래 반영 보장.
+  const incomeAdd = async (
+    item: Parameters<typeof addFixed>[0],
+    repeatMonths: Parameters<typeof addFixed>[1],
+  ) => {
+    const r = await addFixed(item, repeatMonths);
+    if (r.error) return { error: r.error };
+    if (r.bulkDone) {
+      try {
+        await r.bulkDone;
+        await refetchTransactions();
+      } catch (e) {
+        console.error("[income recurring]", e);
+        toast.error("거래 자동 등록 실패 — 가계부에 반영되지 않을 수 있어요");
+        return { error: e };
+      }
+    }
+    return { error: null };
+  };
+
+  // 지출 add — fx INSERT 만 await + bulk 는 fire-and-forget. 폼 응답 빠르게.
+  const expenseAdd = async (
+    item: Parameters<typeof addFixed>[0],
+    repeatMonths: Parameters<typeof addFixed>[1],
+  ) => {
+    const r = await addFixed(item, repeatMonths);
+    if (!r.error && r.bulkDone) {
+      r.bulkDone
+        .then(() => refetchTransactions())
+        .catch((e) => {
+          console.error("[fixed-expense bulk insert]", e);
+        });
+    }
+    return { error: r.error };
+  };
+
   // 자동 적용 useEffect 제거 — 페이지 마운트마다 트리거되어 사용자가 수동으로
   // 거래를 지워도 다음 진입 시 다시 등록되는 문제 + 고정비 삭제 후 재추가 시 중복
   // 등록되는 문제의 근본 원인이었음. 이제 사용자가 명시적으로 트리거 (고정비 추가 시
@@ -435,62 +522,18 @@ function FinancePageInner() {
         onDeleteCategory={deleteCategory}
         onUpdateCategoryColor={updateCategoryColor}
       />
-      {/* 수입 관리 — FixedExpenseManager 의 income variant. */}
+      {/* 수입(income) · 지출(expense) 두 매니저는 onAdd 를 제외한 모든 mutation/카테고리
+          핸들러가 동일. variant + open 상태 + onAdd 차이만 별도 prop 으로. */}
       <FixedExpenseManager
+        {...sharedManagerProps}
         open={incomeOpen}
         onOpenChange={setIncomeOpen}
         fixedExpenses={incomeFixedExpenses}
-        categories={categories}
-        defaultYear={year}
-        defaultMonth={month}
         variant="income"
-        onAdd={async (item, repeatMonths) => {
-          const r = await addFixed(item, repeatMonths);
-          if (r.error) return { error: r.error };
-          // 수입은 await 로 bulk insert 완료까지 기다림 → 폼 닫히는 시점에는
-          // expenses 에 이미 들어가 있고 스코어카드에 즉시 반영. 보통 1~12행이라 체감 즉시.
-          if (r.bulkDone) {
-            try {
-              await r.bulkDone;
-              await refetchTransactions();
-            } catch (e) {
-              console.error("[income recurring]", e);
-              toast.error("거래 자동 등록 실패 — 가계부에 반영되지 않을 수 있어요");
-              return { error: e };
-            }
-          }
-          return { error: null };
-        }}
-        onUpdate={async (id, updates) => {
-          const r = await updateFixed(id, updates);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onDelete={async (id) => {
-          const r = await deleteFixed(id);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onDeleteWithScope={async (id, y, m) => {
-          const r = await deleteFixedWithScope(id, y, m);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onUpdateWithScope={async (id, updates, y, m) => {
-          const r = await updateFixedWithScope(id, updates, y, m);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onEnsureFixedMonths={async (id, repeat, fromY, fromM) => {
-          const r = await ensureFixedMonths(id, repeat, fromY, fromM);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onAddCategory={addCategory}
-        onDeleteCategory={deleteCategory}
-        onUpdateCategoryColor={updateCategoryColor}
+        onAdd={incomeAdd}
       />
       <FixedExpenseManager
+        {...sharedManagerProps}
         open={fixedOpen}
         onOpenChange={(o) => {
           setFixedOpen(o);
@@ -498,52 +541,8 @@ function FinancePageInner() {
           if (!o) setManagerInitialEditingId(undefined);
         }}
         fixedExpenses={expenseFixedExpenses}
-        categories={categories}
-        defaultYear={year}
-        defaultMonth={month}
         initialEditingId={managerInitialEditingId}
-        onAdd={async (item, repeatMonths) => {
-          // addFixed 는 fx row INSERT(1 RTT) 만 await 하고 즉시 반환 → 폼 즉시 닫힘.
-          // expense bulk INSERT 는 bulkDone 으로 fire-and-forget. 끝나면 transactions 도
-          // refresh — 이 await 도 caller 에서 빼서 폼 응답이 막히지 않게 함.
-          const r = await addFixed(item, repeatMonths);
-          if (!r.error && r.bulkDone) {
-            r.bulkDone
-              .then(() => refetchTransactions())
-              .catch((e) => {
-                console.error("[fixed-expense bulk insert]", e);
-              });
-          }
-          return { error: r.error };
-        }}
-        onUpdate={async (id, updates) => {
-          const r = await updateFixed(id, updates);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onDelete={async (id) => {
-          const r = await deleteFixed(id);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onDeleteWithScope={async (id, y, m) => {
-          const r = await deleteFixedWithScope(id, y, m);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onUpdateWithScope={async (id, updates, y, m) => {
-          const r = await updateFixedWithScope(id, updates, y, m);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onEnsureFixedMonths={async (id, repeat, fromY, fromM) => {
-          const r = await ensureFixedMonths(id, repeat, fromY, fromM);
-          if (!r.error) await refetchTransactions();
-          return r;
-        }}
-        onAddCategory={addCategory}
-        onDeleteCategory={deleteCategory}
-        onUpdateCategoryColor={updateCategoryColor}
+        onAdd={expenseAdd}
       />
 
       {/* 고정비 매칭 거래 클릭 시 — "이 달만 / 전체" 분기 다이얼로그.
