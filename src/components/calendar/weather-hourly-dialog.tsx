@@ -160,13 +160,17 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
         }}
       >
         <div className="contents">
-          <DialogHeader className="px-4 pt-5 pb-2 shrink-0">
+          <DialogHeader className="px-4 pt-5 pb-3 shrink-0">
             <DialogTitle className="text-base">{dateLabel} 시간별 날씨</DialogTitle>
           </DialogHeader>
 
-          {/* 일일 요약 — 큰 아이콘 + 한글 설명 + 최고/최저 기온. weather prop 없으면 생략. */}
+          {/* 두 섹션을 둥근 사각형 프레임으로 분리해 구조화된 인상.
+              border-foreground/10 + bg-foreground/[0.03] — 흑투명 톤으로 라이트/다크 양쪽 자연. */}
+          <div className="flex flex-col gap-3 px-3 pb-4">
+
+          {/* 1) 일일 요약 — 큰 아이콘 + 한글 설명 + 최고/최저 기온. */}
           {weather && (
-            <div className="flex items-center gap-4 px-4 pb-4 pt-1">
+            <div className="flex items-center gap-4 rounded-2xl border border-foreground/10 bg-foreground/[0.03] px-4 py-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={getWeatherIconUrl(weather.weather_icon)}
@@ -191,10 +195,8 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             </div>
           )}
 
-          {/* 본문 — 가로 스크롤 스트립. iPhone Weather 앱 스타일.
-              한 컬럼: 시각 / 아이콘 / 기온 / 강수확률.
-              스트립 영역만 muted 배경(연한 회색) 으로 덮어 일일 요약과 시각 구분. */}
-          <div className="overflow-x-auto overflow-y-hidden pb-5">
+          {/* 2) 시간별 가로 스크롤 스트립. 동일 프레임 디자인. */}
+          <div className="overflow-x-auto overflow-y-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.03] py-3">
             {loading && (
               <div className="flex gap-3 px-5">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -253,6 +255,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                 })}
               </div>
             )}
+          </div>
           </div>
         </div>
       </DialogContent>
