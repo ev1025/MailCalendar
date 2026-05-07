@@ -226,7 +226,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
             Tailwind arbitrary value 로 표현 — 일부 브라우저에서 inline style
             mask-image 누락되는 케이스 회피. */}
         <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden py-3">
-        <div className="overflow-x-auto overflow-y-hidden [touch-action:pan-x] [mask-image:linear-gradient(to_right,transparent_0,black_28px,black_calc(100%-28px),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0,black_28px,black_calc(100%-28px),transparent_100%)]">
+        <div className="overflow-x-auto overflow-y-hidden [touch-action:pan-x] [mask-image:linear-gradient(to_right,transparent_0,black_56px,black_calc(100%-56px),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0,black_56px,black_calc(100%-56px),transparent_100%)]">
             {loading && (
               <div className="flex gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
