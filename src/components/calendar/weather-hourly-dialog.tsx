@@ -156,11 +156,10 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
           onOpenChange(false);
         }}
         style={{
-          // 다이얼로그 자체에 그라디언트 — 내부 패널 없이 전체 배경으로 색감 통일.
-          // 상단 파랑(헤더 영역) → 중앙 거의 투명 → 하단 따뜻 톤(strip 영역).
-          // popover 의 솔리드 색을 fallback 으로 깔아 가독성 보장.
+          // 다이얼로그 전체에 색감을 확실히 입히기 — 알파값 강화(파랑 0.32→0.10 / 따뜻 0.22).
+          // popover 솔리드를 fallback 으로 깔아 텍스트 가독성 유지.
           background:
-            "linear-gradient(180deg, oklch(0.7 0.13 250 / 0.14) 0%, oklch(0.7 0.13 250 / 0.04) 45%, oklch(0.75 0.13 30 / 0.07) 100%), var(--popover)",
+            "linear-gradient(180deg, oklch(0.7 0.13 250 / 0.32) 0%, oklch(0.7 0.13 250 / 0.10) 50%, oklch(0.75 0.13 30 / 0.22) 100%), var(--popover)",
         }}
       >
         <DialogHeader className="px-4 pt-5 pb-3 shrink-0">
