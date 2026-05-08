@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { parseYmd, ymd } from "@/lib/date-utils";
+import { parseYmd, ymd, todayYmd } from "@/lib/date-utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -125,13 +125,22 @@ function CalendarPageInner() {
   const { weatherMap } = useWeather(year, month);
 
   // 시간별 날씨 prefetch — 일일 weatherMap 이 로드되면, 가시 월의 ±3일 정도
-  // 백그라운드로 시간별 데이터 미리 받음. 사용자가 클릭 시 캐시 hit 으로 즉시 표시.
-  // weatherMap 에 들어 있는 모든 날짜(=현재 보이는 월) 에 대해 prefetch.
-  // SWR 패턴 — fresh 한 건 skip, stale 만 갱신, miss 만 네트워크. 이미 캐시된
-  // 날짜는 즉시 반환되므로 API 부담 적음.
+  // 시간별 날씨 prefetch — 두 단계.
+  //  1) 매일 한 번 force-refresh (앱 처음 켤 때 / 자정 넘어 다시 켰을 때)
+  //     보이는 월 전체 force fetch → 하루 동안 다이얼로그에서 즉시 캐시 hit.
+  //  2) 그 외엔 miss 인 날짜만 보충 prefetch.
   useEffect(() => {
+    if (Object.keys(weatherMap).length === 0) return;
+    const today = todayYmd();
+    const SYNC_KEY = "weather-hourly-last-sync";
+    const lastSync =
+      typeof window !== "undefined" ? window.localStorage.getItem(SYNC_KEY) : null;
+    const force = lastSync !== today;
     for (const ymdStr of Object.keys(weatherMap)) {
-      prefetchHourlyWeather(ymdStr, weatherLoc.lat, weatherLoc.lon);
+      prefetchHourlyWeather(ymdStr, weatherLoc.lat, weatherLoc.lon, force);
+    }
+    if (force && typeof window !== "undefined") {
+      window.localStorage.setItem(SYNC_KEY, today);
     }
   }, [weatherMap, weatherLoc.lat, weatherLoc.lon]);
   // 공유 owner 의 태그까지 색상이 보이려면 visibleUserIds 전달.

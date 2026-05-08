@@ -103,11 +103,16 @@ async function fetchHourly(
   return await fetchHourlyNetwork(date, lat, lon, signal);
 }
 
-/** 외부에서 미리 시간별 날씨 prefetch — calendar/page 에서 weatherMap 로드 후
- *  보이는 월 모든 날짜에 대해 백그라운드 호출. 보수적: 캐시(stale 포함) 있으면
- *  skip — 다이얼로그에서 SWR 가 갱신 담당. miss 만 네트워크. */
-export function prefetchHourlyWeather(date: string, lat: number, lon: number): void {
-  if (readCacheStale(cacheKey(date, lat, lon))) return;
+/** 외부에서 미리 시간별 날씨 prefetch.
+ *  - force=false (기본): 캐시(stale 포함) 있으면 skip — miss 만 네트워크.
+ *  - force=true: 캐시 무시하고 강제 갱신 — 하루 한 번 일괄 sync 에서 사용. */
+export function prefetchHourlyWeather(
+  date: string,
+  lat: number,
+  lon: number,
+  force = false,
+): void {
+  if (!force && readCacheStale(cacheKey(date, lat, lon))) return;
   fetchHourlyNetwork(date, lat, lon).catch(() => {});
 }
 
@@ -162,8 +167,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
 
   useEffect(() => {
     if (!open || !date) return;
-    // SWR — stale 한 캐시(24h 안쪽) 가 있으면 즉시 표시 후, fresh 가 아니면
-    // 백그라운드 refetch. miss 면 로딩 표시 후 네트워크.
+    // 캐시 hit (24h 안쪽) → 즉시 표시, 추가 fetch 없음. 갱신은 calendar/page 의
+    // "하루 한 번 일괄 prefetch" 에서 담당 (앱 켤 때 마지막 sync 날짜와 다르면
+    // 보이는 월 전체 force-refresh). miss 면 즉시 네트워크.
     const key = cacheKey(date, location.lat, location.lon);
     const cached = readCacheStale(key);
     let cancelled = false;
@@ -171,12 +177,6 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
       setEntries(cached);
       setLoading(false);
       setError(null);
-      // fresh 면 끝, stale 이면 백그라운드로 새로 받기 (UI 깜빡임 없음).
-      if (!isCacheFresh(key)) {
-        fetchHourlyNetwork(date, location.lat, location.lon).then((rows) => {
-          if (!cancelled && rows) setEntries(rows);
-        });
-      }
     } else {
       setEntries(null);
       setError(null);
