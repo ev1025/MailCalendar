@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import AppShell from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/sonner";
+import { QueryProvider } from "@/components/providers/query-provider";
+import { SwRegister } from "@/components/providers/sw-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,8 +80,11 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body className="min-h-full flex flex-col">
-        <AppShell>{children}</AppShell>
-        <Toaster richColors position="top-center" />
+        <QueryProvider>
+          <AppShell>{children}</AppShell>
+          <Toaster richColors position="top-center" />
+          <SwRegister />
+        </QueryProvider>
       </body>
     </html>
   );

@@ -1,78 +1,93 @@
-"use client";
-
-import { Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Plane, Route } from "lucide-react";
-import PageHeader from "@/components/layout/page-header";
-import HeaderViewMenu from "@/components/layout/header-view-menu";
-import PlanList from "@/components/travel/plan-list";
-import PlanDetail from "@/components/travel/plan-detail";
-import { useVisibleUserIds } from "@/hooks/use-visible-user-ids";
+import {
+  HydrationBoundary,
+  QueryClient,
+  dehydrate,
+} from "@tanstack/react-query";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  travelPlansQueryKey,
+} from "@/hooks/use-travel-plans";
+import {
+  travelPlanTasksQueryKey,
+} from "@/hooks/use-travel-plan-tasks";
+import type { TravelPlan, TravelPlanTask } from "@/types";
+import TravelPlansClient from "./plans-client";
 
 /**
- * 여행 계획 페이지 — 목록 / 상세를 같은 라우트에서 ?id 쿼리로 토글.
- *
- * 이전엔 /travel/plans (목록) 와 /travel/plans/[planId] (상세) 가 분리된 라우트라
- * 카드 탭 시 페이지 전체가 unmount/remount → "리로드" 처럼 보였음.
- * 이제 같은 페이지 안에서 쿼리 파라미터만 바뀌어 PageHeader/AppShell 이 유지됨.
+ * 여행 계획 페이지 — RSC.
+ * 본인 user_id 의 travel_plans 를 prefetch.
+ * ?id=xxx 로 단일 plan 상세인 경우 해당 plan 의 tasks 도 prefetch.
  */
-export default function TravelPlansPage() {
-  return (
-    <Suspense fallback={null}>
-      <TravelPlansPageInner />
-    </Suspense>
-  );
-}
+export default async function TravelPlansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ id?: string }>;
+}) {
+  const params = await searchParams;
+  const planId = params.id ?? null;
 
-function TravelPlansPageInner() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const planId = searchParams.get("id");
-  const { visibleUserIds } = useVisibleUserIds();
+  const supa = await createSupabaseServerClient();
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { staleTime: 5 * 60 * 1000 } },
+  });
 
-  // 상세 모드 — query 만 바뀌므로 페이지 자체는 그대로 유지.
-  // 헤더 ← 버튼은 Next Link replace 로 이동 — router.push 가 query-only 변경 시
-  // 일부 환경에서 트리거 안 되던 이슈 회피.
-  if (planId) {
-    return (
-      <div className="flex flex-col min-h-0">
-        <PlanDetail planId={planId} backHref="/travel/plans" />
-      </div>
-    );
+  try {
+    const {
+      data: { user },
+    } = await supa.auth.getUser();
+
+    if (user) {
+      const { data: appUser } = await supa
+        .from("app_users")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      const currentUserId =
+        (appUser as { id?: string | null } | null)?.id ?? null;
+
+      if (currentUserId) {
+        const visibleUserIds = [currentUserId];
+
+        // 본인 plans + (planId 있으면) 해당 tasks 병렬 fetch.
+        const [plansRes, tasksRes] = await Promise.all([
+          supa
+            .from("travel_plans")
+            .select("*")
+            .eq("user_id", currentUserId)
+            .order("updated_at", { ascending: false }),
+          planId
+            ? supa
+                .from("travel_plan_tasks")
+                .select("*")
+                .eq("plan_id", planId)
+                .order("day_index", { ascending: true })
+                .order("start_time", {
+                  ascending: true,
+                  nullsFirst: false,
+                })
+                .order("manual_order", { ascending: true })
+            : Promise.resolve({ data: null }),
+        ]);
+
+        queryClient.setQueryData<TravelPlan[]>(
+          travelPlansQueryKey(currentUserId, visibleUserIds),
+          (plansRes.data as TravelPlan[]) ?? [],
+        );
+        if (planId && tasksRes.data) {
+          queryClient.setQueryData<TravelPlanTask[]>(
+            travelPlanTasksQueryKey(planId),
+            tasksRes.data as TravelPlanTask[],
+          );
+        }
+      }
+    }
+  } catch {
+    // skip
   }
 
   return (
-    <>
-      <PageHeader
-        title="여행 계획"
-        actions={
-          <HeaderViewMenu
-            items={[
-              {
-                key: "travel",
-                label: "여행",
-                icon: Plane,
-                onSelect: () => router.push("/travel"),
-              },
-              {
-                key: "travel-plans",
-                label: "여행 계획",
-                icon: Route,
-                active: true,
-                onSelect: () => {},
-              },
-            ]}
-          />
-        }
-      />
-      <div className="flex flex-col h-[calc(100%-3.5rem)] overflow-hidden px-2 py-2 md:h-auto md:overflow-visible md:min-h-0 md:p-6">
-        <PlanList
-          visibleUserIds={visibleUserIds}
-          onSelectPlan={(id) =>
-            router.replace(`/travel/plans?id=${id}`, { scroll: false })
-          }
-        />
-      </div>
-    </>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <TravelPlansClient />
+    </HydrationBoundary>
   );
 }

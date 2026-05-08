@@ -1,58 +1,97 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import {
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
-import { useAutoRefetch } from "@/hooks/use-auto-refetch";
 import { todayYmd } from "@/lib/date-utils";
 
 /**
  * 하단 네비/사이드바에 노출할 뱃지 카운트.
- *
- * 가벼운 count 쿼리만 사용 — 캐시 hydrate 흐름 외부.
- *  - calendar: 오늘 일정 개수 (start_date <= today <= end_date)
+ * 가벼운 count 쿼리. Realtime + invalidate 로 변경 시 즉시 갱신.
+ *  - calendar: 오늘 일정 개수
  *  - finance: 오늘이 결제일인 활성 고정비 개수
- *
- * 너무 많은 쿼리를 하지 않기 위해 5분 stale-while-revalidate.
  */
-export function useNavBadges() {
-  const userId = useCurrentUserId();
-  const [todayEvents, setTodayEvents] = useState(0);
-  const [todayFixed, setTodayFixed] = useState(0);
+const STALE_TIME = 60 * 1000; // 1분 — 폴링 폐기, Realtime + 자동 invalidate 의존.
+const GC_TIME = 24 * 60 * 60 * 1000;
 
-  const refetch = async () => {
-    if (!userId) return;
-    const today = new Date();
-    const ymd = todayYmd();
-    const dayOfMonth = today.getDate();
+export function navBadgesQueryKey(userId: string | null | undefined) {
+  return ["nav-badges", userId ?? ""] as const;
+}
 
-    // 1) 오늘 포함 일정 — start_date <= today AND (end_date IS NULL ? start_date == today : end_date >= today)
-    // PostgREST: start_date.lte.today AND (end_date.gte.today OR (end_date.is.null AND start_date.eq.today))
-    const ev = await supabase
+async function fetchNavBadges(userId: string | null | undefined) {
+  if (!userId) return { todayEvents: 0, todayFixed: 0 };
+  const today = new Date();
+  const ymd = todayYmd();
+  const dayOfMonth = today.getDate();
+
+  const [ev, fx] = await Promise.all([
+    supabase
       .from("calendar_events")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .lte("start_date", ymd)
-      .or(`end_date.gte.${ymd},and(end_date.is.null,start_date.eq.${ymd})`);
-    if (typeof ev.count === "number") setTodayEvents(ev.count);
-
-    // 2) 오늘이 결제일인 활성 고정비
-    const fx = await supabase
+      .or(
+        `end_date.gte.${ymd},and(end_date.is.null,start_date.eq.${ymd})`,
+      ),
+    supabase
       .from("fixed_expenses")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .eq("is_active", true)
-      .eq("day_of_month", dayOfMonth);
-    if (typeof fx.count === "number") setTodayFixed(fx.count);
+      .eq("day_of_month", dayOfMonth),
+  ]);
+  return {
+    todayEvents: ev.count ?? 0,
+    todayFixed: fx.count ?? 0,
   };
+}
 
+export function useNavBadges() {
+  const userId = useCurrentUserId();
+  const queryClient = useQueryClient();
+
+  const badgesQuery = useQuery({
+    queryKey: navBadgesQueryKey(userId),
+    queryFn: () => fetchNavBadges(userId),
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+    enabled: !!userId,
+  });
+
+  // Realtime — calendar_events / fixed_expenses 변경 시 invalidate.
+  // RLS가 select에만 작동하므로 보수적으로 변경 즉시 invalidate.
   useEffect(() => {
-    refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+    if (!userId) return;
+    const channel = supabase
+      .channel(`nav-badges:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "calendar_events" },
+        () =>
+          queryClient.invalidateQueries({
+            queryKey: navBadgesQueryKey(userId),
+          }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "fixed_expenses" },
+        () =>
+          queryClient.invalidateQueries({
+            queryKey: navBadgesQueryKey(userId),
+          }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
 
-  // 포그라운드 복귀 시 갱신.
-  useAutoRefetch(refetch);
-
-  return { todayEvents, todayFixed };
+  return {
+    todayEvents: badgesQuery.data?.todayEvents ?? 0,
+    todayFixed: badgesQuery.data?.todayFixed ?? 0,
+  };
 }

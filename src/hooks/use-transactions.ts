@@ -1,27 +1,85 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { Expense, ExpenseCategory } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
-import { getSessionCache, setSessionCache } from "@/lib/session-cache";
 import { ymd, parseYmd, monthBounds } from "@/lib/date-utils";
 
+const STALE_TIME = 5 * 60 * 1000;
+const GC_TIME = 24 * 60 * 60 * 1000;
+
+export function transactionsQueryKey(
+  userId: string | null | undefined,
+  startDate: string,
+  endExclusive: string,
+) {
+  return ["transactions", userId ?? "", startDate, endExclusive] as const;
+}
+
+export function expenseCategoriesQueryKey(userId: string | null | undefined) {
+  return ["expense-categories", userId ?? ""] as const;
+}
+
+async function fetchTransactionsRange(
+  userId: string | null | undefined,
+  startDate: string,
+  endExclusive: string,
+): Promise<Expense[]> {
+  let query = supabase
+    .from("expenses")
+    .select("*, category:expense_categories(*)")
+    .gte("date", startDate)
+    .lt("date", endExclusive)
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (userId) query = query.eq("user_id", userId);
+  const { data } = await query;
+  return ((data as Expense[]) ?? []);
+}
+
+async function fetchExpenseCategories(
+  userId: string | null | undefined,
+): Promise<ExpenseCategory[]> {
+  let q = supabase.from("expense_categories").select("*").order("name");
+  if (userId) q = q.or(`user_id.is.null,user_id.eq.${userId}`);
+  else q = q.is("user_id", null);
+  const { data } = await q;
+  return ((data as ExpenseCategory[]) ?? []);
+}
+
+function invalidateTransactions(
+  qc: QueryClient,
+  userId: string | null | undefined,
+) {
+  qc.invalidateQueries({ queryKey: ["transactions", userId ?? ""] });
+}
+function invalidateCategories(
+  qc: QueryClient,
+  userId: string | null | undefined,
+) {
+  qc.invalidateQueries({ queryKey: expenseCategoriesQueryKey(userId) });
+}
+
 /**
- * 가계부 거래 조회 훅.
+ * 가계부 거래 조회 훅 (TanStack Query).
  *
- * 호환성: 기존엔 (year, month) 시그니처였으나 시작일/종료일 범위 픽커 도입에 따라
- * (startDate, endDate?) 시그니처로 변경.
- *  - startDate: "YYYY-MM-DD" (포함)
- *  - endDate: "YYYY-MM-DD" (포함). 생략 시 startDate 가 속한 달의 말일로 간주.
+ * (startDate, endDate?) 시그니처:
+ *  - startDate "YYYY-MM-DD" (포함)
+ *  - endDate "YYYY-MM-DD" (포함, 생략 시 startDate 가 속한 달의 말일까지)
  *
- * 내부 쿼리는 inclusive end 를 위해 다음날 자정 미만으로 변환.
+ * 내부적으로 다음날 자정 미만(endExclusive)으로 변환해 PostgREST 쿼리.
  */
 export function useTransactions(startDate: string, endDate?: string) {
   const userId = useCurrentUserId();
+  const queryClient = useQueryClient();
 
-  // endDate 가 주어지면 그 다음날 (exclusive 상한). 없으면 startDate 의 다음 달 1일.
-  const endExclusive = (() => {
+  const endExclusive = useMemo(() => {
     if (endDate) {
       const d = parseYmd(endDate);
       d.setDate(d.getDate() + 1);
@@ -29,280 +87,229 @@ export function useTransactions(startDate: string, endDate?: string) {
     }
     const d = parseYmd(startDate);
     return monthBounds(d.getFullYear(), d.getMonth() + 2).start;
-  })();
+  }, [startDate, endDate]);
 
-  // 캐시 — 같은 (사용자, 기간) 의 직전 결과 즉시 hydrate → 빈 화면 깜빡임 제거.
-  const txCacheKey = useMemo(
-    () => `tx:${userId ?? ""}:${startDate}:${endExclusive}`,
+  const txKey = useMemo(
+    () => transactionsQueryKey(userId, startDate, endExclusive),
     [userId, startDate, endExclusive],
   );
-  const catCacheKey = useMemo(() => `cat:${userId ?? ""}`, [userId]);
+  const catKey = useMemo(() => expenseCategoriesQueryKey(userId), [userId]);
 
-  const [transactions, setTransactions] = useState<Expense[]>(
-    () => getSessionCache<Expense[]>(txCacheKey) ?? [],
-  );
-  const [categories, setCategories] = useState<ExpenseCategory[]>(
-    () => getSessionCache<ExpenseCategory[]>(catCacheKey) ?? [],
-  );
-  const [loading, setLoading] = useState(
-    () => getSessionCache<Expense[]>(txCacheKey) === null,
-  );
+  const txQuery = useQuery<Expense[]>({
+    queryKey: txKey,
+    queryFn: () => fetchTransactionsRange(userId, startDate, endExclusive),
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
 
-  // 카테고리는 글로벌 시드(user_id IS NULL) + 본인 추가분만 조회.
-  // 다른 사용자가 만든 커스텀 카테고리는 보이지 않음.
-  const fetchCategories = useCallback(async () => {
-    let q = supabase.from("expense_categories").select("*").order("name");
-    if (userId) q = q.or(`user_id.is.null,user_id.eq.${userId}`);
-    else q = q.is("user_id", null);
-    const { data } = await q;
-    if (data) {
-      setCategories(data);
-      setSessionCache(catCacheKey, data);
-    }
-  }, [userId, catCacheKey]);
+  const catQuery = useQuery<ExpenseCategory[]>({
+    queryKey: catKey,
+    queryFn: () => fetchExpenseCategories(userId),
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
 
-  const fetchTransactions = useCallback(async () => {
-    let query = supabase
-      .from("expenses")
-      .select("*, category:expense_categories(*)")
-      .gte("date", startDate)
-      .lt("date", endExclusive)
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false });
-    if (userId) query = query.eq("user_id", userId);
-    const { data, error } = await query;
-
-    if (error) {
-      // fallback: 시그니처 동일하게 endExclusive 사용 — 이전엔 endDate 로 잘못 비교해
-      // 마지막 날 거래가 누락되던 off-by-one 버그.
-      const fallback = await supabase
-        .from("expenses")
-        .select("*, category:expense_categories(*)")
-        .gte("date", startDate)
-        .lt("date", endExclusive)
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false });
-      if (fallback.data) {
-        setTransactions(fallback.data);
-        setSessionCache(txCacheKey, fallback.data);
-      }
-    } else if (data) {
-      setTransactions(data);
-      setSessionCache(txCacheKey, data);
-    }
-    setLoading(false);
-  }, [startDate, endExclusive, userId, txCacheKey]);
-
-  // 키 변경 시 캐시 hydrate. 캐시 없으면 빈 상태로 로딩 표시.
-  useEffect(() => {
-    const cached = getSessionCache<Expense[]>(txCacheKey);
-    if (cached) {
-      setTransactions(cached);
-      setLoading(false);
-    } else {
-      setTransactions([]);
-      setLoading(true);
-    }
-  }, [txCacheKey]);
-
-  useEffect(() => {
-    const cached = getSessionCache<ExpenseCategory[]>(catCacheKey);
-    if (cached) setCategories(cached);
-  }, [catCacheKey]);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
-
-  // 인접 월(±1) prefetch — 사용자가 좌우 스와이프했을 때 캐시 히트로 즉시 표시.
-  // startDate 가 "YYYY-MM-01" 형태일 때만 의미있음 (월 단위 범위). 부분 범위는 skip.
+  // 인접 월 prefetch — startDate 가 "YYYY-MM-01" 형태일 때만.
   useEffect(() => {
     if (!/^\d{4}-\d{2}-01$/.test(startDate)) return;
-    let cancelled = false;
     const baseY = parseInt(startDate.slice(0, 4), 10);
     const baseM = parseInt(startDate.slice(5, 7), 10);
-    const prefetch = async (delta: number) => {
+    const prefetch = (delta: number) => {
       const t = new Date(baseY, baseM - 1 + delta, 1);
       const ny = t.getFullYear();
       const nm = t.getMonth() + 1;
       const sd = monthBounds(ny, nm).start;
-      const ed = new Date(ny, nm, 1);
-      const edStr = monthBounds(ed.getFullYear(), ed.getMonth() + 1).start;
-      const k = `tx:${userId ?? ""}:${sd}:${edStr}`;
-      if (getSessionCache(k)) return;
-      let q = supabase
-        .from("expenses")
-        .select("*, category:expense_categories(*)")
-        .gte("date", sd)
-        .lt("date", edStr)
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false });
-      if (userId) q = q.eq("user_id", userId);
-      const { data } = await q;
-      if (cancelled || !data) return;
-      setSessionCache(k, data);
-    };
-    prefetch(-1).catch(() => {});
-    prefetch(1).catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [startDate, userId]);
-
-  const addTransaction = async (
-    tx: Omit<Expense, "id" | "created_at" | "category">
-  ) => {
-    const { error } = await supabase
-      .from("expenses")
-      .insert({ ...tx, user_id: userId });
-    if (error) {
-      // title/installment_*/user_id 컬럼이 아직 없는 DB 대비 — 모두 제거하고 재시도.
-      const { title, installment_id, installment_total, ...rest } = tx;
-      void title;
-      void installment_id;
-      void installment_total;
-      const retry = await supabase.from("expenses").insert(rest);
-      if (!retry.error) await fetchTransactions();
-      return { error: retry.error };
-    }
-    await fetchTransactions();
-    return { error: null };
-  };
-
-  /** N개월 할부 — 같은 installment_id 로 N개 행 일괄 insert. 시작 날짜 기준 +1개월씩.
-   *  amount 는 N등분, 잔액(rounding remainder)은 마지막 행에 합산. title 에 (k/N) 표기. */
-  const addInstallment = async (
-    base: Omit<Expense, "id" | "created_at" | "category" | "installment_id" | "installment_total">,
-    months: number
-  ) => {
-    if (months <= 1) return await addTransaction(base);
-    const installmentId =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `inst_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const baseAmount = Math.floor(base.amount / months);
-    const remainder = base.amount - baseAmount * months;
-    const startDate = parseYmd(base.date);
-
-    const rows = Array.from({ length: months }, (_, i) => {
-      const d = new Date(startDate);
-      d.setMonth(d.getMonth() + i);
-      const dateStr = ymd(d);
-      const amt = i === months - 1 ? baseAmount + remainder : baseAmount;
-      const titledLabel = `${i + 1}/${months}`;
-      const title = base.title ? `${base.title} (${titledLabel})` : `할부 ${titledLabel}`;
-      return {
-        ...base,
-        title,
-        amount: amt,
-        date: dateStr,
-        installment_id: installmentId,
-        installment_total: months,
-        user_id: userId,
-      };
-    });
-
-    const { error } = await supabase.from("expenses").insert(rows);
-    if (error) {
-      // installment_*/title/user_id 컬럼 없는 DB 대비
-      const fallback = rows.map((r) => {
-        const { installment_id, installment_total, title, ...rest } = r;
-        void installment_id;
-        void installment_total;
-        void title;
-        return rest;
+      const edStr = monthBounds(ny, nm + 1).start;
+      const k = transactionsQueryKey(userId, sd, edStr);
+      queryClient.prefetchQuery({
+        queryKey: k,
+        queryFn: () => fetchTransactionsRange(userId, sd, edStr),
+        staleTime: STALE_TIME,
       });
-      const retry = await supabase.from("expenses").insert(fallback);
-      if (!retry.error) await fetchTransactions();
-      return { error: retry.error };
-    }
-    await fetchTransactions();
-    return { error: null };
-  };
+    };
+    prefetch(-1);
+    prefetch(1);
+  }, [startDate, userId, queryClient]);
 
-  const updateTransaction = async (
-    id: string,
-    updates: Partial<Omit<Expense, "id" | "created_at" | "category">>
-  ) => {
-    const { error } = await supabase
-      .from("expenses")
-      .update(updates)
-      .eq("id", id);
-    if (error) {
-      // title 컬럼 없는 DB 대비 재시도.
-      const { title, ...rest } = updates;
-      void title;
-      const retry = await supabase
-        .from("expenses")
-        .update(rest)
-        .eq("id", id);
-      if (!retry.error) await fetchTransactions();
-      return { error: retry.error };
-    }
-    await fetchTransactions();
-    return { error: null };
-  };
+  // ---------- mutations ----------
+  const invalidate = useCallback(
+    () => invalidateTransactions(queryClient, userId),
+    [queryClient, userId],
+  );
+  const invalidateCats = useCallback(
+    () => invalidateCategories(queryClient, userId),
+    [queryClient, userId],
+  );
 
-  /** 단일 또는 할부 묶음 삭제 — installment_id 가 있으면 같은 묶음 전체 삭제. */
-  const deleteTransaction = async (id: string) => {
-    const target = transactions.find((t) => t.id === id);
-    if (target?.installment_id) {
+  const addTransaction = useCallback(
+    async (tx: Omit<Expense, "id" | "created_at" | "category">) => {
       const { error } = await supabase
         .from("expenses")
-        .delete()
-        .eq("installment_id", target.installment_id);
-      if (!error) await fetchTransactions();
+        .insert({ ...tx, user_id: userId });
+      if (error) {
+        const { title, installment_id, installment_total, ...rest } = tx;
+        void title;
+        void installment_id;
+        void installment_total;
+        const retry = await supabase.from("expenses").insert(rest);
+        if (!retry.error) invalidate();
+        return { error: retry.error };
+      }
+      invalidate();
+      return { error: null };
+    },
+    [userId, invalidate],
+  );
+
+  /** N개월 할부 — 같은 installment_id 로 N개 행 일괄 insert. amount 는 N등분, 잔여는 마지막 행. */
+  const addInstallment = useCallback(
+    async (
+      base: Omit<
+        Expense,
+        "id" | "created_at" | "category" | "installment_id" | "installment_total"
+      >,
+      months: number,
+    ) => {
+      if (months <= 1) return await addTransaction(base);
+      const installmentId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `inst_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const baseAmount = Math.floor(base.amount / months);
+      const remainder = base.amount - baseAmount * months;
+      const startDateLocal = parseYmd(base.date);
+
+      const rows = Array.from({ length: months }, (_, i) => {
+        const d = new Date(startDateLocal);
+        d.setMonth(d.getMonth() + i);
+        const dateStr = ymd(d);
+        const amt = i === months - 1 ? baseAmount + remainder : baseAmount;
+        const titledLabel = `${i + 1}/${months}`;
+        const title = base.title
+          ? `${base.title} (${titledLabel})`
+          : `할부 ${titledLabel}`;
+        return {
+          ...base,
+          title,
+          amount: amt,
+          date: dateStr,
+          installment_id: installmentId,
+          installment_total: months,
+          user_id: userId,
+        };
+      });
+
+      const { error } = await supabase.from("expenses").insert(rows);
+      if (error) {
+        const fallback = rows.map((r) => {
+          const { installment_id, installment_total, title, ...rest } = r;
+          void installment_id;
+          void installment_total;
+          void title;
+          return rest;
+        });
+        const retry = await supabase.from("expenses").insert(fallback);
+        if (!retry.error) invalidate();
+        return { error: retry.error };
+      }
+      invalidate();
+      return { error: null };
+    },
+    [userId, invalidate, addTransaction],
+  );
+
+  const updateTransaction = useCallback(
+    async (
+      id: string,
+      updates: Partial<Omit<Expense, "id" | "created_at" | "category">>,
+    ) => {
+      const { error } = await supabase
+        .from("expenses")
+        .update(updates)
+        .eq("id", id);
+      if (error) {
+        const { title, ...rest } = updates;
+        void title;
+        const retry = await supabase
+          .from("expenses")
+          .update(rest)
+          .eq("id", id);
+        if (!retry.error) invalidate();
+        return { error: retry.error };
+      }
+      invalidate();
+      return { error: null };
+    },
+    [invalidate],
+  );
+
+  const deleteTransaction = useCallback(
+    async (id: string) => {
+      const transactions = txQuery.data ?? [];
+      const target = transactions.find((t) => t.id === id);
+      if (target?.installment_id) {
+        const { error } = await supabase
+          .from("expenses")
+          .delete()
+          .eq("installment_id", target.installment_id);
+        if (!error) invalidate();
+        return { error };
+      }
+      const { error } = await supabase.from("expenses").delete().eq("id", id);
+      if (!error) invalidate();
       return { error };
-    }
-    const { error } = await supabase.from("expenses").delete().eq("id", id);
-    if (!error) await fetchTransactions();
-    return { error };
-  };
+    },
+    [invalidate, txQuery.data],
+  );
 
-  const addCategory = async (
-    name: string,
-    type: "income" | "expense",
-    color: string
-  ) => {
-    if (!userId) return { error: "로그인 후 사용 가능합니다" };
-    const { error } = await supabase
-      .from("expense_categories")
-      .insert({ name, type, color, icon: null, user_id: userId });
-    if (error) return { error: error.message || String(error) };
-    await fetchCategories();
-    return { error: null };
-  };
+  const addCategory = useCallback(
+    async (name: string, type: "income" | "expense", color: string) => {
+      if (!userId) return { error: "로그인 후 사용 가능합니다" };
+      const { error } = await supabase
+        .from("expense_categories")
+        .insert({ name, type, color, icon: null, user_id: userId });
+      if (error) return { error: error.message || String(error) };
+      invalidateCats();
+      return { error: null };
+    },
+    [userId, invalidateCats],
+  );
 
-  const deleteCategory = async (id: string) => {
-    const { error } = await supabase
-      .from("expense_categories")
-      .delete()
-      .eq("id", id);
-    if (error) return { error: error.message || String(error) };
-    await fetchCategories();
-    return { error: null };
-  };
+  const deleteCategory = useCallback(
+    async (id: string) => {
+      const { error } = await supabase
+        .from("expense_categories")
+        .delete()
+        .eq("id", id);
+      if (error) return { error: error.message || String(error) };
+      invalidateCats();
+      return { error: null };
+    },
+    [invalidateCats],
+  );
 
-  const updateCategoryColor = async (id: string, color: string) => {
-    const { error } = await supabase
-      .from("expense_categories")
-      .update({ color })
-      .eq("id", id);
-    if (error) return { error: error.message || String(error) };
-    await fetchCategories();
-    return { error: null };
-  };
+  const updateCategoryColor = useCallback(
+    async (id: string, color: string) => {
+      const { error } = await supabase
+        .from("expense_categories")
+        .update({ color })
+        .eq("id", id);
+      if (error) return { error: error.message || String(error) };
+      invalidateCats();
+      return { error: null };
+    },
+    [invalidateCats],
+  );
 
-  // 집계는 transactions 가 변할 때만 재계산. 매 렌더 O(n) 회피.
-  // 단일 반복으로 income/expense/by-category 한 번에 산출.
+  // 집계 — 단일 패스로 income/expense/by-category 산출.
   const stats = useMemo(() => {
+    const transactions = txQuery.data ?? [];
     let totalIncome = 0;
     let totalExpense = 0;
-    const expenseByCategory: Record<string, { amount: number; color: string }> = {};
+    const expenseByCategory: Record<
+      string,
+      { amount: number; color: string }
+    > = {};
     for (const t of transactions) {
       if (t.type === "income") {
         totalIncome += t.amount;
@@ -310,7 +317,8 @@ export function useTransactions(startDate: string, endDate?: string) {
         totalExpense += t.amount;
         if (t.category) {
           const { name, color } = t.category;
-          if (!expenseByCategory[name]) expenseByCategory[name] = { amount: 0, color };
+          if (!expenseByCategory[name])
+            expenseByCategory[name] = { amount: 0, color };
           expenseByCategory[name].amount += t.amount;
         }
       }
@@ -321,13 +329,12 @@ export function useTransactions(startDate: string, endDate?: string) {
       balance: totalIncome - totalExpense,
       expenseByCategory,
     };
-  }, [transactions]);
-  const { totalIncome, totalExpense, balance, expenseByCategory } = stats;
+  }, [txQuery.data]);
 
   return {
-    transactions,
-    categories,
-    loading,
+    transactions: txQuery.data ?? [],
+    categories: catQuery.data ?? [],
+    loading: txQuery.data === undefined,
     addTransaction,
     addInstallment,
     updateTransaction,
@@ -335,10 +342,10 @@ export function useTransactions(startDate: string, endDate?: string) {
     addCategory,
     deleteCategory,
     updateCategoryColor,
-    totalIncome,
-    totalExpense,
-    balance,
-    expenseByCategory,
-    refetch: fetchTransactions,
+    totalIncome: stats.totalIncome,
+    totalExpense: stats.totalExpense,
+    balance: stats.balance,
+    expenseByCategory: stats.expenseByCategory,
+    refetch: () => txQuery.refetch(),
   };
 }

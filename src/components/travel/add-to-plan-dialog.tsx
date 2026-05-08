@@ -151,7 +151,9 @@ export default function AddToPlanDialog({ open, onOpenChange, travelItem, onDone
             transport_manual: false,
           }));
 
-    const { error } = await supabase.from("travel_plan_tasks").insert(rows);
+    const { error } = await supabase
+      .from("travel_plan_tasks")
+      .insert(rows as never);
     if (error) {
       toast.error("일정 추가 실패");
       return;

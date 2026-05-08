@@ -1,87 +1,103 @@
-"use client";
+import {
+  HydrationBoundary,
+  QueryClient,
+  dehydrate,
+} from "@tanstack/react-query";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  travelItemsQueryKey,
+} from "@/hooks/use-travel-items";
+import {
+  travelTagsQueryKey,
+} from "@/hooks/use-travel-tags";
+import {
+  travelCategoriesQueryKey,
+} from "@/hooks/use-travel-categories";
+import type { TravelItem, TravelTag } from "@/types";
+import TravelClient from "./travel-client";
 
-import { useRouter } from "next/navigation";
-import { Plane, Route } from "lucide-react";
-import PageHeader from "@/components/layout/page-header";
-import HeaderViewMenu from "@/components/layout/header-view-menu";
-import TravelList from "@/components/travel/travel-list";
-import PullToRefresh from "@/components/ui/pull-to-refresh";
-import { useCalendarEvents } from "@/hooks/use-calendar-events";
-import { useEventTags } from "@/hooks/use-event-tags";
-import { useTravelItems } from "@/hooks/use-travel-items";
-import { useVisibleUserIds } from "@/hooks/use-visible-user-ids";
-import { supabase } from "@/lib/supabase";
+interface TravelCategoryRow {
+  id: string;
+  name: string;
+  color: string;
+  is_builtin: boolean;
+  sort_order?: number;
+}
 
-export default function TravelPage() {
-  const router = useRouter();
-  const { visibleUserIds } = useVisibleUserIds();
+/**
+ * Travel 페이지 — RSC.
+ * 본인 user_id 기준으로 travel_items / travel_tags / travel_categories 를 prefetch.
+ * visibleUserIds 는 localStorage 기반이라 서버에서 알 수 없음 → 본인만 가정.
+ */
+export default async function TravelPage() {
+  const supa = await createSupabaseServerClient();
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { staleTime: 5 * 60 * 1000 } },
+  });
 
-  // 여행 카드의 "달력 추가"는 calendar 쪽 mutation만 필요.
-  // useCalendarEvents(year, month, visibleUserIds) 는 조회용으로 year/month 를 받지만,
-  // 여기선 addEvent 만 쓰므로 임의의 현재 월을 넣어도 무방.
-  const now = new Date();
-  const { addEvent, deleteEvent } = useCalendarEvents(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    visibleUserIds
-  );
-  const { addTag } = useEventTags();
-  // Pull-to-refresh 가 호출할 refetch — TravelList 가 자체 인스턴스로 fetch 하지만
-  // 같은 cacheKey 라 SWR 패턴상 동일 결과 갱신.
-  const { refetch: refetchTravel } = useTravelItems(visibleUserIds);
+  try {
+    const {
+      data: { user },
+    } = await supa.auth.getUser();
+
+    if (user) {
+      const { data: appUser } = await supa
+        .from("app_users")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      const currentUserId =
+        (appUser as { id?: string | null } | null)?.id ?? null;
+
+      if (currentUserId) {
+        // 본인 visibleUserIds=[currentUserId] 가정.
+        const visibleUserIds = [currentUserId];
+        const idsKey = currentUserId;
+
+        // 병렬 fetch.
+        const [itemsRes, tagsRes, catsRes] = await Promise.all([
+          supa
+            .from("travel_items")
+            .select("*")
+            .eq("user_id", currentUserId)
+            .order("visited")
+            .order("created_at", { ascending: false }),
+          supa
+            .from("travel_tags")
+            .select("*")
+            .eq("user_id", currentUserId)
+            .order("name"),
+          supa
+            .from("travel_categories")
+            .select("id, name, color, is_builtin, sort_order")
+            .eq("user_id", currentUserId)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true }),
+        ]);
+
+        queryClient.setQueryData<TravelItem[]>(
+          travelItemsQueryKey(currentUserId, visibleUserIds),
+          (itemsRes.data as TravelItem[]) ?? [],
+        );
+        queryClient.setQueryData<TravelTag[]>(
+          travelTagsQueryKey(idsKey),
+          (tagsRes.data as TravelTag[]) ?? [],
+        );
+        if (catsRes.data && catsRes.data.length > 0) {
+          queryClient.setQueryData<TravelCategoryRow[]>(
+            travelCategoriesQueryKey(currentUserId),
+            catsRes.data as TravelCategoryRow[],
+          );
+        }
+      }
+    }
+  } catch {
+    // RSC prefetch 실패해도 클라이언트가 fetch 재시도.
+  }
 
   return (
-    <>
-      <PageHeader
-        title="여행"
-        actions={
-          <HeaderViewMenu
-            items={[
-              {
-                key: "travel",
-                label: "여행",
-                icon: Plane,
-                active: true,
-                onSelect: () => {},
-              },
-              {
-                key: "travel-plans",
-                label: "여행 계획",
-                icon: Route,
-                onSelect: () => router.push("/travel/plans"),
-              },
-            ]}
-          />
-        }
-      />
-      <div className="flex flex-col h-[calc(100%-3.5rem)] overflow-hidden px-2 py-2 md:h-auto md:overflow-visible md:min-h-0 md:p-6 animate-page-in">
-        <PullToRefresh onRefresh={async () => { await refetchTravel(); }}>
-          <TravelList
-            visibleUserIds={visibleUserIds}
-            onNavigateToMonth={(y, m) => {
-              router.push(`/calendar?y=${y}&m=${m}`);
-            }}
-            onAddEvent={async (data) => {
-              return await addEvent(data);
-            }}
-            onAddEventTagToCalendar={async (name, color) => {
-              return await addTag(name, color);
-            }}
-            onDeleteCalendarEventsByTitleDate={async (title, date) => {
-              const { data } = await supabase
-                .from("calendar_events")
-                .select("id")
-                .eq("title", title)
-                .eq("start_date", date);
-              if (data) {
-                for (const ev of data as { id: string }[]) {
-                  await deleteEvent(ev.id);
-                }
-              }
-            }}
-          />
-        </PullToRefresh>
-      </div>
-    </>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <TravelClient />
+    </HydrationBoundary>
   );
 }
