@@ -25,6 +25,15 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "매일 캘린더",
   description: "캘린더, 가계부, 메모, 영양제 비교",
+  // PWA + iOS 홈화면 추가 시 보이는 아이콘. manifest.ts 의 icons 와 함께 작동.
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    // iOS Safari 홈화면 추가 — apple-touch-icon. 512 를 시스템이 자동 downscale.
+    apple: { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+  },
 };
 
 export const viewport: Viewport = {
