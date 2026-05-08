@@ -12,6 +12,7 @@ import { Droplet, ArrowUp, ArrowDown } from "lucide-react";
 import { useWeatherLocation } from "@/hooks/use-weather-location";
 import { getWeatherIconUrl } from "@/lib/weather";
 import { parseYmd } from "@/lib/date-utils";
+import { getPersistentCache, setPersistentCache } from "@/lib/persistent-cache";
 import { KO_WEEKDAYS } from "@/lib/calendar/repeat-helpers";
 import type { WeatherData } from "@/types";
 
@@ -29,14 +30,31 @@ interface HourlyEntry {
   weather_description: string;
 }
 
-// 모듈 레벨 캐시 — 같은 (date,lat,lon) 의 시간별 응답을 5분 보관.
-// 사용자가 다이얼로그 열기 전에 prefetchHourly() 로 미리 채울 수도 있음.
-type CacheEntry = { entries: HourlyEntry[]; cachedAt: number };
-const hourlyCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
+// 캐시 — 모듈 레벨 Map(intra-session, 가장 빠름) + localStorage(cross-session).
+// 앱 재시작 후 첫 진입에도 마지막 결과 즉시 표시.
+const hourlyCache = new Map<string, HourlyEntry[]>();
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30분 — localStorage 에서 hydrate 시 유효 기간.
 
 function cacheKey(date: string, lat: number, lon: number): string {
   return `${date}|${lat.toFixed(3)}|${lon.toFixed(3)}`;
+}
+
+function lsKey(key: string): string {
+  return `weather-hourly:${key}`;
+}
+
+/** 캐시 lookup — 메모리 우선, 없으면 localStorage. localStorage hit 은 메모리에도 채움. */
+function readCache(key: string): HourlyEntry[] | null {
+  const mem = hourlyCache.get(key);
+  if (mem) return mem;
+  const persisted = getPersistentCache<HourlyEntry[]>(lsKey(key), CACHE_TTL_MS);
+  if (persisted) hourlyCache.set(key, persisted);
+  return persisted;
+}
+
+function writeCache(key: string, entries: HourlyEntry[]): void {
+  hourlyCache.set(key, entries);
+  setPersistentCache(lsKey(key), entries);
 }
 
 async function fetchHourly(
@@ -46,10 +64,8 @@ async function fetchHourly(
   signal?: AbortSignal,
 ): Promise<HourlyEntry[] | null> {
   const key = cacheKey(date, lat, lon);
-  const cached = hourlyCache.get(key);
-  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
-    return cached.entries;
-  }
+  const cached = readCache(key);
+  if (cached) return cached;
   try {
     const res = await fetch(
       `/api/weather/hourly?date=${date}&lat=${lat}&lon=${lon}`,
@@ -59,7 +75,7 @@ async function fetchHourly(
     const json = await res.json();
     if (json.error) return null;
     const entries = (json.entries ?? []) as HourlyEntry[];
-    hourlyCache.set(key, { entries, cachedAt: Date.now() });
+    writeCache(key, entries);
     return entries;
   } catch {
     return null;
@@ -123,10 +139,10 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
 
   useEffect(() => {
     if (!open || !date) return;
-    // 캐시 즉시 hydrate — 있으면 loading=false 로 0초 표시.
-    const cached = hourlyCache.get(cacheKey(date, location.lat, location.lon));
-    if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
-      setEntries(cached.entries);
+    // 캐시 즉시 hydrate — 메모리 → localStorage 순. 있으면 loading=false 로 0초 표시.
+    const cached = readCache(cacheKey(date, location.lat, location.lon));
+    if (cached) {
+      setEntries(cached);
       setLoading(false);
       setError(null);
       return;

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { CalendarEvent } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
-import { getSessionCache, setSessionCache } from "@/lib/session-cache";
+import { getPersistentCache, setPersistentCache } from "@/lib/persistent-cache";
 import { monthBounds } from "@/lib/date-utils";
 
 export interface SharedEvent extends CalendarEvent {
@@ -45,10 +45,10 @@ export function useCalendarEvents(
   );
 
   const [events, setEvents] = useState<SharedEvent[]>(
-    () => getSessionCache<SharedEvent[]>(cacheKey) ?? [],
+    () => getPersistentCache<SharedEvent[]>(cacheKey, 6 * 60 * 60 * 1000) ?? [],
   );
   const [loading, setLoading] = useState(
-    () => getSessionCache<SharedEvent[]>(cacheKey) === null,
+    () => getPersistentCache<SharedEvent[]>(cacheKey, 6 * 60 * 60 * 1000) === null,
   );
 
   const fetchEvents = useCallback(async () => {
@@ -73,12 +73,12 @@ export function useCalendarEvents(
     const rows = (data as SharedEvent[]) || [];
     setEvents(rows);
     setLoading(false);
-    setSessionCache(cacheKey, rows);
+    setPersistentCache(cacheKey, rows);
   }, [cacheKey, startDate, endDate, visibleUserIds, currentUserId]);
 
   // 키 변경 시(월 전환 등) 캐시 즉시 hydrate. fetchEvents 가 백그라운드 갱신.
   useEffect(() => {
-    const cached = getSessionCache<SharedEvent[]>(cacheKey);
+    const cached = getPersistentCache<SharedEvent[]>(cacheKey, 6 * 60 * 60 * 1000);
     if (cached) {
       setEvents(cached);
       setLoading(false);
@@ -110,7 +110,7 @@ export function useCalendarEvents(
           ? `${y + 1}-01-01`
           : monthBounds(y, m + 1).start;
       const k = `cal-events:${currentUserId}:${sd}:${ed}:${visibleKey}`;
-      if (getSessionCache(k)) return;
+      if (getPersistentCache(k, 6 * 60 * 60 * 1000)) return;
       const { data } = await supabase
         .from("calendar_events")
         .select("*")
@@ -123,7 +123,7 @@ export function useCalendarEvents(
         .order("sort_order")
         .order("created_at");
       if (cancelled) return;
-      setSessionCache(k, (data as SharedEvent[]) || []);
+      setPersistentCache(k, (data as SharedEvent[]) || []);
     };
     const prev =
       month === 1 ? { y: year - 1, m: 12 } : { y: year, m: month - 1 };
