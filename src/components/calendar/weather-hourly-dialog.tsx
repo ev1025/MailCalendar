@@ -115,9 +115,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
   const stripMask = useMemo(() => {
     const stops: string[] = [];
     if (atStart) stops.push("black 0");
-    else stops.push("transparent 0", "black 56px");
+    else stops.push("transparent 0", "black 19px");
     if (atEnd) stops.push("black 100%");
-    else stops.push("black calc(100% - 56px)", "transparent 100%");
+    else stops.push("black calc(100% - 19px)", "transparent 100%");
     return `linear-gradient(to right, ${stops.join(", ")})`;
   }, [atStart, atEnd]);
 
@@ -255,7 +255,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
         )}
 
         {/* strip 패널 — Apple Weather 스타일 edge fade + 추가 내부 padding.
-            mask-image 로 좌우 56px fade. 그 위에 panel 자체의 px-3 으로 fade
+            mask-image 로 좌우 19px fade. 그 위에 panel 자체의 px-3 으로 fade
             영역 외부에 추가 hard padding — 카드가 fade 시작 전에도 모서리와
             여유 두도록. */}
         <div className="w-full min-w-0 rounded-2xl bg-black/[0.07] dark:bg-white/[0.06] backdrop-blur-md ring-1 ring-inset ring-white/40 dark:ring-white/[0.06] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_2px_6px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)] overflow-hidden py-3 px-3">
