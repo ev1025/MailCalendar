@@ -66,8 +66,9 @@ export function useNavBadges() {
   // RLS가 select에만 작동하므로 보수적으로 변경 즉시 invalidate.
   useEffect(() => {
     if (!userId) return;
+    const rid = Math.random().toString(36).slice(2);
     const channel = supabase
-      .channel(`nav-badges:${userId}`)
+      .channel(`nav-badges:${userId}:${rid}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "calendar_events" },

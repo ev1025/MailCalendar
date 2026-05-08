@@ -65,8 +65,9 @@ export function useCalendarShares() {
   // Realtime — calendar_shares 테이블 변경 시 invalidate.
   useEffect(() => {
     if (!currentUserId) return;
+    const rid = Math.random().toString(36).slice(2);
     const channel = supabase
-      .channel(`calendar-shares:${currentUserId}`)
+      .channel(`calendar-shares:${currentUserId}:${rid}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "calendar_shares" },

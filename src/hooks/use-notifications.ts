@@ -64,8 +64,9 @@ export function useNotifications() {
   // Realtime — notifications 테이블 변경 시 invalidate.
   useEffect(() => {
     if (!userId) return;
+    const rid = Math.random().toString(36).slice(2);
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(`notifications:${userId}:${rid}`)
       .on(
         "postgres_changes",
         {

@@ -153,8 +153,12 @@ export function useCalendarEvents(
   // 보수적으로 항상 invalidate (비용은 stale 처리만, 실 fetch는 활성 월만).
   useEffect(() => {
     if (!currentUserId) return;
+    // channel name 에 random suffix — strict mode 이중 effect 시 cleanup(비동기)
+    // 끝나기 전에 같은 이름으로 .channel() 호출되면 Supabase 캐시가 같은 객체를
+    // 반환해 이미 subscribed 채널에 .on() 등록되어 throw. random 으로 매번 새 객체.
+    const rid = Math.random().toString(36).slice(2);
     const channel = supabase
-      .channel(`calendar-events:${currentUserId}`)
+      .channel(`calendar-events:${currentUserId}:${rid}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "calendar_events" },
