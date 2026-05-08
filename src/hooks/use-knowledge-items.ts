@@ -131,7 +131,7 @@ export function useKnowledgeItems(folderId: string | null) {
 
   return {
     items,
-    loading: itemsQuery.data === undefined,
+    loading: itemsQuery.isPending,
     addItem,
     updateItem,
     deleteItem,

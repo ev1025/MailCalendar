@@ -129,7 +129,7 @@ export function useTravelPlanTasks(planId: string | null) {
 
   return {
     tasks: tasksQuery.data ?? [],
-    loading: !!planId && tasksQuery.data === undefined,
+    loading: !!planId && tasksQuery.isPending,
     addTask,
     updateTask,
     deleteTask,

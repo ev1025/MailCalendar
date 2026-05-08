@@ -334,7 +334,7 @@ export function useTransactions(startDate: string, endDate?: string) {
   return {
     transactions: txQuery.data ?? [],
     categories: catQuery.data ?? [],
-    loading: txQuery.data === undefined,
+    loading: txQuery.isPending,
     addTransaction,
     addInstallment,
     updateTransaction,

@@ -123,7 +123,7 @@ export function useProducts() {
 
   return {
     products: productsQuery.data ?? [],
-    loading: productsQuery.data === undefined,
+    loading: productsQuery.isPending,
     addProduct,
     updateProduct,
     deleteProduct,

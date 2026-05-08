@@ -93,7 +93,7 @@ export function useProductPurchases(productId: string | null) {
 
   return {
     purchases: purchasesQuery.data ?? [],
-    loading: !!productId && purchasesQuery.data === undefined,
+    loading: !!productId && purchasesQuery.isPending,
     addPurchase,
     updatePurchase,
     deletePurchase,

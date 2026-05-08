@@ -18,7 +18,8 @@ import FinanceClient from "./finance-client";
 
 /**
  * Finance 페이지 — RSC.
- * 본인 user_id 의 이번달 transactions / fixed_expenses / categories / payment_methods prefetch.
+ * 본인 user_id 의 이번달 transactions / fixed_expenses / categories /
+ * payment_methods 를 prefetchQuery 로 prefetch.
  */
 export default async function FinancePage() {
   const supa = await createSupabaseServerClient();
@@ -28,8 +29,9 @@ export default async function FinancePage() {
 
   try {
     const {
-      data: { user },
-    } = await supa.auth.getUser();
+      data: { session },
+    } = await supa.auth.getSession();
+    const user = session?.user ?? null;
 
     if (user) {
       const { data: appUser } = await supa
@@ -51,56 +53,66 @@ export default async function FinancePage() {
           now.getMonth() + 2,
         ).start;
 
-        const [txRes, fxRes, catRes, pmRes] = await Promise.all([
-          supa
-            .from("expenses")
-            .select("*, category:expense_categories(*)")
-            .gte("date", startYmd)
-            .lt("date", endYmdExclusive)
-            .eq("user_id", currentUserId)
-            .order("date", { ascending: false })
-            .order("created_at", { ascending: false }),
-          supa
-            .from("fixed_expenses")
-            .select("*, category:expense_categories(*)")
-            .eq("is_active", true)
-            .eq("user_id", currentUserId)
-            .order("day_of_month"),
-          supa
-            .from("expense_categories")
-            .select("*")
-            .or(`user_id.is.null,user_id.eq.${currentUserId}`)
-            .order("name"),
-          supa
-            .from("payment_methods")
-            .select("id, name, color, sort_order")
-            .eq("user_id", currentUserId)
-            .order("sort_order", { ascending: true })
-            .order("created_at", { ascending: true }),
+        // 4개 prefetch 병렬.
+        await Promise.all([
+          queryClient.prefetchQuery({
+            queryKey: transactionsQueryKey(
+              currentUserId,
+              startYmd,
+              endYmdExclusive,
+            ),
+            queryFn: async (): Promise<Expense[]> => {
+              const { data } = await supa
+                .from("expenses")
+                .select("*, category:expense_categories(*)")
+                .gte("date", startYmd)
+                .lt("date", endYmdExclusive)
+                .eq("user_id", currentUserId)
+                .order("date", { ascending: false })
+                .order("created_at", { ascending: false });
+              return (data as Expense[]) ?? [];
+            },
+          }),
+          queryClient.prefetchQuery({
+            queryKey: fixedExpensesQueryKey(currentUserId),
+            queryFn: async (): Promise<FixedExpense[]> => {
+              const { data } = await supa
+                .from("fixed_expenses")
+                .select("*, category:expense_categories(*)")
+                .eq("is_active", true)
+                .eq("user_id", currentUserId)
+                .order("day_of_month");
+              return (data as FixedExpense[]) ?? [];
+            },
+          }),
+          queryClient.prefetchQuery({
+            queryKey: expenseCategoriesQueryKey(currentUserId),
+            queryFn: async (): Promise<ExpenseCategory[]> => {
+              const { data } = await supa
+                .from("expense_categories")
+                .select("*")
+                .or(`user_id.is.null,user_id.eq.${currentUserId}`)
+                .order("name");
+              return (data as ExpenseCategory[]) ?? [];
+            },
+          }),
+          queryClient.prefetchQuery({
+            queryKey: paymentMethodsQueryKey(currentUserId),
+            queryFn: async (): Promise<PaymentMethod[]> => {
+              const { data } = await supa
+                .from("payment_methods")
+                .select("id, name, color, sort_order")
+                .eq("user_id", currentUserId)
+                .order("sort_order", { ascending: true })
+                .order("created_at", { ascending: true });
+              return (data as PaymentMethod[]) ?? [];
+            },
+          }),
         ]);
-
-        queryClient.setQueryData<Expense[]>(
-          transactionsQueryKey(currentUserId, startYmd, endYmdExclusive),
-          (txRes.data as Expense[]) ?? [],
-        );
-        queryClient.setQueryData<FixedExpense[]>(
-          fixedExpensesQueryKey(currentUserId),
-          (fxRes.data as FixedExpense[]) ?? [],
-        );
-        queryClient.setQueryData<ExpenseCategory[]>(
-          expenseCategoriesQueryKey(currentUserId),
-          (catRes.data as ExpenseCategory[]) ?? [],
-        );
-        if (pmRes.data && pmRes.data.length > 0) {
-          queryClient.setQueryData<PaymentMethod[]>(
-            paymentMethodsQueryKey(currentUserId),
-            pmRes.data as PaymentMethod[],
-          );
-        }
       }
     }
   } catch {
-    // skip
+    // skip — 클라이언트 fetch 재시도.
   }
 
   return (

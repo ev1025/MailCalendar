@@ -416,7 +416,7 @@ export function useCalendarEvents(
     events: queryResult.data ?? [],
     // 캐시 hit 인 경우 isPending=false, 즉시 데이터 표시 → 깜빡임 없음.
     // enabled=false 인 동안은 의미 없으므로 false 로 통일.
-    loading: enabled && queryResult.data === undefined,
+    loading: enabled && queryResult.isPending,
     addEvent,
     addEventsBulk,
     updateEvent,

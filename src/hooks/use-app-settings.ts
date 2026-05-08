@@ -55,7 +55,7 @@ export function useAppSetting(key: string, defaultValue: string) {
   });
 
   const value = settingQuery.data ?? defaultValue;
-  const loading = !!userId && settingQuery.data === undefined;
+  const loading = !!userId && settingQuery.isPending;
 
   const saveValue = useCallback(
     async (next: string) => {

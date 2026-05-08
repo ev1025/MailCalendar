@@ -104,7 +104,7 @@ export function useKnowledgeFolders() {
 
   return {
     folders,
-    loading: foldersQuery.data === undefined,
+    loading: foldersQuery.isPending,
     addFolder,
     updateFolder,
     deleteFolder,

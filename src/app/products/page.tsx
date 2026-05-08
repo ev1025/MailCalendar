@@ -26,7 +26,8 @@ interface ProductCategoryRow {
 
 /**
  * Products 페이지 — RSC.
- * 본인 user_id 의 products / product_categories / 이번달 transactions / fixed_expenses prefetch.
+ * 본인 user_id 의 products / product_categories / 이번달 transactions /
+ * fixed_expenses prefetchQuery.
  */
 export default async function ProductsPage() {
   const supa = await createSupabaseServerClient();
@@ -36,8 +37,9 @@ export default async function ProductsPage() {
 
   try {
     const {
-      data: { user },
-    } = await supa.auth.getUser();
+      data: { session },
+    } = await supa.auth.getSession();
+    const user = session?.user ?? null;
 
     if (user) {
       const { data: appUser } = await supa
@@ -59,65 +61,85 @@ export default async function ProductsPage() {
           now.getMonth() + 2,
         ).start;
 
-        const [prodRes, prodCatRes, txRes, fxRes, expCatRes] =
-          await Promise.all([
-            supa
-              .from("products")
-              .select("*")
-              .eq("user_id", currentUserId)
-              .order("is_active", { ascending: false })
-              .order("category")
-              .order("sub_category")
-              .order("sort_order")
-              .order("name"),
-            supa
-              .from("product_categories")
-              .select("id, name, color, is_builtin, sort_order")
-              .eq("user_id", currentUserId)
-              .order("sort_order", { ascending: true })
-              .order("created_at", { ascending: true }),
-            supa
-              .from("expenses")
-              .select("*, category:expense_categories(*)")
-              .gte("date", startYmd)
-              .lt("date", endYmdExclusive)
-              .eq("user_id", currentUserId)
-              .order("date", { ascending: false }),
-            supa
-              .from("fixed_expenses")
-              .select("*, category:expense_categories(*)")
-              .eq("is_active", true)
-              .eq("user_id", currentUserId)
-              .order("day_of_month"),
-            supa
-              .from("expense_categories")
-              .select("*")
-              .or(`user_id.is.null,user_id.eq.${currentUserId}`)
-              .order("name"),
-          ]);
-
-        queryClient.setQueryData<Product[]>(
-          productsQueryKey(currentUserId),
-          (prodRes.data as Product[]) ?? [],
-        );
-        if (prodCatRes.data && prodCatRes.data.length > 0) {
-          queryClient.setQueryData<ProductCategoryRow[]>(
-            productCategoriesQueryKey(currentUserId),
-            prodCatRes.data as ProductCategoryRow[],
-          );
-        }
-        queryClient.setQueryData<Expense[]>(
-          transactionsQueryKey(currentUserId, startYmd, endYmdExclusive),
-          (txRes.data as Expense[]) ?? [],
-        );
-        queryClient.setQueryData<FixedExpense[]>(
-          fixedExpensesQueryKey(currentUserId),
-          (fxRes.data as FixedExpense[]) ?? [],
-        );
-        queryClient.setQueryData<ExpenseCategory[]>(
-          expenseCategoriesQueryKey(currentUserId),
-          (expCatRes.data as ExpenseCategory[]) ?? [],
-        );
+        await Promise.all([
+          queryClient.prefetchQuery({
+            queryKey: productsQueryKey(currentUserId),
+            queryFn: async (): Promise<Product[]> => {
+              const { data, error } = await supa
+                .from("products")
+                .select("*")
+                .eq("user_id", currentUserId)
+                .order("is_active", { ascending: false })
+                .order("category")
+                .order("sub_category")
+                .order("sort_order")
+                .order("name");
+              if (error) {
+                const fallback = await supa
+                  .from("products")
+                  .select("*")
+                  .eq("user_id", currentUserId)
+                  .order("is_active", { ascending: false })
+                  .order("category")
+                  .order("name");
+                return (fallback.data as Product[]) ?? [];
+              }
+              return (data as Product[]) ?? [];
+            },
+          }),
+          queryClient.prefetchQuery({
+            queryKey: productCategoriesQueryKey(currentUserId),
+            queryFn: async (): Promise<ProductCategoryRow[]> => {
+              const { data } = await supa
+                .from("product_categories")
+                .select("id, name, color, is_builtin, sort_order")
+                .eq("user_id", currentUserId)
+                .order("sort_order", { ascending: true })
+                .order("created_at", { ascending: true });
+              return (data as ProductCategoryRow[]) ?? [];
+            },
+          }),
+          queryClient.prefetchQuery({
+            queryKey: transactionsQueryKey(
+              currentUserId,
+              startYmd,
+              endYmdExclusive,
+            ),
+            queryFn: async (): Promise<Expense[]> => {
+              const { data } = await supa
+                .from("expenses")
+                .select("*, category:expense_categories(*)")
+                .gte("date", startYmd)
+                .lt("date", endYmdExclusive)
+                .eq("user_id", currentUserId)
+                .order("date", { ascending: false });
+              return (data as Expense[]) ?? [];
+            },
+          }),
+          queryClient.prefetchQuery({
+            queryKey: fixedExpensesQueryKey(currentUserId),
+            queryFn: async (): Promise<FixedExpense[]> => {
+              const { data } = await supa
+                .from("fixed_expenses")
+                .select("*, category:expense_categories(*)")
+                .eq("is_active", true)
+                .eq("user_id", currentUserId)
+                .order("day_of_month");
+              return (data as FixedExpense[]) ?? [];
+            },
+          }),
+          queryClient.prefetchQuery({
+            queryKey: expenseCategoriesQueryKey(currentUserId),
+            queryFn: async (): Promise<ExpenseCategory[]> => {
+              const { data } = await supa
+                .from("expense_categories")
+                .select("*")
+                .or(`user_id.is.null,user_id.eq.${currentUserId}`)
+                .order("name");
+              return (data as ExpenseCategory[]) ?? [];
+            },
+          }),
+        ]);
       }
     }
   } catch {

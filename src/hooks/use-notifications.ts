@@ -114,7 +114,7 @@ export function useNotifications() {
   return {
     notifications,
     unreadCount,
-    loading: !!userId && notifQuery.data === undefined,
+    loading: !!userId && notifQuery.isPending,
     markAsRead,
     markAllRead,
     refetch: () => notifQuery.refetch(),

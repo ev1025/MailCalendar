@@ -66,12 +66,18 @@ export function useNavBadges() {
   // RLS가 select에만 작동하므로 보수적으로 변경 즉시 invalidate.
   useEffect(() => {
     if (!userId) return;
+    // 본인 user_id 행 변경에만 반응 — 남의 변경 이벤트로 불필요 invalidate 방지.
     const rid = Math.random().toString(36).slice(2);
     const channel = supabase
       .channel(`nav-badges:${userId}:${rid}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "calendar_events" },
+        {
+          event: "*",
+          schema: "public",
+          table: "calendar_events",
+          filter: `user_id=eq.${userId}`,
+        },
         () =>
           queryClient.invalidateQueries({
             queryKey: navBadgesQueryKey(userId),
@@ -79,7 +85,12 @@ export function useNavBadges() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "fixed_expenses" },
+        {
+          event: "*",
+          schema: "public",
+          table: "fixed_expenses",
+          filter: `user_id=eq.${userId}`,
+        },
         () =>
           queryClient.invalidateQueries({
             queryKey: navBadgesQueryKey(userId),

@@ -177,7 +177,7 @@ export function useCalendarShares() {
     outgoing,
     incoming,
     viewableUserIds,
-    loading: !!currentUserId && sharesQuery.data === undefined,
+    loading: !!currentUserId && sharesQuery.isPending,
     invite,
     accept,
     reject,

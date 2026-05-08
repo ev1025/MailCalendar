@@ -17,14 +17,16 @@ import CalendarClient from "./calendar-client";
  * 책임:
  *  1) 쿠키 세션에서 로그인 사용자(auth.users → app_users 매핑)를 식별.
  *  2) URL 의 ?y=YYYY&m=MM (없으면 오늘 기준)으로 표시 월 결정.
- *  3) 본인 user_id 만 visibleUserIds 로 가정해 해당 월의 events 를 PostgREST 로 prefetch.
+ *  3) 본인 user_id 만 visibleUserIds 로 가정해 해당 월의 events 를 prefetchQuery.
  *  4) TanStack Query 의 dehydrate 결과를 HydrationBoundary 로 감싸 클라이언트에 전달.
  *
  * 클라이언트의 useCalendarEvents 가 동일 queryKey 로 호출하면 즉시 cache hit →
  * 첫 paint 부터 데이터 노출, 깜빡임 0%.
  *
- * 공유받은 사용자(viewableUserIds)의 events 는 visibleUserIds 토글 후 클라이언트에서
- * 추가 fetch — 본인 일정이 즉시 보이는 게 우선. 공유 prefetch 는 추후 정교화 가능.
+ * `prefetchQuery` 패턴:
+ *  - setQueryData 직접 호출보다 정석. queryFn 결과를 자동 setQueryData + 메타
+ *    (dataUpdatedAt / fetchStatus 등) 정확히 동기화.
+ *  - 동일 queryKey + queryFn 조합을 client useQuery 가 받으면 isPending=false 즉시 hit.
  */
 export default async function CalendarPage({
   searchParams,
@@ -41,16 +43,17 @@ export default async function CalendarPage({
   const supa = await createSupabaseServerClient();
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: {
-        staleTime: 5 * 60 * 1000,
-      },
+      queries: { staleTime: 5 * 60 * 1000 },
     },
   });
 
   try {
+    // getSession() — JWT 쿠키 로컬 디코딩(0.1ms). RPC 없음.
+    // RSC prefetch 는 어차피 RLS 가 보호하므로 server 검증 불필요.
     const {
-      data: { user },
-    } = await supa.auth.getUser();
+      data: { session },
+    } = await supa.auth.getSession();
+    const user = session?.user ?? null;
 
     if (user) {
       const { data: appUser } = await supa
@@ -69,29 +72,29 @@ export default async function CalendarPage({
             ? `${year + 1}-01-01`
             : monthBounds(year, month + 1).start;
         const visibleUserIds = [currentUserId];
-        const queryKey = calendarEventsQueryKey(
-          currentUserId,
-          startDate,
-          endDate,
-          visibleUserIds,
-        );
 
-        const { data: events } = await supa
-          .from("calendar_events")
-          .select("*")
-          .in("user_id", visibleUserIds)
-          .lt("start_date", endDate)
-          .or(
-            `end_date.gte.${startDate},and(end_date.is.null,start_date.gte.${startDate})`,
-          )
-          .order("start_date")
-          .order("sort_order")
-          .order("created_at");
-
-        queryClient.setQueryData<SharedEvent[]>(
-          queryKey,
-          (events as SharedEvent[]) ?? [],
-        );
+        await queryClient.prefetchQuery({
+          queryKey: calendarEventsQueryKey(
+            currentUserId,
+            startDate,
+            endDate,
+            visibleUserIds,
+          ),
+          queryFn: async (): Promise<SharedEvent[]> => {
+            const { data } = await supa
+              .from("calendar_events")
+              .select("*")
+              .in("user_id", visibleUserIds)
+              .lt("start_date", endDate)
+              .or(
+                `end_date.gte.${startDate},and(end_date.is.null,start_date.gte.${startDate})`,
+              )
+              .order("start_date")
+              .order("sort_order")
+              .order("created_at");
+            return (data as SharedEvent[]) ?? [];
+          },
+        });
       }
     }
   } catch {

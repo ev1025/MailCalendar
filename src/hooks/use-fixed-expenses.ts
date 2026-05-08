@@ -674,7 +674,7 @@ export function useFixedExpenses() {
 
   return {
     fixedExpenses,
-    loading: fxQuery.data === undefined,
+    loading: fxQuery.isPending,
     addFixed,
     updateFixed,
     deleteFixed,

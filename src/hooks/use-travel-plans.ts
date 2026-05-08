@@ -180,7 +180,7 @@ export function useTravelPlans(visibleUserIds?: string[]) {
 
   return {
     plans,
-    loading: plansQuery.data === undefined,
+    loading: plansQuery.isPending,
     addPlan,
     updatePlan,
     deletePlan,

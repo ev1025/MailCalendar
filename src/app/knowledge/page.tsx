@@ -11,7 +11,7 @@ import KnowledgeClient from "./knowledge-client";
 
 /**
  * Knowledge 페이지 — RSC.
- * 모든 폴더와 모든 아이템(전체 보기 키)을 prefetch.
+ * 모든 폴더와 모든 아이템(전체 보기 키)을 prefetchQuery.
  */
 export default async function KnowledgePage() {
   const supa = await createSupabaseServerClient();
@@ -20,27 +20,30 @@ export default async function KnowledgePage() {
   });
 
   try {
-    const [foldersRes, itemsRes] = await Promise.all([
-      supa
-        .from("knowledge_folders")
-        .select("*")
-        .order("sort_order")
-        .order("name"),
-      supa
-        .from("knowledge_items")
-        .select("*")
-        .order("pinned", { ascending: false })
-        .order("updated_at", { ascending: false }),
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryKey: KNOWLEDGE_FOLDERS_KEY,
+        queryFn: async (): Promise<KnowledgeFolder[]> => {
+          const { data } = await supa
+            .from("knowledge_folders")
+            .select("*")
+            .order("sort_order")
+            .order("name");
+          return (data as KnowledgeFolder[]) ?? [];
+        },
+      }),
+      queryClient.prefetchQuery({
+        queryKey: knowledgeItemsQueryKey(null),
+        queryFn: async (): Promise<KnowledgeItem[]> => {
+          const { data } = await supa
+            .from("knowledge_items")
+            .select("*")
+            .order("pinned", { ascending: false })
+            .order("updated_at", { ascending: false });
+          return (data as KnowledgeItem[]) ?? [];
+        },
+      }),
     ]);
-
-    queryClient.setQueryData<KnowledgeFolder[]>(
-      KNOWLEDGE_FOLDERS_KEY,
-      (foldersRes.data as KnowledgeFolder[]) ?? [],
-    );
-    queryClient.setQueryData<KnowledgeItem[]>(
-      knowledgeItemsQueryKey(null),
-      (itemsRes.data as KnowledgeItem[]) ?? [],
-    );
   } catch {
     // skip
   }

@@ -238,7 +238,7 @@ export function useTravelItems(visibleUserIds?: string[]) {
 
   return {
     items,
-    loading: itemsQuery.data === undefined,
+    loading: itemsQuery.isPending,
     addItem,
     updateItem,
     deleteItem,

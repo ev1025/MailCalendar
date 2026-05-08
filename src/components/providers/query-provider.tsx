@@ -6,22 +6,30 @@ import {
   isServer,
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { useState } from "react";
 
 /**
  * 앱 전역 TanStack Query Provider.
  *
- * RSC-safe 패턴(Tanstack 공식 권장):
- *  - 서버: 매 요청마다 새 QueryClient (요청 간 캐시 격리, RSC prefetch용)
- *  - 브라우저: 싱글턴 (탭 내 페이지 이동 간 캐시 유지 — Suspense 더블 호출 방지)
+ * 두 모드:
+ *  1. 서버 (RSC dehydrate 컨텍스트): QueryClientProvider 만 — persist 불필요.
+ *  2. 클라이언트 (브라우저): PersistQueryClientProvider — localStorage 에 캐시 영속화.
+ *
+ * persist 동작:
+ *  - 모든 useQuery 결과가 localStorage 에 자동 저장 (변경 시 thro+ttle).
+ *  - 앱 재시작 시 첫 paint 부터 캐시값 즉시 hydrate → 네트워크 fetch 전에 이전 화면 복원.
+ *  - maxAge 24h 지난 캐시는 자동 삭제.
+ *  - buster: 키 충돌 방지 — 앱 코드/스키마 변경 시 이 문자열 bump 해서 구 캐시 무효화.
  *
  * defaultOptions:
- *  - staleTime 60s: 1분 동안 fresh, 그 후 background revalidate.
- *  - gcTime 24h: 가비지 컬렉션 전까지 캐시 보존(탭 이동 후 돌아와도 즉시 표시).
- *  - refetchOnWindowFocus false: 모바일 PWA 백그라운드 → 포그라운드 복귀 시
- *    네트워크 폭증 방지. 필요한 도메인은 useAutoRefetch나 Realtime으로 명시 갱신.
- *  - retry 1: 일시 네트워크 오류는 한 번 재시도.
+ *  - staleTime 60s · gcTime 24h · refetchOnWindowFocus false · retry 1.
  */
+
+const PERSIST_BUSTER = "v1"; // 캐시 호환성 깨질 때 (스키마 변경 등) bump.
+const PERSIST_MAX_AGE = 24 * 60 * 60 * 1000; // 24h
+
 function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -41,25 +49,58 @@ function makeQueryClient() {
 let browserQueryClient: QueryClient | undefined = undefined;
 
 function getQueryClient(): QueryClient {
-  if (isServer) {
-    // 서버: 요청마다 새로 만든다. RSC prefetch 컨텍스트 격리.
-    return makeQueryClient();
-  }
-  // 브라우저: 한 번만 생성하고 재사용.
+  if (isServer) return makeQueryClient();
   if (!browserQueryClient) browserQueryClient = makeQueryClient();
   return browserQueryClient;
 }
 
+// persister는 client 에서만 의미가 있다. localStorage 접근 가능.
+let persister:
+  | ReturnType<typeof createSyncStoragePersister>
+  | undefined;
+if (typeof window !== "undefined") {
+  try {
+    persister = createSyncStoragePersister({
+      storage: window.localStorage,
+      key: "MC_QUERY_CACHE",
+      throttleTime: 1000,
+    });
+  } catch {
+    // localStorage 비활성(privacy mode 등) — persist 없이 진행.
+    persister = undefined;
+  }
+}
+
 export function QueryProvider({ children }: { children: React.ReactNode }) {
-  // useState 초기화로 mount 동안 동일 인스턴스 유지.
   const [queryClient] = useState(() => getQueryClient());
 
+  // 서버 / persist 불가 환경 → 일반 Provider.
+  if (isServer || !persister) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+        {process.env.NODE_ENV === "development" && (
+          <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+        )}
+      </QueryClientProvider>
+    );
+  }
+
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: PERSIST_MAX_AGE,
+        buster: PERSIST_BUSTER,
+        // 일부 키만 persist 하고 싶으면 dehydrateOptions.shouldDehydrateQuery 추가.
+        // 현재는 기본값(모든 query) — 우리 데이터는 모두 동일 사용자 본인 것이라 안전.
+      }}
+    >
       {children}
       {process.env.NODE_ENV === "development" && (
         <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
       )}
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
