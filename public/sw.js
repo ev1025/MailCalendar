@@ -1,24 +1,23 @@
-/* MailCalendar Service Worker — 정적 자산 cacheFirst + 네비게이션 networkFirst.
+/* MailCalendar Service Worker — 정적 자산만 cacheFirst.
  *
- * 전략:
- *  1. 설치(install) — 자체 sw 만 캐시. 정적 자산은 첫 fetch 시 lazily.
- *  2. activate — 구버전 캐시 정리.
- *  3. fetch:
- *     - GET 만 가로채기 (POST/PUT/DELETE 우회).
- *     - chrome-extension://, blob:, data: 등 비-http 스킴 우회.
- *     - 매니페스트 / 아이콘 / Next.js 정적 산출물 → cacheFirst.
- *     - HTML 페이지 → networkFirst (fallback: cache).
- *     - 그 외 (API, 외부 스크립트 등) → 네트워크 직행 (캐시 안 함).
+ * 정책 (보수적):
+ *  - GET 만 가로채기 (POST/PUT/DELETE 우회).
+ *  - chrome-extension://, blob:, data: 등 비-http 스킴 우회.
+ *  - 외부 호스트(Supabase, 지도 API) 우회.
+ *  - 응답 헤더 Cache-Control: no-store / private 인 경우 캐시 금지.
+ *  - **`?_rsc=` (Next.js RSC payload) 절대 캐시 금지** — stale 시 라우터 깨짐.
+ *  - **HTML/페이지 navigation 캐시 안 함** — Next.js App Router 의 RSC 직렬화가
+ *    서버측 dynamic 렌더라, SW 가 stale 페이지 응답 주면 hydration mismatch 발생.
+ *  - 캐시 대상은 오직: _next/static/*, /icons/*, /manifest.webmanifest,
+ *    .png/.jpg/.svg/.webp/.ico/.woff2 등 hash 포함 영구 자산.
  *
- * 버전: 변경 시 OLD_CACHES 배열에 이전 버전 남기지 말고 그냥 prefix 매칭으로 정리.
+ * 버전 변경 시 활성화 단계에서 구버전 캐시 자동 정리.
  */
 
-const SW_VERSION = "v1";
+const SW_VERSION = "v2";
 const STATIC_CACHE = `mc-static-${SW_VERSION}`;
-const PAGES_CACHE = `mc-pages-${SW_VERSION}`;
 
-self.addEventListener("install", (event) => {
-  // 즉시 활성화 — 새 sw 가 즉시 fetch 핸들 받도록.
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
@@ -31,33 +30,23 @@ self.addEventListener("activate", (event) => {
           .filter((k) => k.startsWith("mc-") && !k.endsWith(SW_VERSION))
           .map((k) => caches.delete(k)),
       );
-      // 모든 클라이언트에 즉시 적용.
       await self.clients.claim();
     })(),
   );
 });
 
 function isStaticAsset(url) {
-  // Next.js 빌드 산출물 (해시 포함 영구).
   if (url.pathname.startsWith("/_next/static/")) return true;
-  // 매니페스트.
   if (url.pathname === "/manifest.webmanifest") return true;
-  // 아이콘.
   if (url.pathname.startsWith("/icons/")) return true;
-  // 단순 파일 확장자 (PNG/JPG/SVG/WEBP/ICO/JS/CSS/WOFF2 등).
-  return /\.(?:png|jpg|jpeg|svg|webp|ico|js|css|woff2?|ttf)$/.test(url.pathname);
+  return /\.(?:png|jpg|jpeg|svg|webp|ico|woff2?|ttf)$/.test(url.pathname);
 }
 
-function isAppNavigation(request, url) {
-  // 페이지 네비게이션 — HTML 요청.
-  if (request.mode === "navigate") return true;
-  // 명시적으로 HTML accept.
-  const accept = request.headers.get("accept") || "";
-  if (accept.includes("text/html")) {
-    // API 라우트는 제외 — 동적 응답.
-    if (url.pathname.startsWith("/api/")) return false;
-    return true;
-  }
+function shouldNotCache(response) {
+  if (!response || !response.ok) return true;
+  // Cache-Control no-store / private 검사 — 인증 응답·1회용 토큰 캐시 방지.
+  const cc = response.headers.get("cache-control") || "";
+  if (/no-store|private/i.test(cc)) return true;
   return false;
 }
 
@@ -65,36 +54,21 @@ async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   if (cached) {
-    // 백그라운드 갱신 시도 (실패 무시).
+    // 백그라운드 갱신 (실패 무시).
     fetch(request)
       .then((res) => {
-        if (res && res.ok) cache.put(request, res.clone());
+        if (!shouldNotCache(res)) cache.put(request, res.clone());
       })
       .catch(() => {});
     return cached;
   }
   const res = await fetch(request);
-  if (res && res.ok) cache.put(request, res.clone());
+  if (!shouldNotCache(res)) cache.put(request, res.clone());
   return res;
-}
-
-async function networkFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  try {
-    const res = await fetch(request);
-    if (res && res.ok) cache.put(request, res.clone());
-    return res;
-  } catch (err) {
-    const cached = await cache.match(request);
-    if (cached) return cached;
-    throw err;
-  }
 }
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
-
-  // GET 만 처리.
   if (request.method !== "GET") return;
 
   let url;
@@ -104,21 +78,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // http(s) 가 아닌 스킴 우회.
   if (url.protocol !== "http:" && url.protocol !== "https:") return;
-
-  // 외부 호스트 우회 (Supabase, 지도 API 등은 그냥 네트워크).
   if (url.origin !== self.location.origin) return;
 
+  // RSC payload — 절대 캐시 금지. router 가 매번 새로 받아야 함.
+  if (url.searchParams.has("_rsc")) return;
+
+  // 정적 자산만 캐시. 그 외(HTML 페이지·API)는 그대로 네트워크.
   if (isStaticAsset(url)) {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }
-
-  if (isAppNavigation(request, url)) {
-    event.respondWith(networkFirst(request, PAGES_CACHE));
-    return;
-  }
-
-  // 그 외 (API 등) — 그냥 네트워크.
 });

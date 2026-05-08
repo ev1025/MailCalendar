@@ -6,10 +6,30 @@
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-// 모듈 최초 import 시 한 번만 createBrowserClient 호출.
-// createBrowserClient 자체는 document.cookie를 즉시 만지지 않으므로
-// SSR 빌드(next build) 시 모듈이 로드되어도 안전.
-export const supabase = getSupabaseBrowserClient();
+type SupabaseBrowserClient = ReturnType<typeof getSupabaseBrowserClient>;
+
+// Lazy 싱글턴 — 모듈 import 시점에는 createBrowserClient 호출하지 않고,
+// 첫 메서드 접근 시점에 클라이언트 측에서만 인스턴스 생성.
+// (모듈 top-level 직접 호출은 SSR 빌드/렌더 시점과 클라이언트 hydration 시점의
+// 인스턴스·쿠키 참조가 꼬일 수 있어 권장되지 않음.)
+let _instance: SupabaseBrowserClient | null = null;
+function lazyGet(): SupabaseBrowserClient {
+  if (!_instance) _instance = getSupabaseBrowserClient();
+  return _instance;
+}
+
+export const supabase = new Proxy({} as SupabaseBrowserClient, {
+  get(_, prop) {
+    const client = lazyGet();
+    const value = (client as unknown as Record<PropertyKey, unknown>)[
+      prop as PropertyKey
+    ];
+    if (typeof value === "function") {
+      return (value as (...args: unknown[]) => unknown).bind(client);
+    }
+    return value;
+  },
+}) as SupabaseBrowserClient;
 
 // 레거시 호환 — 이전 hybridStorage 시절의 setRememberMe / 자동로그인 토글.
 // @supabase/ssr은 표준 sb-* 쿠키(1년 만료)로 영속을 보장하므로 더 이상 필요 없음.
