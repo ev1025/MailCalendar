@@ -32,8 +32,12 @@ interface HourlyEntry {
 
 // 캐시 — 모듈 레벨 Map(intra-session, 가장 빠름) + localStorage(cross-session).
 // 앱 재시작 후 첫 진입에도 마지막 결과 즉시 표시.
+// SWR 패턴: stale 한 데이터(=오래된)도 일단 보여주고 백그라운드 refetch 로 갱신.
 const hourlyCache = new Map<string, HourlyEntry[]>();
-const CACHE_TTL_MS = 30 * 60 * 1000; // 30분 — localStorage 에서 hydrate 시 유효 기간.
+// fresh 기준 — 이보다 오래된 캐시는 hit 으로 보여주되 백그라운드 갱신.
+// localStorage 자체에는 24h 후 만료(메모리는 무한).
+const FRESH_TTL_MS = 30 * 60 * 1000; // 30분
+const STALE_TTL_MS = 24 * 60 * 60 * 1000; // 24시간 — 이보다 오래되면 무시(완전 새로 fetch).
 
 function cacheKey(date: string, lat: number, lon: number): string {
   return `${date}|${lat.toFixed(3)}|${lon.toFixed(3)}`;
@@ -43,13 +47,18 @@ function lsKey(key: string): string {
   return `weather-hourly:${key}`;
 }
 
-/** 캐시 lookup — 메모리 우선, 없으면 localStorage. localStorage hit 은 메모리에도 채움. */
-function readCache(key: string): HourlyEntry[] | null {
+/** 캐시 stale 허용 lookup — 24h 안쪽 데이터는 모두 반환 (오래돼도 표시 후 갱신). */
+function readCacheStale(key: string): HourlyEntry[] | null {
   const mem = hourlyCache.get(key);
   if (mem) return mem;
-  const persisted = getPersistentCache<HourlyEntry[]>(lsKey(key), CACHE_TTL_MS);
+  const persisted = getPersistentCache<HourlyEntry[]>(lsKey(key), STALE_TTL_MS);
   if (persisted) hourlyCache.set(key, persisted);
   return persisted;
+}
+
+/** fresh 기준(30m) 안쪽인지. true 면 백그라운드 refetch 불필요. */
+function isCacheFresh(key: string): boolean {
+  return getPersistentCache<HourlyEntry[]>(lsKey(key), FRESH_TTL_MS) != null;
 }
 
 function writeCache(key: string, entries: HourlyEntry[]): void {
@@ -57,15 +66,13 @@ function writeCache(key: string, entries: HourlyEntry[]): void {
   setPersistentCache(lsKey(key), entries);
 }
 
-async function fetchHourly(
+/** 네트워크 fetch — 캐시 무관 항상 새로 받음 + 결과를 캐시에 기록. */
+async function fetchHourlyNetwork(
   date: string,
   lat: number,
   lon: number,
   signal?: AbortSignal,
 ): Promise<HourlyEntry[] | null> {
-  const key = cacheKey(date, lat, lon);
-  const cached = readCache(key);
-  if (cached) return cached;
   try {
     const res = await fetch(
       `/api/weather/hourly?date=${date}&lat=${lat}&lon=${lon}`,
@@ -75,17 +82,33 @@ async function fetchHourly(
     const json = await res.json();
     if (json.error) return null;
     const entries = (json.entries ?? []) as HourlyEntry[];
-    writeCache(key, entries);
+    writeCache(cacheKey(date, lat, lon), entries);
     return entries;
   } catch {
     return null;
   }
 }
 
+/** 캐시 우선 fetch — fresh 면 즉시 반환, stale 이면 stale 반환하며 백그라운드 갱신,
+ *  miss 면 네트워크. prefetch 용도로도 사용. */
+async function fetchHourly(
+  date: string,
+  lat: number,
+  lon: number,
+  signal?: AbortSignal,
+): Promise<HourlyEntry[] | null> {
+  const key = cacheKey(date, lat, lon);
+  const cached = readCacheStale(key);
+  if (cached && isCacheFresh(key)) return cached;
+  return await fetchHourlyNetwork(date, lat, lon, signal);
+}
+
 /** 외부에서 미리 시간별 날씨 prefetch — calendar/page 에서 weatherMap 로드 후
- *  보이는 월의 일부 날짜에 대해 백그라운드 호출. 사용자가 클릭했을 때 즉시 표시. */
+ *  보이는 월 모든 날짜에 대해 백그라운드 호출. 보수적: 캐시(stale 포함) 있으면
+ *  skip — 다이얼로그에서 SWR 가 갱신 담당. miss 만 네트워크. */
 export function prefetchHourlyWeather(date: string, lat: number, lon: number): void {
-  fetchHourly(date, lat, lon).catch(() => {});
+  if (readCacheStale(cacheKey(date, lat, lon))) return;
+  fetchHourlyNetwork(date, lat, lon).catch(() => {});
 }
 
 interface Props {
@@ -139,27 +162,35 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
 
   useEffect(() => {
     if (!open || !date) return;
-    // 캐시 즉시 hydrate — 메모리 → localStorage 순. 있으면 loading=false 로 0초 표시.
-    const cached = readCache(cacheKey(date, location.lat, location.lon));
+    // SWR — stale 한 캐시(24h 안쪽) 가 있으면 즉시 표시 후, fresh 가 아니면
+    // 백그라운드 refetch. miss 면 로딩 표시 후 네트워크.
+    const key = cacheKey(date, location.lat, location.lon);
+    const cached = readCacheStale(key);
+    let cancelled = false;
     if (cached) {
       setEntries(cached);
       setLoading(false);
       setError(null);
-      return;
+      // fresh 면 끝, stale 이면 백그라운드로 새로 받기 (UI 깜빡임 없음).
+      if (!isCacheFresh(key)) {
+        fetchHourlyNetwork(date, location.lat, location.lon).then((rows) => {
+          if (!cancelled && rows) setEntries(rows);
+        });
+      }
+    } else {
+      setEntries(null);
+      setError(null);
+      setLoading(true);
+      fetchHourlyNetwork(date, location.lat, location.lon)
+        .then((rows) => {
+          if (cancelled) return;
+          if (rows === null) setError("fetch failed");
+          else setEntries(rows);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     }
-    let cancelled = false;
-    setEntries(null);
-    setError(null);
-    setLoading(true);
-    fetchHourly(date, location.lat, location.lon)
-      .then((rows) => {
-        if (cancelled) return;
-        if (rows === null) setError("fetch failed");
-        else setEntries(rows);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
     return () => {
       cancelled = true;
     };

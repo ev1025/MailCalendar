@@ -126,16 +126,12 @@ function CalendarPageInner() {
 
   // 시간별 날씨 prefetch — 일일 weatherMap 이 로드되면, 가시 월의 ±3일 정도
   // 백그라운드로 시간별 데이터 미리 받음. 사용자가 클릭 시 캐시 hit 으로 즉시 표시.
-  // 너무 많이 호출하면 외부 API 부담이라 오늘 ±3일만 처리.
+  // weatherMap 에 들어 있는 모든 날짜(=현재 보이는 월) 에 대해 prefetch.
+  // SWR 패턴 — fresh 한 건 skip, stale 만 갱신, miss 만 네트워크. 이미 캐시된
+  // 날짜는 즉시 반환되므로 API 부담 적음.
   useEffect(() => {
-    const today = new Date();
-    for (let d = -1; d <= 3; d++) {
-      const t = new Date(today);
-      t.setDate(today.getDate() + d);
-      const ymdStr = ymd(t);
-      if (weatherMap[ymdStr]) {
-        prefetchHourlyWeather(ymdStr, weatherLoc.lat, weatherLoc.lon);
-      }
+    for (const ymdStr of Object.keys(weatherMap)) {
+      prefetchHourlyWeather(ymdStr, weatherLoc.lat, weatherLoc.lon);
     }
   }, [weatherMap, weatherLoc.lat, weatherLoc.lon]);
   // 공유 owner 의 태그까지 색상이 보이려면 visibleUserIds 전달.
