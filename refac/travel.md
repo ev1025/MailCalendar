@@ -5,44 +5,58 @@
 - `src/components/travel/travel-list.tsx`
 - `src/components/travel/travel-form.tsx`
 
+---
+
 ## H — 필수
 
-### 1. 가상화 부재
+### 1. ✅ tagColorMap / allCategories / allItemTags useMemo — `252089c`
+- 매 렌더 새 객체·배열 → 메모화.
+
+### 2. ⏳ 가상화 부재
 - 100+ 행 시 모두 DOM 렌더.
-- 수정: `@tanstack/react-virtual` 도입. card 동적 높이라면 `useVirtualizer` + `measureElement`.
+- → `@tanstack/react-virtual` 동적 카드 가상화.
 
-### 2. tagColorMap / categoryColors 매 렌더 재생성
-- `travel-list.tsx:270-275` — 필터/정렬 변경 시마다 `new Set()` 순회.
-- 수정: `useMemo`.
+### 3. ⏳ 필터 영속성 분산
+- sessionStorage(filters) + localStorage(order) 혼용.
+- → 통합 인터페이스. `persistent-cache.ts` 활용.
 
-### 3. 필터 영속성 분산
-- sessionStorage(filters) + localStorage(order) 혼용 (`travel-list.tsx:77-84, 235-237`).
-- 수정: 단일 인터페이스. `persistent-cache.ts` 활용 또는 통합 hook.
+### 4. ⏳ drag 의도 시각 피드백
+- TouchSensor 200ms delay — hold 중 무반응 구간.
+- → drag 시작 시 즉시 약한 scale 1.02 (Plans 패턴 적용).
+
+---
 
 ## M — 권장
 
-### 4. 리오더 layoutId 애니메이션
-- `arrayMove` 후 key 가 같아 framer 가 위치 이동 인식 못 함.
-- 수정: `<motion.div layoutId={item.id}>` + `<AnimatePresence>`.
+### 5. ⏳ 리오더 layoutId 애니메이션
+- `arrayMove` 후 framer 가 위치 이동 인식 못 함.
+- → `motion.div layoutId={item.id}` + AnimatePresence.
 
-### 5. 필터 패널 진입/퇴출 transition
+### 6. ⏳ 필터 패널 진입/퇴출 transition
 - 검색창 ↔ 필터 토글 시 layout shift.
-- 수정: `<AnimatePresence mode="wait">` + 동일 height 보장.
+- → `<AnimatePresence mode="wait">` + min-height reserved.
 
-### 6. drag 의도 감지
-- 200ms TouchSensor delay — 사용자가 카드 hold 시 무반응 구간.
-- 수정: drag 시작 시 즉시 약한 scale 피드백 (visual cue).
+### 7. ⏳ 가본 곳 토글 spring
+- 체크 시 ✓ 즉시 표시. spring + scale 0.9→1 으로 만족감.
+
+### 8. ⏳ 검색 결과 매칭 강조
+- 매칭 단어에 `<mark>` 또는 bg-yellow tint.
+
+---
 
 ## L — 있으면 좋음
 
-### 7. 행 내 액션 버튼 hit-target
-- 모바일에서 10px 정도로 작은 트리거. 패딩 추가.
+### 9. ⏳ 행 내 액션 버튼 hit-target
+- 모바일 10px 트리거 작음. `p-1` 패딩 추가로 24~28px.
 
-### 8. 삭제 swipe gesture
-- 데스크톱 우클릭 / 모바일 swipe-to-delete 도입 (라이브러리 또는 커스텀).
+### 10. ⏳ 삭제 swipe gesture
+- 데스크톱 우클릭 / 모바일 swipe-to-delete (Vaul 또는 커스텀).
 
-## 적용 순서
-1. H2 color map 메모 (즉시)
-2. M4 layoutId 리오더 애니메이션
-3. M5 필터 패널 transition
-4. H1 가상화 (실 데이터 기준)
+---
+
+## 적용 순서 (남은 미적용)
+1. ⏳ M5 layoutId 리오더 (즉시 효과)
+2. ⏳ M7 가본 곳 토글 spring
+3. ⏳ M6 필터 패널 transition
+4. ⏳ H4 drag 의도 피드백
+5. ⏳ H3 영속성 통합
