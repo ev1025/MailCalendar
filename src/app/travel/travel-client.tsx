@@ -10,11 +10,14 @@ import { useCalendarEvents } from "@/hooks/use-calendar-events";
 import { useEventTags } from "@/hooks/use-event-tags";
 import { useTravelItems } from "@/hooks/use-travel-items";
 import { useVisibleUserIds } from "@/hooks/use-visible-user-ids";
+import { useCalendarShares } from "@/hooks/use-calendar-shares";
 import { supabase } from "@/lib/supabase";
 
 export default function TravelClient() {
   const router = useRouter();
-  const { visibleUserIds } = useVisibleUserIds();
+  const { viewableUserIds } = useCalendarShares();
+  // 첫 진입 기본값을 본인 + 수락된 공유 owner 모두로.
+  const { visibleUserIds } = useVisibleUserIds(viewableUserIds);
 
   // 여행 카드의 "달력 추가"는 calendar 쪽 mutation만 필요.
   // useCalendarEvents(year, month, visibleUserIds) 는 조회용으로 year/month 를 받지만,

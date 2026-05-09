@@ -8,6 +8,7 @@ import HeaderViewMenu from "@/components/layout/header-view-menu";
 import PlanList from "@/components/travel/plan-list";
 import PlanDetail from "@/components/travel/plan-detail";
 import { useVisibleUserIds } from "@/hooks/use-visible-user-ids";
+import { useCalendarShares } from "@/hooks/use-calendar-shares";
 
 /**
  * 여행 계획 페이지 — 목록 / 상세를 같은 라우트에서 ?id 쿼리로 토글.
@@ -28,7 +29,8 @@ function TravelPlansPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planId = searchParams.get("id");
-  const { visibleUserIds } = useVisibleUserIds();
+  const { viewableUserIds } = useCalendarShares();
+  const { visibleUserIds } = useVisibleUserIds(viewableUserIds);
 
   // 상세 모드 — query 만 바뀌므로 페이지 자체는 그대로 유지.
   // 헤더 ← 버튼은 Next Link replace 로 이동 — router.push 가 query-only 변경 시

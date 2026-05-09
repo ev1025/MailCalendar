@@ -81,7 +81,9 @@ function CalendarPageInner() {
 
   const { users } = useAppUsers();
   const { viewableUserIds } = useCalendarShares();
-  const { visibleUserIds, toggleVisible } = useVisibleUserIds();
+  // 첫 진입(localStorage 비어있음) 시 본인 + 수락된 공유 owner 모두 기본 ON →
+  // 공유받은 사용자의 일정·아이콘이 즉시 노출됨.
+  const { visibleUserIds, toggleVisible } = useVisibleUserIds(viewableUserIds);
 
   // 폼 (새 일정 / 수정)
   const [formOpen, setFormOpen] = useState(false);
