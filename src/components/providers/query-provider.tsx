@@ -99,8 +99,6 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           // 표시 방지. 다른 도메인 (events/transactions/...) 은 persist 유지.
           shouldDehydrateQuery: (q) => {
             const k0 = q.queryKey[0];
-            // 공유 상태는 상대 액션으로 자주 바뀜 → 매 mount fresh fetch.
-            if (k0 === "calendar-shares") return false;
             // 에러로 끝난 쿼리는 영속 제외 — 빈 결과/네트워크 실패 등이 다음
             // mount 에 cache hit 으로 표시되는 race 방지.
             if (q.state.status !== "success") return false;
@@ -110,6 +108,11 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
               const data = q.state.data as unknown[] | undefined;
               if (!data || data.length === 0) return false;
             }
+            // calendar-shares 는 영속 포함 — 이전엔 stale "응답 대기 중" 우려로
+            // 제외했으나, 그러면 첫 paint 에 viewableUserIds = [본인] 만 으로
+            // 시작하여 calendar 의 사용자 chip 행이 미노출 → fetch 후 등장하며
+            // layout shift 발생. refetchOnMount: "always" + staleTime 30s 가
+            // 즉시 background 로 fresh 데이터 가져오므로 stale 표시는 거의 없음.
             return true;
           },
         },
