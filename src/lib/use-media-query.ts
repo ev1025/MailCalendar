@@ -1,20 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
-// 뷰포트 사이즈에 따른 분기를 위한 훅.
-// SSR 단계에서는 matches=false(기본 = 모바일)로 시작 → 하이드레이션 이후
-// 실제 window.matchMedia 로 갱신. 모바일-퍼스트 설계라 기본값이 맞음.
-export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
-
-  useEffect(() => {
+/**
+ * 뷰포트 사이즈에 따른 분기 훅 — React 19 정석 (useSyncExternalStore).
+ *
+ * SSR/RSC 단계에선 getServerSnapshot 으로 false(모바일 가정) 반환.
+ * 클라이언트는 window.matchMedia 의 외부 store 를 직접 구독 — 이펙트 안에서
+ * setState 트리거 없음(react-hooks/set-state-in-effect 통과).
+ */
+function subscribe(query: string) {
+  return (cb: () => void) => {
+    if (typeof window === "undefined") return () => {};
     const mql = window.matchMedia(query);
-    setMatches(mql.matches);
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
-  }, [query]);
+    mql.addEventListener("change", cb);
+    return () => mql.removeEventListener("change", cb);
+  };
+}
 
-  return matches;
+function getSnapshot(query: string) {
+  return () => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(query).matches;
+  };
+}
+
+const getServerSnapshot = () => false;
+
+export function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    subscribe(query),
+    getSnapshot(query),
+    getServerSnapshot,
+  );
 }

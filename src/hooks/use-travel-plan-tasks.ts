@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   useQuery,
   useQueryClient,
@@ -57,14 +57,38 @@ export function useTravelPlanTasks(planId: string | null) {
     [queryClient, planId],
   );
 
-  // task 변경 후 calendar_events 도 영향. plan 이 등록된 적 있다면 재동기화 + invalidate.
-  const syncCalendar = useCallback(async () => {
-    if (!planId) return;
-    await syncPlanCalendarEvents({ planId, userId });
-    queryClient.invalidateQueries({
-      queryKey: ["calendar-events", userId ?? ""],
-    });
-  }, [planId, userId, queryClient]);
+  // task 변경 후 calendar_events 도 영향. plan 이 등록된 적 있다면 재동기화.
+  // 짧은 시간(연속 update — 정렬 드래그 등)에 여러 번 호출되면 마지막 한 번만 실행
+  // 되도록 trailing debounce. immediate=true 인 경우(폼 저장 등)엔 즉시 실행 후
+  // 잠금. 일반은 600ms.
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, []);
+
+  const syncCalendar = useCallback(
+    (opts?: { immediate?: boolean }) => {
+      if (!planId) return;
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+      const run = async () => {
+        await syncPlanCalendarEvents({ planId, userId });
+        queryClient.invalidateQueries({
+          queryKey: ["calendar-events", userId ?? ""],
+        });
+      };
+      if (opts?.immediate) {
+        // fire-and-forget — 호출자 await 안 해도 진행.
+        void run();
+        return;
+      }
+      syncTimerRef.current = setTimeout(() => {
+        void run();
+      }, 600);
+    },
+    [planId, userId, queryClient],
+  );
 
   const addTask = useCallback(
     async (input: Omit<TravelPlanTask, "id" | "created_at">) => {
@@ -75,7 +99,7 @@ export function useTravelPlanTasks(planId: string | null) {
         .single();
       if (!error) {
         invalidate();
-        await syncCalendar();
+        syncCalendar();
       }
       return { data, error };
     },
@@ -90,7 +114,7 @@ export function useTravelPlanTasks(planId: string | null) {
         .eq("id", id);
       if (!error) {
         invalidate();
-        await syncCalendar();
+        syncCalendar();
       }
       return { error };
     },
@@ -105,7 +129,7 @@ export function useTravelPlanTasks(planId: string | null) {
         .eq("id", id);
       if (!error) {
         invalidate();
-        await syncCalendar();
+        syncCalendar();
       }
       return { error };
     },
@@ -120,7 +144,7 @@ export function useTravelPlanTasks(planId: string | null) {
         .insert(rows);
       if (!error) {
         invalidate();
-        await syncCalendar();
+        syncCalendar();
       }
       return { error };
     },

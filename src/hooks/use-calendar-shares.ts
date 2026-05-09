@@ -18,7 +18,9 @@ export interface CalendarShare {
   created_at: string;
 }
 
-const STALE_TIME = 5 * 60 * 1000;
+// Realtime publication 이 활성 안 된 환경 대비 — 짧은 staleTime 으로 mount/focus
+// 시 background fetch 보장. 데이터 자체가 작아서 비용 미미.
+const STALE_TIME = 30 * 1000;
 const GC_TIME = 24 * 60 * 60 * 1000;
 
 export function calendarSharesQueryKey(
@@ -43,6 +45,27 @@ function invalidate(qc: QueryClient, userId: string | null | undefined) {
   qc.invalidateQueries({ queryKey: calendarSharesQueryKey(userId) });
 }
 
+/**
+ * share 수락/거절/해제·초대 후 호출. share 변동은 곧 "어떤 user_id 의 데이터를
+ * 볼 수 있는지" 가 바뀌는 것이므로 그 user 들의 도메인 캐시도 일괄 invalidate.
+ *
+ *  - calendar-events: visibleUserIds 가 자동 확장(useVisibleUserIds 가 새 user
+ *    추가) → useCalendarEvents 의 queryKey 가 바뀌어 자동 fetch. 단 stale 캐시도
+ *    같이 invalidate 해서 잔여 표시 방지.
+ *  - event-tags / travel-items / travel-plans: 양방향 공유로 노출되는 데이터.
+ *  - notifications: 공유 알림이 새로 들어온 경우 즉시 갱신.
+ */
+function cascadeInvalidate(qc: QueryClient, userId: string | null | undefined) {
+  qc.invalidateQueries({ queryKey: calendarSharesQueryKey(userId) });
+  qc.invalidateQueries({ queryKey: ["calendar-events", userId ?? ""] });
+  qc.invalidateQueries({ queryKey: ["event-tags"] });
+  qc.invalidateQueries({ queryKey: ["travel-items", userId ?? ""] });
+  qc.invalidateQueries({ queryKey: ["travel-plans", userId ?? ""] });
+  qc.invalidateQueries({ queryKey: ["travel-tags"] });
+  qc.invalidateQueries({ queryKey: ["notifications", userId ?? ""] });
+  qc.invalidateQueries({ queryKey: ["nav-badges", userId ?? ""] });
+}
+
 export function useCalendarShares() {
   const currentUserId = useCurrentUserId();
   const { users } = useAppUsers();
@@ -58,11 +81,15 @@ export function useCalendarShares() {
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
     enabled: !!currentUserId,
+    // mount 마다 무조건 refetch — Realtime publication 미활성 환경에서도
+    // 항상 fresh 한 share 상태 보장. 캐시 hit 으로 즉시 노출은 유지(stale-while-revalidate).
+    refetchOnMount: "always",
   });
 
   const shares = sharesQuery.data ?? [];
 
-  // Realtime — calendar_shares 테이블 변경 시 invalidate.
+  // Realtime — calendar_shares 테이블 변경 시 cascade invalidate.
+  // (publication 활성 시 작동. 미활성 환경은 위 refetchOnMount 가 fallback.)
   useEffect(() => {
     if (!currentUserId) return;
     const rid = Math.random().toString(36).slice(2);
@@ -71,7 +98,7 @@ export function useCalendarShares() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "calendar_shares" },
-        () => invalidate(queryClient, currentUserId),
+        () => cascadeInvalidate(queryClient, currentUserId),
       )
       .subscribe();
     return () => {
@@ -79,8 +106,8 @@ export function useCalendarShares() {
     };
   }, [currentUserId, queryClient]);
 
-  const inv = useCallback(
-    () => invalidate(queryClient, currentUserId),
+  const cascade = useCallback(
+    () => cascadeInvalidate(queryClient, currentUserId),
     [queryClient, currentUserId],
   );
 
@@ -93,6 +120,10 @@ export function useCalendarShares() {
     [shares, currentUserId],
   );
 
+  // 양방향 — RLS 의 shared_user_ids() 와 정합. 한쪽만 수락(accepted) 되어도
+  // 양쪽 모두 서로 일정을 볼 수 있어야 함.
+  //   - 내가 viewer 인 share 의 owner (incoming.accepted)
+  //   - 내가 owner 인 share 의 viewer (outgoing.accepted)
   const viewableUserIds = useMemo(
     () =>
       Array.from(
@@ -101,9 +132,12 @@ export function useCalendarShares() {
           ...incoming
             .filter((s) => s.status === "accepted")
             .map((s) => s.owner_id),
+          ...outgoing
+            .filter((s) => s.status === "accepted")
+            .map((s) => s.viewer_id),
         ]),
       ),
-    [incoming, currentUserId],
+    [incoming, outgoing, currentUserId],
   );
 
   const invite = useCallback(
@@ -130,10 +164,10 @@ export function useCalendarShares() {
         `/calendar`,
       );
 
-      inv();
+      cascade();
       return { error: null };
     },
-    [currentUserId, outgoing, users, inv],
+    [currentUserId, outgoing, users, cascade],
   );
 
   const accept = useCallback(
@@ -142,10 +176,10 @@ export function useCalendarShares() {
         .from("calendar_shares")
         .update({ status: "accepted" })
         .eq("id", shareId);
-      if (!error) inv();
+      if (!error) cascade();
       return { error };
     },
-    [inv],
+    [cascade],
   );
 
   const reject = useCallback(
@@ -154,10 +188,10 @@ export function useCalendarShares() {
         .from("calendar_shares")
         .update({ status: "rejected" })
         .eq("id", shareId);
-      if (!error) inv();
+      if (!error) cascade();
       return { error };
     },
-    [inv],
+    [cascade],
   );
 
   const cancel = useCallback(
@@ -166,10 +200,10 @@ export function useCalendarShares() {
         .from("calendar_shares")
         .delete()
         .eq("id", shareId);
-      if (!error) inv();
+      if (!error) cascade();
       return { error };
     },
-    [inv],
+    [cascade],
   );
 
   return {

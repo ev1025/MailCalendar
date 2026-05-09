@@ -16,6 +16,16 @@ export interface CalendarEvent {
   created_at: string;
 }
 
+/**
+ * 공유 정보 포함 이벤트 — fetch 결과 행에는 user_id 등 메타가 함께 옴.
+ * useCalendarEvents / day-detail / DB view 등에서 owner 매핑을 위해 사용.
+ */
+export interface SharedEvent extends CalendarEvent {
+  user_id?: string | null;
+  shared_with?: string[] | null;
+  shared_accepted_by?: string[] | null;
+}
+
 export interface EventTag {
   id: string;
   name: string;

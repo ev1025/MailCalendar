@@ -47,11 +47,19 @@ async function fetchDdaySettings(
   userId: string | null | undefined,
 ): Promise<DdaySettings> {
   if (!userId) return DEFAULT;
-  const ownRes = await supabase
-    .from("app_users")
-    .select("dday_enabled, dday_date, dday_time")
-    .eq("id", userId)
-    .single();
+  // 본인 dday + 공유 파트너 목록 병렬 fetch — 의존성 없으므로 직렬 waterfall 제거.
+  const [ownRes, sharesRes] = await Promise.all([
+    supabase
+      .from("app_users")
+      .select("dday_enabled, dday_date, dday_time")
+      .eq("id", userId)
+      .single(),
+    supabase
+      .from("calendar_shares")
+      .select("owner_id, viewer_id")
+      .eq("status", "accepted")
+      .or(`owner_id.eq.${userId},viewer_id.eq.${userId}`),
+  ]);
   const own = ownRes.data as
     | {
         dday_enabled: boolean | null;
@@ -68,11 +76,6 @@ async function fetchDdaySettings(
     };
   }
 
-  const sharesRes = await supabase
-    .from("calendar_shares")
-    .select("owner_id, viewer_id")
-    .eq("status", "accepted")
-    .or(`owner_id.eq.${userId},viewer_id.eq.${userId}`);
   const partnerIds = (sharesRes.data ?? [])
     .map((s: { owner_id: string; viewer_id: string }) =>
       s.owner_id === userId ? s.viewer_id : s.owner_id,

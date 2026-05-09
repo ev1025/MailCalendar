@@ -42,10 +42,11 @@ function emit() {
 }
 
 export function useKnowledgeFavorites() {
-  const [store, setStore] = useState<FavStore>({ folders: [], items: [] });
+  // useState lazy initializer 로 첫 렌더부터 localStorage hydrate.
+  // useEffect 안에서 setState 안 해도 되므로 react-hooks/set-state-in-effect 통과.
+  const [store, setStore] = useState<FavStore>(read);
 
   useEffect(() => {
-    setStore(read());
     const handler = () => setStore(read());
     window.addEventListener(EVENT, handler);
     window.addEventListener("storage", handler);

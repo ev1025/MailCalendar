@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PanelDialog from "@/components/ui/panel-dialog";
 import { Button } from "@/components/ui/button";
 import { UserPlus, X, Users, Check } from "lucide-react";
@@ -76,10 +76,18 @@ const STATE_PRIORITY: Record<ShareState["kind"], number> = {
  * 우선순위: 받은 요청 → 공유 중 → 보낸 요청 → 초대 가능.
  */
 export default function ShareManager({ open, onOpenChange }: Props) {
-  const { users } = useAppUsers();
+  const { users, refetch: refetchUsers } = useAppUsers();
   const currentUserId = useCurrentUserId();
-  const { outgoing, incoming, invite, accept, reject, cancel } =
+  const { outgoing, incoming, invite, accept, reject, cancel, refetch: refetchShares } =
     useCalendarShares();
+
+  // dialog 열릴 때마다 양쪽 다 강제 refetch — Realtime publication 미활성 또는
+  // 다른 디바이스에서 변경된 share 가 즉시 반영되지 않은 상태로 열린 경우 대비.
+  useEffect(() => {
+    if (!open) return;
+    refetchShares();
+    refetchUsers();
+  }, [open, refetchShares, refetchUsers]);
   const [cancelTarget, setCancelTarget] = useState<
     | { ids: string[]; name: string; mode: "reject-incoming" | "remove-accepted" | "cancel-outgoing" }
     | null

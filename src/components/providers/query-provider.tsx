@@ -93,8 +93,16 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         persister,
         maxAge: PERSIST_MAX_AGE,
         buster: PERSIST_BUSTER,
-        // 일부 키만 persist 하고 싶으면 dehydrateOptions.shouldDehydrateQuery 추가.
-        // 현재는 기본값(모든 query) — 우리 데이터는 모두 동일 사용자 본인 것이라 안전.
+        dehydrateOptions: {
+          // 공유 상태(calendar-shares)는 상대 액션(수락/거절)으로 자주 바뀌므로
+          // 영속 캐시에서 제외 → 매 mount 마다 fresh fetch 로 stale "응답 대기 중"
+          // 표시 방지. 다른 도메인 (events/transactions/...) 은 persist 유지.
+          shouldDehydrateQuery: (q) => {
+            const k0 = q.queryKey[0];
+            if (k0 === "calendar-shares") return false;
+            return true;
+          },
+        },
       }}
     >
       {children}

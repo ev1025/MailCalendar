@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCurrentUserId } from "@/lib/current-user";
 
 // 캘린더/여행/여행계획이 공유하는 "보이는 사용자" 필터.
@@ -8,11 +8,15 @@ import { useCurrentUserId } from "@/lib/current-user";
 const VISIBLE_KEY = "calendar_visible_user_ids";
 
 /**
- * @param initialIds 첫 진입 시(localStorage 비어있을 때) 기본으로 켤 user_id 목록.
- *   보통 useCalendarShares().viewableUserIds (본인 + 수락된 공유 owner) 를 넘김.
- *   생략하면 본인 ID 만 기본 ON.
+ * @param initialIds 보통 useCalendarShares().viewableUserIds (본인 + 양방향
+ *   accepted 공유자). 기본값 + 자동 추가 둘 다에 사용됨.
  *
- *   ※ 사용자가 토글한 적 있다면 localStorage 우선 — 의도 보존.
+ * 동작:
+ *  1. localStorage 비어 있음 → initialIds(있으면) 또는 [본인] 로 초기화.
+ *  2. initialIds 가 변경되어 새로운 user_id 가 등장하면 자동으로 visibleUserIds 에
+ *     추가 (= 새 share 수락 시 즉시 그 사람 일정 노출).
+ *  3. 사용자가 토글로 끈 user 는 다시 자동 ON 안 됨 — 토글 의도 보존.
+ *     (동작 2/3 동시 만족: 처음 본 user 만 자동 추가, "끈 user 기억"은 별도 set.)
  */
 export function useVisibleUserIds(initialIds?: string[]) {
   const currentUserId = useCurrentUserId();
@@ -27,25 +31,44 @@ export function useVisibleUserIds(initialIds?: string[]) {
     }
   });
 
-  // initialIds 가 변경(공유 수락 등)되어도 안정적인 의존 키.
+  // 사용자가 명시적으로 토글로 끈 user 들 — 자동 ON 대상에서 제외.
+  // (탭 닫으면 잊힘. 영속화 안 함 — 너무 보수적이면 신규 share 자동 노출이 무용.)
+  const explicitlyOffRef = useRef<Set<string>>(new Set());
+
+  // initialIds 의 안정적 직렬화 키.
   const initialKey = useMemo(
-    () => (initialIds && initialIds.length > 0 ? [...initialIds].sort().join(",") : ""),
+    () =>
+      initialIds && initialIds.length > 0
+        ? [...initialIds].sort().join(",")
+        : "",
     [initialIds],
   );
 
-  // 최초 1회: 저장된 값 없으면 initialIds(viewable) 또는 본인.
-  // 공유 수락이 늦게 도착해 initialIds 가 나중에 채워지는 경우도 대응 — 그 시점에
-  // 처음 hydrate.
+  // 첫 hydrate + initialIds 변동 시 새로운 user 자동 추가.
   useEffect(() => {
-    if (visibleUserIds.length > 0) return;
-    if (initialIds && initialIds.length > 0) {
-      setVisibleUserIds(initialIds);
-    } else if (currentUserId) {
-      setVisibleUserIds([currentUserId]);
-    }
+    setVisibleUserIds((prev) => {
+      // 첫 hydrate.
+      if (prev.length === 0) {
+        if (initialIds && initialIds.length > 0) return initialIds;
+        if (currentUserId) return [currentUserId];
+        return prev;
+      }
+      // initialIds 의 새 user 자동 추가 — 단 explicitlyOff 에 든 건 제외.
+      const offSet = explicitlyOffRef.current;
+      const next = [...prev];
+      let changed = false;
+      for (const id of initialIds ?? []) {
+        if (!next.includes(id) && !offSet.has(id)) {
+          next.push(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserId, visibleUserIds.length, initialKey]);
+  }, [currentUserId, initialKey]);
 
+  // localStorage persist.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (visibleUserIds.length > 0) {
@@ -56,9 +79,16 @@ export function useVisibleUserIds(initialIds?: string[]) {
   }, [visibleUserIds]);
 
   const toggleVisible = (uid: string) => {
-    setVisibleUserIds((prev) =>
-      prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid]
-    );
+    setVisibleUserIds((prev) => {
+      if (prev.includes(uid)) {
+        // 사용자가 끔 → "explicitlyOff" 에 기록 → 자동 ON 안 됨.
+        explicitlyOffRef.current.add(uid);
+        return prev.filter((id) => id !== uid);
+      }
+      // 다시 켬 → off set 에서 제거.
+      explicitlyOffRef.current.delete(uid);
+      return [...prev, uid];
+    });
   };
 
   return { visibleUserIds, setVisibleUserIds, toggleVisible };

@@ -255,7 +255,19 @@ export default function DayDetail({
                       const evOwn = ev as EventWithOwner;
                       const ownerId = evOwn.user_id ?? null;
                       const isOwner = !ownerId || ownerId === currentUserId;
-                      const owner = ownerId ? usersById.get(ownerId) : undefined;
+                      // ownerId 가 있는데 useAppUsers 에 매핑이 안 보이면(앱 사용자
+                      // 목록 fetch 직전 race 등) "공유 사용자" 라는 placeholder 라도
+                      // 노출 — 그래야 사용자가 "이 일정은 다른 사람 것" 이란 사실을 인지.
+                      const lookedUp = ownerId ? usersById.get(ownerId) : undefined;
+                      const owner = isOwner
+                        ? undefined
+                        : (lookedUp ?? {
+                            id: ownerId ?? "",
+                            name: "공유 사용자",
+                            color: "#6B7280",
+                            emoji: null,
+                            avatar_url: null,
+                          });
                       return (
                         <motion.div
                           key={ev.id}

@@ -7,15 +7,13 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent, SharedEvent } from "@/types";
 import { useCurrentUserId } from "@/lib/current-user";
 import { monthBounds } from "@/lib/date-utils";
+import { safeCalendarEventData as safeData } from "@/lib/calendar/safe-data";
 
-export interface SharedEvent extends CalendarEvent {
-  user_id?: string | null;
-  shared_with?: string[] | null;
-  shared_accepted_by?: string[] | null;
-}
+// Re-export 호환 — 이전엔 이 훅에서 직접 export 했음.
+export type { SharedEvent };
 
 const STALE_TIME = 5 * 60 * 1000; // 5분 fresh — 그 이후 background revalidate.
 const GC_TIME = 24 * 60 * 60 * 1000; // 24시간 메모리 보존 — 페이지 이동 후 복귀 시 즉시 표시.
@@ -173,31 +171,6 @@ export function useCalendarEvents(
   }, [currentUserId, queryClient]);
 
   // ---------- mutation helpers ----------
-  // safeData: 기존 시리즈/태그/공유 등 옵션 필드를 안전하게 dropdown 처리.
-  // (예전 fallback 패턴 유지: insert 실패 시 옵션 필드 제거하고 재시도)
-  function safeData(data: Record<string, unknown>) {
-    const {
-      tag,
-      repeat,
-      sort_order,
-      shared_with,
-      shared_accepted_by,
-      series_id,
-      ...rest
-    } = data;
-    const result: Record<string, unknown> = { ...rest };
-    if (tag !== undefined && tag !== null && tag !== "") result.tag = tag;
-    if (repeat !== undefined && repeat !== null && repeat !== "none")
-      result.repeat = repeat;
-    if (sort_order !== undefined && sort_order !== null)
-      result.sort_order = sort_order;
-    if (shared_with !== undefined) result.shared_with = shared_with;
-    if (shared_accepted_by !== undefined)
-      result.shared_accepted_by = shared_accepted_by;
-    if (series_id !== undefined) result.series_id = series_id;
-    return result;
-  }
-
   const invalidate = useCallback(
     () => invalidateCalendarEvents(queryClient, currentUserId),
     [queryClient, currentUserId],
