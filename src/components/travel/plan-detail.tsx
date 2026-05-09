@@ -88,13 +88,21 @@ export default function PlanDetail({ planId, backHref }: Props) {
     const firstPending = sorted.find((t) => !t.completed_at);
     if (!firstPending) return;
     autoScrolledRef.current = true;
-    // DOM 렌더 후 다음 frame 에 scroll — task row 가 마운트된 후 querySelector.
-    requestAnimationFrame(() => {
+
+    // DOM 렌더 후 querySelector. 첫 시도 실패(아직 마운트 전) 시 짧은 backoff
+    // 으로 최대 3회 재시도 — silent fail 방어.
+    const tryScroll = (remaining: number) => {
       const el = document.querySelector<HTMLElement>(
         `[data-plan-task-id="${firstPending.id}"]`,
       );
-      el?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      if (remaining <= 0) return;
+      setTimeout(() => tryScroll(remaining - 1), 80);
+    };
+    requestAnimationFrame(() => tryScroll(3));
   }, [sorted]);
 
   const legs = useMemo(() => tasksToLegs(sorted), [sorted]);

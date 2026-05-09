@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, memo, useState, useMemo, useEffect, useRef } from "react";
+import { Suspense, memo, useCallback, useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -274,7 +274,30 @@ function ProductsPageInner() {
   // category 필터 — URL 동기화 (useUrlStringParam 헬퍼로 통일).
   const [categoryFilter, setCategoryFilter] = useUrlStringParam("category", "전체");
   const [stats, setStats] = useState<Record<string, ProductStat>>({});
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // 그룹 확장 상태 영속화 — 새로고침/탭 재진입 시 마지막 펼침 상태 유지.
+  const EXPANDED_KEY = "products-expanded-groups-v1";
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = window.localStorage.getItem(EXPANDED_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw) as string[];
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        EXPANDED_KEY,
+        JSON.stringify(Array.from(expandedGroups)),
+      );
+    } catch {
+      // quota / private mode — 무시.
+    }
+  }, [expandedGroups]);
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [pendingDeleteCategory, setPendingDeleteCategory] = useState<string | null>(null);
 
@@ -317,6 +340,25 @@ function ProductsPageInner() {
         setStats(map);
       });
   }, [products, statsTick]);
+
+  // ProductRow 의 인라인 핸들러를 useCallback 으로 안정화 — ProductRow 가
+  // memo() 인데 매 렌더 새 함수면 memo 무용지물.
+  const handleProductEdit = useCallback((prod: Product) => {
+    setEditing(prod);
+    setFormOpen(true);
+  }, []);
+  const handleProductDelete = useCallback((prod: Product) => {
+    setDeletingProduct(prod);
+  }, []);
+  const handleProductAddFixed = useCallback((prod: Product) => {
+    setFixedProduct(prod);
+  }, []);
+  const handleProductTogglePurchased = useCallback(
+    async (prod: Product) => {
+      await updateProduct(prod.id, { is_active: !prod.is_active });
+    },
+    [updateProduct],
+  );
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -632,17 +674,10 @@ function ProductsPageInner() {
                                       p={p}
                                       idx={idx}
                                       stat={stats[p.id]}
-                                      onEdit={(prod) => {
-                                        setEditing(prod);
-                                        setFormOpen(true);
-                                      }}
-                                      onDelete={(prod) => setDeletingProduct(prod)}
-                                      onAddFixed={(prod) => setFixedProduct(prod)}
-                                      onTogglePurchased={async (prod) => {
-                                        await updateProduct(prod.id, {
-                                          is_active: !prod.is_active,
-                                        });
-                                      }}
+                                      onEdit={handleProductEdit}
+                                      onDelete={handleProductDelete}
+                                      onAddFixed={handleProductAddFixed}
+                                      onTogglePurchased={handleProductTogglePurchased}
                                       onDuplicate={handleDuplicate}
                                     />
                                   ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useMemo } from "react";
+import { Suspense, useCallback, useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { FolderPlus, FilePlus } from "lucide-react";
 import { useKnowledgeFolders } from "@/hooks/use-knowledge-folders";
@@ -125,12 +125,12 @@ function KnowledgePageInner() {
   // ── 액션 핸들러 ─────────────────────────────────────
   // 새 폴더는 PromptDialog 로 이름 먼저 입력받아 생성 — 모바일에서 인라인 rename
   // 진입이 어려워 통일된 흐름이 더 자연스러움.
-  const handleAddFolder = (parentId: string | null) => {
+  const handleAddFolder = useCallback((parentId: string | null) => {
     setFolderPromptParentId(parentId);
     setFolderPromptOpen(true);
-  };
+  }, []);
 
-  const handleAddItem = async (folderId: string | null) => {
+  const handleAddItem = useCallback(async (folderId: string | null) => {
     // DB 에 행 만들지 않고 메모리에서만 pendingNew 상태로 에디터 오픈.
     // 저장 시 비로소 addItem. 내용 없이 닫히면 DB 변경 없음.
     setSelectedItemId(null);
@@ -139,7 +139,7 @@ function KnowledgePageInner() {
     setEditContent("");
     setDirty(false);
     setEditing(true);
-  };
+  }, []);
 
   // 편집 → 읽기 모드 전환. pendingNew 면 아무것도 DB 에 없으니 그냥 상태만 리셋.
   const handleExitEditor = async () => {
@@ -290,27 +290,31 @@ function KnowledgePageInner() {
   // pendingNew(드래프트 에디터) 상태도 "노트 뷰" 로 취급 — PageHeader 숨김·전체화면 적용.
   const noteOpen = !!selectedItem || !!pendingNew;
 
-  const listActions = (
-    <>
-      <button
-        type="button"
-        onClick={() => handleAddFolder(viewFolderId)}
-        aria-label="폴더 추가"
-        title="폴더 추가"
-        className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
-      >
-        <FolderPlus className="h-[20px] w-[20px]" strokeWidth={1.6} />
-      </button>
-      <button
-        type="button"
-        onClick={() => handleAddItem(viewFolderId)}
-        aria-label="새 노트"
-        title="새 노트"
-        className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
-      >
-        <FilePlus className="h-[20px] w-[20px]" strokeWidth={1.6} />
-      </button>
-    </>
+  // 매 렌더 새 JSX 트리 생성 회피 — 같은 핸들러/viewFolderId 일 땐 동일 reference.
+  const listActions = useMemo(
+    () => (
+      <>
+        <button
+          type="button"
+          onClick={() => handleAddFolder(viewFolderId)}
+          aria-label="폴더 추가"
+          title="폴더 추가"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
+        >
+          <FolderPlus className="h-[20px] w-[20px]" strokeWidth={1.6} />
+        </button>
+        <button
+          type="button"
+          onClick={() => handleAddItem(viewFolderId)}
+          aria-label="새 노트"
+          title="새 노트"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
+        >
+          <FilePlus className="h-[20px] w-[20px]" strokeWidth={1.6} />
+        </button>
+      </>
+    ),
+    [viewFolderId, handleAddFolder, handleAddItem],
   );
 
   // PageHeader 는 선택 모드에서도 계속 노출 — 이전엔 선택 진입 시 PageHeader 를

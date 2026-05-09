@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
+import { memo, useMemo, useState, useEffect } from "react";
 import { Trash2, CalendarPlus, Check, ArrowUp, ArrowDown, Filter, X, Route } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import RowActionPopover from "@/components/ui/row-action-popover";
@@ -267,15 +267,25 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
   // 삭제 확인 다이얼로그 — 행 메뉴의 삭제 클릭 시 즉시 삭제 대신 확인 단계.
   const [deletingItem, setDeletingItem] = useState<TravelItem | null>(null);
 
-  const tagColorMap: Record<string, string> = {};
-  for (const t of tags) tagColorMap[t.name] = t.color;
-  for (const t of eventTags) tagColorMap[t.name] = t.color;
+  // 매 렌더 새 객체·배열 생성 회피 — useMemo 로 tags / items 변경 시만 재계산.
+  const tagColorMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const t of tags) m[t.name] = t.color;
+    for (const t of eventTags) m[t.name] = t.color;
+    return m;
+  }, [tags, eventTags]);
 
   // 사용자 정의 분류 색상 맵 — 기본 5개 외의 분류에도 색상 반영.
   const { colors: categoryColors } = useTravelCategories();
 
-  const allCategories = [...new Set(items.map((i) => i.category))];
-  const allItemTags = [...new Set(items.flatMap((i) => i.tag ? i.tag.split(",") : []))];
+  const allCategories = useMemo(
+    () => [...new Set(items.map((i) => i.category))],
+    [items],
+  );
+  const allItemTags = useMemo(
+    () => [...new Set(items.flatMap((i) => (i.tag ? i.tag.split(",") : [])))],
+    [items],
+  );
 
   // 3단계 사이클 + 다중 정렬
   // 미선택 → 오름차순 추가 → 내림차순 → 정렬 해제(리스트에서 제거)

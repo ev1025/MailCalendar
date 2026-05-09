@@ -55,10 +55,17 @@ interface PlanCardProps {
 function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, onDuplicate, onAddToCalendar, onRemoveFromCalendar }: PlanCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: plan.id, disabled: !dragEnabled });
+  // 드래그 중 시각 피드백 강화 — 단순 opacity 0.5 만으론 "들고 있다"는 인지가 약함.
+  // scale + shadow 로 카드가 떠 있는 느낌. zIndex 로 다른 카드 위로 올림.
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.85 : 1,
+    scale: isDragging ? 1.03 : 1,
+    boxShadow: isDragging
+      ? "0 12px 24px -8px rgba(0,0,0,0.18), 0 4px 8px -2px rgba(0,0,0,0.10)"
+      : undefined,
+    zIndex: isDragging ? 50 : undefined,
   };
 
   // 드래그 바 없이 카드 전체가 드래그 타겟.
