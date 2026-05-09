@@ -9,7 +9,6 @@ import {
   Settings as SettingsIcon,
   Share2,
   ChevronRight,
-  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,7 +133,20 @@ function ProfilePageInner() {
 
   return (
     <div className="flex flex-col min-h-full">
-      <PageHeader title="내 프로필" showBell />
+      <PageHeader
+        title="내 프로필"
+        showBell
+        actions={
+          <button
+            type="button"
+            onClick={() => router.push("/settings")}
+            aria-label="설정"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+          >
+            <SettingsIcon className="h-5 w-5" strokeWidth={1.6} />
+          </button>
+        }
+      />
 
       {/* ── Hero ───────────────────────────────────────
           사용자 색 기반 radial wash + 큰 아바타 + 이름 + 이메일.
@@ -168,12 +180,6 @@ function ProfilePageInner() {
               />
             ) : (
               emoji || (name ? name[0] : "?")
-            )}
-            {/* 이미지 모드일 때 작은 카메라 뱃지 (편집 가능 표시) */}
-            {avatarMode === "image" && (
-              <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
-                <Pencil className="h-3.5 w-3.5" />
-              </span>
             )}
           </motion.button>
           <div className="text-center">
@@ -323,43 +329,25 @@ function ProfilePageInner() {
         </div>
       </section>
 
-      {/* ── 더 보기 — 액션 row (공유 / 설정) ── */}
+      {/* ── 캘린더 공유 ── */}
       <section className="px-4 md:px-6 mt-6 mb-10">
         <div className="mx-auto w-full max-w-md">
-          <div className="rounded-2xl border bg-card divide-y overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShareOpen(true)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent/40 transition-colors"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-                <Share2 className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="flex w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left hover:bg-accent/40 transition-colors"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+              <Share2 className="h-4 w-4" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold">캘린더 공유</span>
+              <span className="block text-[11px] text-muted-foreground">
+                함께 보고 싶은 사람을 초대하거나 수락한 공유를 관리해요
               </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-sm font-semibold">캘린더 공유</span>
-                <span className="block text-[11px] text-muted-foreground">
-                  함께 보고 싶은 사람을 초대하거나 수락한 공유를 관리해요
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/settings")}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent/40 transition-colors"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground shrink-0">
-                <SettingsIcon className="h-4 w-4" />
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-sm font-semibold">설정</span>
-                <span className="block text-[11px] text-muted-foreground">
-                  테마, 일기예보 지역, D-day, 계정
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-            </button>
-          </div>
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+          </button>
         </div>
       </section>
 
