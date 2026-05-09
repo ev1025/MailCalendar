@@ -297,34 +297,29 @@ function SettingsPageInner() {
   return (
     <>
       <PageHeader title="설정" showBack />
-    <div className="p-4 md:p-6 max-w-2xl">
+    <div className="px-4 py-4 md:px-6 md:py-6 max-w-2xl mx-auto md:mx-0">
 
-      {/* 탭 */}
-      <div className="flex border-b mb-6">
-        <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 tap-feedback ${
-            tab === "general" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          onClick={() => setTab("general")}
-        >
-          일반
-        </button>
-        <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 tap-feedback ${
-            tab === "account" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          onClick={() => setTab("account")}
-        >
-          계정
-        </button>
-        <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-all duration-200 tap-feedback ${
-            tab === "api" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-          onClick={() => setTab("api")}
-        >
-          API
-        </button>
+      {/* 탭 — segmented (Apple 스타일 pill). 좌우 동일 폭. */}
+      <div className="mb-5 inline-flex w-full rounded-full border bg-muted/40 p-0.5">
+        {(["general", "account", "api"] as const).map((t) => {
+          const label =
+            t === "general" ? "일반" : t === "account" ? "계정" : "API";
+          const active = tab === t;
+          return (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-all tap-feedback ${
+                active
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "general" ? (
