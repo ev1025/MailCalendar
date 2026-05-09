@@ -186,9 +186,10 @@ export default function DatabaseView({
   ];
 
   return (
-    // 데스크탑은 80vh 부모(calendar-md-height) 안에서 내부 스크롤 — h-full + flex-1.
-    // 모바일은 부모 높이 없음 → 자연스러운 document 스크롤.
-    <div className="flex flex-col gap-3 w-full md:h-full md:min-h-0 md:max-w-5xl md:mx-auto">
+    // 모바일·데스크톱 모두 부모(calendar-md-height) 가 height 정의 — 자체 내부 스크롤.
+    // 이전엔 모바일 자연 스크롤 의도였으나 부모 컨테이너의 overflow-hidden 으로
+    // 잘림 발생 → 양쪽 모두 h-full + flex-1 + overflow-auto 통일.
+    <div className="flex flex-col gap-3 w-full h-full min-h-0 md:max-w-5xl md:mx-auto">
       {/* 검색 + 태그 필터 */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
@@ -265,7 +266,7 @@ export default function DatabaseView({
           )}
         </div>
       ) : (
-        <div className={`md:flex-1 md:min-h-0 md:overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
+        <div className={`flex-1 min-h-0 overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
           <div className="rounded-lg border">
           <table
             ref={tableRef}

@@ -170,20 +170,16 @@ function ProfilePageInner() {
             <p className="text-xs text-muted-foreground">{authUser?.email}</p>
           </section>
 
-          {/* 카드 1: 이름 */}
-          <section className="rounded-xl border bg-card">
-            <div className="flex items-center justify-between border-b px-4 py-2.5">
-              <h2 className="text-sm font-semibold">이름</h2>
-            </div>
-            <div className="p-4">
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="이름"
-                maxLength={20}
-                className="h-10"
-              />
-            </div>
+          {/* 카드 1: 이름 — 한 줄 inline 형태 (라벨 + Input) */}
+          <section className="rounded-xl border bg-card flex items-center gap-3 px-4 py-3">
+            <span className="text-sm font-semibold shrink-0">이름</span>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="이름"
+              maxLength={20}
+              className="h-9 flex-1"
+            />
           </section>
 
           {/* 카드 2: 아바타 — 이미지 / 이모지 모드 분기 */}
