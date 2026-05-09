@@ -142,6 +142,10 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
+        // 다이얼로그 열릴 때 계산기 input 에 자동 포커스되어 모바일 키보드가
+        // 즉시 올라오던 문제 — initialFocus={false} 로 차단. 사용자가 input
+        // 을 직접 탭할 때만 포커스 + 키보드 노출.
+        initialFocus={false}
         // 다이얼로그 카드 자체는 default(투명) — 내부 그라디언트가 그대로 보이도록.
         className="max-w-[calc(100%-1.5rem)] sm:max-w-[420px] p-0 gap-0 overflow-hidden border-none"
       >
