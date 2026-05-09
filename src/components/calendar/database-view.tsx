@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { parseYmd } from "@/lib/date-utils";
 import { ArrowUp, ArrowDown, Filter, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -308,9 +309,15 @@ export default function DatabaseView({
               </tr>
             </thead>
             <tbody>
+              <AnimatePresence initial={false}>
               {filtered.map((ev) => (
-                <tr
+                <motion.tr
                   key={ev.id}
+                  layout="position"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: 16 }}
+                  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                   className="cursor-pointer hover:bg-accent/50 transition-colors border-b last:border-b-0"
                   onClick={() => onEdit(ev)}
                 >
@@ -364,8 +371,9 @@ export default function DatabaseView({
                       )) : <span className="text-[11px] text-muted-foreground/40">-</span>}
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
+              </AnimatePresence>
             </tbody>
           </table>
           </div>

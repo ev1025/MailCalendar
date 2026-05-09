@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo, useRef } from "react";
+import { Suspense, useCallback, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { toast } from "sonner";
@@ -8,7 +8,7 @@ import { Wallet, ShoppingBag, X, Check, Repeat } from "lucide-react";
 import DateRangePicker from "@/components/layout/date-range-picker";
 import PageHeader from "@/components/layout/page-header";
 import { useTransactions } from "@/hooks/use-transactions";
-import { useFixedExpenses } from "@/hooks/use-fixed-expenses";
+import { useFixedExpenses, type FixedExpense } from "@/hooks/use-fixed-expenses";
 import { useUrlStringParam } from "@/hooks/use-url-param";
 import HeaderViewMenu from "@/components/layout/header-view-menu";
 import MonthlySummary from "@/components/finance/monthly-summary";
@@ -221,23 +221,28 @@ function FinancePageInner() {
   // 고정비에서 자동 등록된 거래 포함 여부 (여행 "가본곳 포함" 토글 패턴 차용).
   const [includeFixed, setIncludeFixed] = useState(true);
 
-  // 어떤 거래가 고정비에서 자동 등록된 것인지 판별 — applyFixedToMonth 가
-  // amount + description 동일하게 insert 하므로 그 조합으로 매칭.
-  // (false-positive 가능성 있으나 실용상 충분.)
-  const fixedSet = useMemo(() => {
-    const s = new Set<string>();
+  // 어떤 거래가 고정비에서 자동 등록된 것인지 판별 + lookup 용 단일 Map.
+  // 이전: Set(매칭 여부) + Array.find(실제 row) 두 번 순회 → Map 하나로 O(1) lookup.
+  // applyFixedToMonth 가 amount + description 동일하게 insert 하므로 그 조합으로 매칭.
+  const fixedByKey = useMemo(() => {
+    const m = new Map<string, FixedExpense>();
     for (const fx of fixedExpenses) {
-      s.add(`${fx.amount}|${fx.description ?? ""}`);
+      m.set(`${fx.amount}|${fx.description ?? ""}`, fx);
     }
-    return s;
+    return m;
   }, [fixedExpenses]);
 
-  const isFromFixed = (tx: Expense) => fixedSet.has(`${tx.amount}|${tx.description ?? ""}`);
+  const isFromFixed = useCallback(
+    (tx: Expense) =>
+      fixedByKey.has(`${tx.amount}|${tx.description ?? ""}`),
+    [fixedByKey],
+  );
   /** 거래 → 매칭되는 고정비 row. amount + description 매칭. */
-  const findFixedFor = (tx: Expense) =>
-    fixedExpenses.find(
-      (fx) => fx.amount === tx.amount && (fx.description ?? "") === (tx.description ?? ""),
-    );
+  const findFixedFor = useCallback(
+    (tx: Expense) =>
+      fixedByKey.get(`${tx.amount}|${tx.description ?? ""}`),
+    [fixedByKey],
+  );
 
   /** 거래 카드 클릭 핸들러 — 고정비 매칭이면 분기 다이얼로그, 아니면 바로 편집 폼. */
   const handleTxClick = (tx: Expense) => {
@@ -258,7 +263,7 @@ function FinancePageInner() {
     if (includeFixed) return allTransactions;
     return allTransactions.filter((tx) => tx.type === "income" || !isFromFixed(tx));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allTransactions, includeFixed, fixedSet]);
+  }, [allTransactions, includeFixed, fixedByKey]);
 
   const baseTotalIncome = useMemo(
     () => baseTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),

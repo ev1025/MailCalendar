@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import {
   Upload,
   Check,
@@ -68,15 +69,21 @@ function ProfilePageInner() {
     }
   }, [currentUser]);
 
-  // 변경사항 dirty 판정 — 저장 버튼 활성/비활성에 사용.
-  const dirty =
-    !!currentUser &&
-    (name.trim() !== currentUser.name ||
-      (avatarMode === "emoji" && emoji !== (currentUser.emoji ?? "")) ||
-      (avatarMode === "image" &&
-        (avatarUrl || null) !== (currentUser.avatar_url ?? null)) ||
-      color !== (currentUser.color ?? DEFAULT_COLOR) ||
-      (currentUser.avatar_url ? avatarMode !== "image" : avatarMode !== "emoji"));
+  // 변경사항 dirty 판정 — 저장 버튼 활성/비활성. useMemo 로 매 렌더 재계산 회피.
+  const dirty = useMemo(() => {
+    if (!currentUser) return false;
+    if (name.trim() !== currentUser.name) return true;
+    if (avatarMode === "emoji" && emoji !== (currentUser.emoji ?? "")) return true;
+    if (
+      avatarMode === "image" &&
+      (avatarUrl || null) !== (currentUser.avatar_url ?? null)
+    )
+      return true;
+    if (color !== (currentUser.color ?? DEFAULT_COLOR)) return true;
+    const initialMode = currentUser.avatar_url ? "image" : "emoji";
+    if (avatarMode !== initialMode) return true;
+    return false;
+  }, [currentUser, name, emoji, color, avatarUrl, avatarMode]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -247,16 +254,21 @@ function ProfilePageInner() {
                 <>
                   <div className="grid grid-cols-8 gap-1">
                     {PRESET_EMOJIS.map((e) => (
-                      <button
+                      <motion.button
                         key={e}
                         type="button"
                         onClick={() => setEmoji(e)}
-                        className={`flex h-8 w-full items-center justify-center rounded-md text-base hover:bg-accent transition-colors ${
-                          emoji === e ? "ring-2 ring-primary" : ""
+                        whileTap={{ scale: 0.88 }}
+                        whileHover={{ scale: 1.08 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                        className={`flex h-8 w-full items-center justify-center rounded-md text-base transition-colors ${
+                          emoji === e
+                            ? "ring-2 ring-primary bg-primary/10"
+                            : "hover:bg-accent"
                         }`}
                       >
                         {e}
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                   <div className="pt-2 border-t">

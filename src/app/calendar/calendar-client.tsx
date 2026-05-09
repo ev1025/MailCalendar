@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseYmd, ymd, todayYmd } from "@/lib/date-utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -126,6 +126,23 @@ function CalendarPageInner() {
     | null
   >(null);
   const { weatherMap } = useWeather(year, month);
+
+  // selectedDate 의 공휴일 lookup — 이전엔 매 렌더 getHolidayMap 호출(전체 Map
+  // 재생성). 같은 year 면 캐시에서 즉시 hit, 없으면 1회 빌드 후 메모.
+  const selectedDateHoliday = useMemo(() => {
+    if (!selectedDate) return undefined;
+    const y = parseYmd(selectedDate).getFullYear();
+    return getHolidayMap(y)[selectedDate];
+  }, [selectedDate]);
+
+  // CalendarView prop 으로 넘기는 mutation 핸들러 — 매 렌더 새 함수로 만들어
+  // CalendarView 내부 useMemo 가 깨지지 않도록 useCallback.
+  const handleEventMove = useCallback(
+    async (eventId: string, newStart: string, newEnd: string | null) => {
+      await updateEvent(eventId, { start_date: newStart, end_date: newEnd });
+    },
+    [updateEvent],
+  );
 
   // 시간별 날씨 prefetch — 일일 weatherMap 이 로드되면, 가시 월의 ±3일 정도
   // 시간별 날씨 prefetch — 두 단계.
@@ -419,9 +436,7 @@ function CalendarPageInner() {
             events={events}
             weatherMap={weatherMap}
             onDateClick={handleDateClick}
-            onEventMove={async (eventId, newStart, newEnd) => {
-              await updateEvent(eventId, { start_date: newStart, end_date: newEnd });
-            }}
+            onEventMove={handleEventMove}
             onReorder={batchUpdateSortOrder}
           />
         </motion.div>
@@ -458,7 +473,7 @@ function CalendarPageInner() {
         weather={weatherMap[selectedDate]}
         tags={tags}
         visibleUserIds={visibleUserIds}
-        holiday={selectedDate ? getHolidayMap(parseYmd(selectedDate).getFullYear())[selectedDate] : undefined}
+        holiday={selectedDateHoliday}
         onAddEvent={handleAddFromDay}
         onEditEvent={(ev) => { setDayDetailOpen(false); setEditing(ev); setFormOpen(true); }}
         onDeleteEvent={async (id) => { await handleDelete(id); }}
