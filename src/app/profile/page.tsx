@@ -8,7 +8,6 @@ import {
   Check,
   Settings as SettingsIcon,
   Share2,
-  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,14 +136,24 @@ function ProfilePageInner() {
         title="내 프로필"
         showBell
         actions={
-          <button
-            type="button"
-            onClick={() => router.push("/settings")}
-            aria-label="설정"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
-          >
-            <SettingsIcon className="h-5 w-5" strokeWidth={1.6} />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              aria-label="캘린더 공유"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+            >
+              <Share2 className="h-5 w-5" strokeWidth={1.6} />
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              aria-label="설정"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+            >
+              <SettingsIcon className="h-5 w-5" strokeWidth={1.6} />
+            </button>
+          </>
         }
       />
 
@@ -329,27 +338,7 @@ function ProfilePageInner() {
         </div>
       </section>
 
-      {/* ── 캘린더 공유 ── */}
-      <section className="px-4 md:px-6 mt-6 mb-10">
-        <div className="mx-auto w-full max-w-md">
-          <button
-            type="button"
-            onClick={() => setShareOpen(true)}
-            className="flex w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left hover:bg-accent/40 transition-colors"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-              <Share2 className="h-4 w-4" />
-            </span>
-            <span className="flex-1 min-w-0">
-              <span className="block text-sm font-semibold">캘린더 공유</span>
-              <span className="block text-[11px] text-muted-foreground">
-                함께 보고 싶은 사람을 초대하거나 수락한 공유를 관리해요
-              </span>
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
-          </button>
-        </div>
-      </section>
+      <div className="mb-10" />
 
       <AvatarCropDialog
         src={cropping?.src ?? null}
