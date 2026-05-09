@@ -22,7 +22,8 @@ BEGIN
     'calendar_events',
     'calendar_shares',
     'fixed_expenses',
-    'notifications'
+    'notifications',
+    'app_users'
   ] LOOP
     -- 이미 publication 에 등록된 경우 ADD 시 duplicate 에러.
     -- pg_publication_tables 에 없는 경우만 ADD.
@@ -49,3 +50,4 @@ ALTER TABLE public.calendar_events REPLICA IDENTITY FULL;
 ALTER TABLE public.calendar_shares REPLICA IDENTITY FULL;
 ALTER TABLE public.fixed_expenses REPLICA IDENTITY FULL;
 ALTER TABLE public.notifications REPLICA IDENTITY FULL;
+ALTER TABLE public.app_users REPLICA IDENTITY FULL;

@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useSupabaseAuth } from "@/lib/auth-supabase";
 import { translateError } from "@/lib/api-errors";
@@ -15,158 +20,162 @@ export interface AppUser {
   created_at: string;
 }
 
-// ─────────────────────────────────────────
-// 단일 스토어 (모듈 수준) — 여러 컴포넌트에서 useAppUsers를 호출해도
-// users 상태가 실시간으로 동기화되도록 pub/sub 패턴 사용.
-// 이전에는 AppShell과 UserSwitcher가 각자 독립된 상태를 가져
-// 프로필 생성 직후 AppShell이 이를 인식 못 해 게이트가 다시 열리던 버그가 있었음.
-// ─────────────────────────────────────────
-type UsersState = { users: AppUser[]; loading: boolean };
-const listeners = new Set<(s: UsersState) => void>();
+const STALE_TIME = 5 * 60 * 1000;
+const GC_TIME = 24 * 60 * 60 * 1000;
 
-// sessionStorage 캐시 — 페이지 진입마다 빈 배열 → fetch 완료 후 채워짐 jank 방지.
-// 같은 세션 내 모든 진입에서 즉시 hydrate.
-const APP_USERS_CACHE_KEY = "app-users";
-function loadInitial(): UsersState {
-  if (typeof window === "undefined") return { users: [], loading: true };
-  try {
-    const raw = window.sessionStorage.getItem(APP_USERS_CACHE_KEY);
-    if (raw) {
-      const cached = JSON.parse(raw) as AppUser[];
-      return { users: cached, loading: false };
-    }
-  } catch {
-    // ignore
-  }
-  return { users: [], loading: true };
-}
-let cache: UsersState = loadInitial();
-let initialFetchPromise: Promise<void> | null = null;
+export const APP_USERS_QUERY_KEY = ["app-users"] as const;
 
-function setCache(next: UsersState) {
-  cache = next;
-  listeners.forEach((fn) => fn(cache));
-}
-
-async function fetchAppUsers(): Promise<void> {
-  setCache({ ...cache, loading: cache.users.length === 0 });
+async function fetchAppUsers(): Promise<AppUser[]> {
   const { data, error } = await supabase
     .from("app_users")
     .select("*")
     .order("created_at");
-  if (!error && data) {
-    setCache({ users: data as AppUser[], loading: false });
-    if (typeof window !== "undefined") {
-      try {
-        window.sessionStorage.setItem(APP_USERS_CACHE_KEY, JSON.stringify(data));
-      } catch {
-        // ignore
-      }
-    }
-  } else {
-    setCache({ ...cache, loading: false });
-  }
+  if (error) return [];
+  return ((data as AppUser[]) ?? []);
 }
 
-function ensureInitialFetch() {
-  if (!initialFetchPromise) initialFetchPromise = fetchAppUsers();
-  return initialFetchPromise;
+function invalidateAppUsers(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: APP_USERS_QUERY_KEY });
 }
 
-// translateError 는 src/lib/api-errors.ts 로 이전 — import 로 사용.
-
+/**
+ * 모든 app_users 프로필 — 공유 일정 화면의 owner 아이콘, 사이드바 사용자
+ * chip, share-manager 등 다양한 곳에서 즉시 hydrate 가 중요.
+ *
+ * 영속성: persistQueryClient (localStorage MC_QUERY_CACHE) 가 자동 처리.
+ *   - 탭/브라우저 재시작 후 첫 paint 부터 cache hit → 깜빡임 없음.
+ *   - app_users 변경(이름/색상/아바타·신규 가입자) 은 Realtime 구독으로 즉시 갱신.
+ *
+ * 시그니처 호환: 기존 호출자(useAppUsers / useCurrentUserId / useCurrentUser)
+ *   가 그대로 동작하도록 동일 반환 형태 유지.
+ */
 export function useAppUsers() {
   const { user: authUser } = useSupabaseAuth();
-  const [state, setState] = useState<UsersState>(cache);
+  const queryClient = useQueryClient();
 
+  const usersQuery = useQuery<AppUser[]>({
+    queryKey: APP_USERS_QUERY_KEY,
+    queryFn: fetchAppUsers,
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
+
+  const users = usersQuery.data ?? [];
+  const loading = usersQuery.isPending;
+
+  // Realtime — app_users 변경 시 invalidate. 신규 사용자 가입, 프로필 색상
+  // 변경, 아바타 업로드 등을 즉시 반영. 모든 사용자 행이 영향이라 filter 없음.
   useEffect(() => {
-    const fn = (s: UsersState) => setState(s);
-    listeners.add(fn);
-    ensureInitialFetch();
-    setState(cache);
+    const rid = Math.random().toString(36).slice(2);
+    const channel = supabase
+      .channel(`app-users:${rid}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "app_users" },
+        () => invalidateAppUsers(queryClient),
+      )
+      .subscribe();
     return () => {
-      listeners.delete(fn);
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
 
-  // 로그인/로그아웃 시 app_users 재조회 — 초기 fetch가 인증 전에 실행돼
-  // RLS에 막혀 빈 결과를 받은 경우, 인증 후 재조회로 프로필을 찾아냄
+  // 로그인 후 RLS 가 풀려 본인 프로필이 처음 보일 수 있는 시점 보강 — 캐시에
+  // 본인 매핑이 없으면 한 번 더 fetch.
   useEffect(() => {
     if (authUser) {
-      const hasMatch = cache.users.some((u) => u.auth_user_id === authUser.id);
-      if (!hasMatch && !cache.loading) fetchAppUsers();
+      const hasMatch = users.some((u) => u.auth_user_id === authUser.id);
+      if (!hasMatch && !loading) invalidateAppUsers(queryClient);
     }
-  }, [authUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id]);
+
+  const inv = useCallback(
+    () => invalidateAppUsers(queryClient),
+    [queryClient],
+  );
 
   /**
-   * 새 프로필 생성. 이메일 로그인 직후 처음 접속할 때 호출.
-   * auth_user_id로 Supabase Auth 사용자와 연결.
+   * 새 프로필 생성 — 이메일 로그인 직후 처음 접속할 때 호출.
+   * auth_user_id 로 Supabase Auth 사용자와 연결.
    */
-  const addUser = async (
-    authUserId: string,
-    name: string,
-    color: string,
-    emoji?: string,
-    avatarUrl?: string
-  ) => {
-    // 이미 이 auth_user_id로 프로필이 있으면 중복 생성 방지 (동시 클릭/스트릭트 모드 대응)
-    const existing = cache.users.find((u) => u.auth_user_id === authUserId);
-    if (existing) {
-      return { data: existing, error: null };
-    }
-    const payload = {
-      auth_user_id: authUserId,
-      name,
-      color,
-      emoji: emoji || null,
-      avatar_url: avatarUrl || null,
-    };
-    const { data, error } = await supabase
-      .from("app_users")
-      .insert(payload)
-      .select()
-      .single();
-    if (error || !data) {
-      // duplicate key 에러라도 DB에 실제로 삽입이 된 상황이 있을 수 있으므로 재조회 후 확인
-      await fetchAppUsers();
-      const afterFetch = cache.users.find((u) => u.auth_user_id === authUserId);
-      if (afterFetch) return { data: afterFetch, error: null };
-      return { data: null, error: translateError(error?.message) };
-    }
-    await fetchAppUsers();
-    return { data: data as AppUser, error: null };
-  };
+  const addUser = useCallback(
+    async (
+      authUserId: string,
+      name: string,
+      color: string,
+      emoji?: string,
+      avatarUrl?: string,
+    ) => {
+      // 동시 클릭 / strict mode 더블 호출 방지.
+      const existing = users.find((u) => u.auth_user_id === authUserId);
+      if (existing) return { data: existing, error: null };
+      const payload = {
+        auth_user_id: authUserId,
+        name,
+        color,
+        emoji: emoji || null,
+        avatar_url: avatarUrl || null,
+      };
+      const { data, error } = await supabase
+        .from("app_users")
+        .insert(payload)
+        .select()
+        .single();
+      if (error || !data) {
+        // duplicate key 라도 실제 삽입 됐을 수 있어 한 번 재조회.
+        await usersQuery.refetch();
+        const after = (usersQuery.data ?? []).find(
+          (u) => u.auth_user_id === authUserId,
+        );
+        if (after) return { data: after, error: null };
+        return { data: null, error: translateError(error?.message) };
+      }
+      inv();
+      return { data: data as AppUser, error: null };
+    },
+    [users, usersQuery, inv],
+  );
 
-  const updateUser = async (id: string, updates: Partial<AppUser>) => {
-    const { error } = await supabase
-      .from("app_users")
-      .update(updates)
-      .eq("id", id);
-    if (error) return { error: translateError(error.message) };
-    await fetchAppUsers();
-    return { error: null };
-  };
+  const updateUser = useCallback(
+    async (id: string, updates: Partial<AppUser>) => {
+      const { error } = await supabase
+        .from("app_users")
+        .update(updates)
+        .eq("id", id);
+      if (error) return { error: translateError(error.message) };
+      inv();
+      return { error: null };
+    },
+    [inv],
+  );
 
-  const deleteUser = async (id: string) => {
-    const { error } = await supabase.from("app_users").delete().eq("id", id);
-    if (!error) await fetchAppUsers();
-    return { error };
-  };
+  const deleteUser = useCallback(
+    async (id: string) => {
+      const { error } = await supabase
+        .from("app_users")
+        .delete()
+        .eq("id", id);
+      if (!error) inv();
+      return { error };
+    },
+    [inv],
+  );
 
   return {
-    users: state.users,
-    loading: state.loading,
+    users,
+    loading,
     addUser,
     updateUser,
     deleteUser,
-    refetch: fetchAppUsers,
+    refetch: () => usersQuery.refetch(),
   };
 }
 
 /**
  * 현재 로그인한 사용자의 app_users.id 반환.
- * Supabase Auth 세션의 auth.uid()를 받아서 app_users의 row id로 변환.
- * 세션이 없거나 app_users에 연결된 row가 없으면 null.
+ * Supabase Auth 세션의 auth.uid() 를 받아서 app_users 의 row id 로 변환.
+ * 세션이 없거나 app_users 에 연결된 row 가 없으면 null.
  */
 export function useCurrentUserId(): string | null {
   const { user } = useSupabaseAuth();

@@ -64,6 +64,9 @@ function cascadeInvalidate(qc: QueryClient, userId: string | null | undefined) {
   qc.invalidateQueries({ queryKey: ["travel-tags"] });
   qc.invalidateQueries({ queryKey: ["notifications", userId ?? ""] });
   qc.invalidateQueries({ queryKey: ["nav-badges", userId ?? ""] });
+  // 공유 수락 시 상대 owner 의 프로필도 즉시 lookup 가능해야 — day-detail 등의
+  // 아이콘 표시 race 방지.
+  qc.invalidateQueries({ queryKey: ["app-users"] });
 }
 
 export function useCalendarShares() {
