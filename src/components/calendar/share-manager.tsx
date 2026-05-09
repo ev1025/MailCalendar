@@ -209,12 +209,6 @@ export default function ShareManager({ open, onOpenChange }: Props) {
   return (
     <PanelDialog open={open} onOpenChange={onOpenChange} title="캘린더 공유">
       <div className="px-4 py-4 flex flex-col gap-5">
-        {/* Hero / 안내 */}
-        <p className="text-xs text-muted-foreground leading-relaxed px-1">
-          서로 캘린더를 공유하면 일정과 D-day, 태그 색상을 같이 볼 수 있어요.
-          한쪽이 수락하면 양방향으로 자동 연결됩니다.
-        </p>
-
         {/* 받은 요청 — 액션 우선순위 1순위, primary tint */}
         {incomingRows.length > 0 && (
           <Section
