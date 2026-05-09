@@ -9,6 +9,7 @@ import {
   Settings as SettingsIcon,
   Share2,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +70,6 @@ function ProfilePageInner() {
     }
   }, [currentUser]);
 
-  // 변경사항 dirty 판정 — 저장 버튼 활성/비활성. useMemo 로 매 렌더 재계산 회피.
   const dirty = useMemo(() => {
     if (!currentUser) return false;
     if (name.trim() !== currentUser.name) return true;
@@ -126,81 +126,97 @@ function ProfilePageInner() {
     );
   }
 
+  // 미리보기 색상 + emoji/avatar 변화가 즉시 hero 에 반영되도록 반응형 값.
+  const previewBg =
+    avatarMode === "image" && avatarUrl
+      ? "transparent"
+      : `${color}30`;
+
   return (
     <div className="flex flex-col min-h-full">
-      <PageHeader
-        title="내 프로필"
-        showBell
-        actions={
-          <button
-            type="button"
-            onClick={() => router.push("/settings")}
-            aria-label="설정"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
-          >
-            <SettingsIcon className="h-5 w-5" strokeWidth={1.6} />
-          </button>
-        }
-      />
+      <PageHeader title="내 프로필" showBell />
 
-      <div className="flex-1 px-4 py-6 md:px-6 md:py-8">
-        <div className="w-full max-w-md mx-auto flex flex-col gap-4">
-          {/* 헤더 — 아바타 + 이름 + 이메일. 큰 시각 정보. */}
-          <section className="flex flex-col items-center gap-2 pb-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (avatarMode === "image") fileRef.current?.click();
-              }}
-              className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full text-[42px] overflow-hidden ring-1 ring-border/40 transition-transform active:scale-95"
-              style={
-                avatarUrl && avatarMode === "image"
-                  ? { backgroundColor: "transparent" }
-                  : { backgroundColor: color + "30", color }
-              }
-              aria-label="아바타 변경"
-            >
-              {avatarMode === "image" && avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={avatarUrl}
-                  alt="avatar"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                emoji || (name ? name[0] : "?")
-              )}
-            </button>
-            <p className="text-base font-semibold text-foreground">
+      {/* ── Hero ───────────────────────────────────────
+          사용자 색 기반 radial wash + 큰 아바타 + 이름 + 이메일.
+          색을 바꾸면 즉시 배경에 반영 — "이건 내 공간" 인지 강화. */}
+      <section className="relative px-6 pt-8 pb-7 overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 transition-colors duration-500"
+          style={{
+            background: `radial-gradient(60% 60% at 50% 0%, ${color}25 0%, transparent 70%)`,
+          }}
+        />
+        <div className="flex flex-col items-center gap-3">
+          <motion.button
+            type="button"
+            onClick={() => {
+              if (avatarMode === "image") fileRef.current?.click();
+            }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 400, damping: 22 }}
+            className="relative flex h-28 w-28 shrink-0 items-center justify-center rounded-full text-[48px] overflow-hidden ring-4 ring-background shadow-lg"
+            style={{ backgroundColor: previewBg, color }}
+            aria-label="아바타 변경"
+          >
+            {avatarMode === "image" && avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt="avatar"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              emoji || (name ? name[0] : "?")
+            )}
+            {/* 이미지 모드일 때 작은 카메라 뱃지 (편집 가능 표시) */}
+            {avatarMode === "image" && (
+              <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+                <Pencil className="h-3.5 w-3.5" />
+              </span>
+            )}
+          </motion.button>
+          <div className="text-center">
+            <p className="text-xl font-bold tracking-tight text-foreground">
               {name || "이름 없음"}
             </p>
-            <p className="text-xs text-muted-foreground">{authUser?.email}</p>
-          </section>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {authUser?.email}
+            </p>
+          </div>
+        </div>
+      </section>
 
-          {/* 카드 1: 이름 — 한 줄 inline 형태 (라벨 + Input) */}
-          <section className="rounded-xl border bg-card flex items-center gap-3 px-4 py-3">
-            <span className="text-sm font-semibold shrink-0">이름</span>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="이름"
-              maxLength={20}
-              className="h-9 flex-1"
-            />
-          </section>
+      {/* ── 편집 카드 — 단일 통합. divide-y 로 row 구분 ── */}
+      <section className="px-4 md:px-6">
+        <div className="mx-auto w-full max-w-md">
+          <div className="rounded-2xl border bg-card divide-y">
+            {/* 이름 */}
+            <div className="flex items-center gap-3 px-4 py-3">
+              <span className="text-xs font-medium text-muted-foreground w-14 shrink-0">
+                이름
+              </span>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="이름"
+                maxLength={20}
+                className="h-9 flex-1 border-0 bg-transparent px-2 shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
+              />
+            </div>
 
-          {/* 카드 2: 아바타 — 이미지 / 이모지 모드 분기 */}
-          <section className="rounded-xl border bg-card">
-            <div className="flex items-center justify-between border-b px-4 py-2.5">
-              <h2 className="text-sm font-semibold">아바타</h2>
-              {/* 모드 세그먼트 — 헤더 우측에 배치, 시각적으로 명확. */}
-              <div className="inline-flex rounded-full border bg-muted/40 p-0.5 text-[11px]">
+            {/* 표시 모드 */}
+            <div className="flex items-center gap-3 px-4 py-3">
+              <span className="text-xs font-medium text-muted-foreground w-14 shrink-0">
+                표시
+              </span>
+              <div className="inline-flex rounded-full border bg-muted/40 p-0.5 text-xs">
                 <button
                   type="button"
                   onClick={() => setAvatarMode("image")}
-                  className={`px-2.5 py-0.5 rounded-full transition-colors ${
+                  className={`px-3 py-1 rounded-full transition-colors ${
                     avatarMode === "image"
-                      ? "bg-background text-foreground shadow-sm"
+                      ? "bg-background text-foreground shadow-sm font-medium"
                       : "text-muted-foreground"
                   }`}
                 >
@@ -209,9 +225,9 @@ function ProfilePageInner() {
                 <button
                   type="button"
                   onClick={() => setAvatarMode("emoji")}
-                  className={`px-2.5 py-0.5 rounded-full transition-colors ${
+                  className={`px-3 py-1 rounded-full transition-colors ${
                     avatarMode === "emoji"
-                      ? "bg-background text-foreground shadow-sm"
+                      ? "bg-background text-foreground shadow-sm font-medium"
                       : "text-muted-foreground"
                   }`}
                 >
@@ -219,39 +235,53 @@ function ProfilePageInner() {
                 </button>
               </div>
             </div>
-            <div className="p-4 flex flex-col gap-3">
-              {avatarMode === "image" ? (
-                <div className="flex gap-2">
-                  <Button
+
+            {/* 모드 별 컨텐츠 */}
+            {avatarMode === "image" ? (
+              <div className="px-4 py-3 flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileRef.current?.click()}
+                  className="h-9 w-full"
+                >
+                  <Upload className="mr-1.5 h-3.5 w-3.5" /> 이미지 업로드
+                </Button>
+                {avatarUrl && (
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileRef.current?.click()}
-                    className="flex-1 h-9"
+                    onClick={() => setAvatarUrl("")}
+                    className="text-[11px] text-muted-foreground hover:text-foreground self-end"
                   >
-                    <Upload className="mr-1 h-3.5 w-3.5" /> 이미지 업로드
-                  </Button>
-                  {avatarUrl && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAvatarUrl("")}
-                      className="h-9"
-                    >
-                      초기화
-                    </Button>
-                  )}
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
+                    아바타 초기화
+                  </button>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </div>
+            ) : (
+              <>
+                {/* 색상 row */}
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <span className="text-xs font-medium text-muted-foreground w-14 shrink-0">
+                    색상
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <ColorPickerRow color={color} onChange={setColor} />
+                  </div>
                 </div>
-              ) : (
-                <>
+
+                {/* 이모지 그리드 */}
+                <div className="px-4 py-3">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    이모지
+                  </p>
                   <div className="grid grid-cols-8 gap-1">
                     {PRESET_EMOJIS.map((e) => (
                       <motion.button
@@ -260,7 +290,11 @@ function ProfilePageInner() {
                         onClick={() => setEmoji(e)}
                         whileTap={{ scale: 0.88 }}
                         whileHover={{ scale: 1.08 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 20,
+                        }}
                         className={`flex h-8 w-full items-center justify-center rounded-md text-base transition-colors ${
                           emoji === e
                             ? "ring-2 ring-primary bg-primary/10"
@@ -271,34 +305,32 @@ function ProfilePageInner() {
                       </motion.button>
                     ))}
                   </div>
-                  <div className="pt-2 border-t">
-                    <p className="mb-1.5 text-[11px] text-muted-foreground">
-                      배경색
-                    </p>
-                    <ColorPickerRow color={color} onChange={setColor} />
-                  </div>
-                </>
-              )}
-            </div>
-          </section>
+                </div>
+              </>
+            )}
+          </div>
 
-          {/* 저장 — 변경 있을 때만 활성 (UX 명확) */}
+          {/* 저장 CTA — 카드 외부 강조. dirty 일 때만 활성. */}
           <Button
             type="button"
             onClick={handleUpdate}
             disabled={!name.trim() || !dirty || saving}
-            className="h-10"
+            className="mt-4 h-11 w-full text-sm font-semibold"
           >
-            <Check className="mr-1 h-4 w-4" />
-            {saving ? "저장 중..." : "변경사항 저장"}
+            <Check className="mr-1.5 h-4 w-4" />
+            {saving ? "저장 중..." : dirty ? "변경사항 저장" : "변경 없음"}
           </Button>
+        </div>
+      </section>
 
-          {/* 카드 3: 캘린더 공유 — share manager 트리거 */}
-          <section className="rounded-xl border bg-card">
+      {/* ── 더 보기 — 액션 row (공유 / 설정) ── */}
+      <section className="px-4 md:px-6 mt-6 mb-10">
+        <div className="mx-auto w-full max-w-md">
+          <div className="rounded-2xl border bg-card divide-y overflow-hidden">
             <button
               type="button"
               onClick={() => setShareOpen(true)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent/40 transition-colors rounded-xl"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent/40 transition-colors"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
                 <Share2 className="h-4 w-4" />
@@ -311,9 +343,25 @@ function ProfilePageInner() {
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
             </button>
-          </section>
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent/40 transition-colors"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground shrink-0">
+                <SettingsIcon className="h-4 w-4" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold">설정</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  테마, 일기예보 지역, D-day, 계정
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
 
       <AvatarCropDialog
         src={cropping?.src ?? null}
