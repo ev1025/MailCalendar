@@ -27,7 +27,7 @@ import { useState } from "react";
  *  - staleTime 60s · gcTime 24h · refetchOnWindowFocus false · retry 1.
  */
 
-const PERSIST_BUSTER = "v1"; // 캐시 호환성 깨질 때 (스키마 변경 등) bump.
+const PERSIST_BUSTER = "v2"; // bump: app-users 빈 배열 영속화 race 픽스
 const PERSIST_MAX_AGE = 24 * 60 * 60 * 1000; // 24h
 
 function makeQueryClient() {
@@ -99,7 +99,17 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           // 표시 방지. 다른 도메인 (events/transactions/...) 은 persist 유지.
           shouldDehydrateQuery: (q) => {
             const k0 = q.queryKey[0];
+            // 공유 상태는 상대 액션으로 자주 바뀜 → 매 mount fresh fetch.
             if (k0 === "calendar-shares") return false;
+            // 에러로 끝난 쿼리는 영속 제외 — 빈 결과/네트워크 실패 등이 다음
+            // mount 에 cache hit 으로 표시되는 race 방지.
+            if (q.state.status !== "success") return false;
+            // app-users 가 빈 배열이면 영속 제외 — 인증 전 RLS 미통과 결과를
+            // localStorage 에 남기지 않도록.
+            if (k0 === "app-users") {
+              const data = q.state.data as unknown[] | undefined;
+              if (!data || data.length === 0) return false;
+            }
             return true;
           },
         },

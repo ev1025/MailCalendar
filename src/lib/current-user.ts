@@ -30,8 +30,19 @@ async function fetchAppUsers(): Promise<AppUser[]> {
     .from("app_users")
     .select("*")
     .order("created_at");
-  if (error) return [];
-  return ((data as AppUser[]) ?? []);
+  if (error) {
+    // throw 해서 useQuery 가 결과를 cache 에 set 하지 않도록 — 빈 배열을 영속화해
+    // 다음 mount 에 cache hit 으로 표시되는 race 방지.
+    throw error;
+  }
+  const rows = (data as AppUser[]) ?? [];
+  if (rows.length === 0) {
+    // RLS 가 아직 적용되지 않은 시점 / 인증 전 호출 등으로 빈 결과인 경우.
+    // 정상 데이터로 인식하지 않고 throw → cache 갱신 안 됨 → 다음 mount 에서
+    // 이전(유효한) cache 가 그대로 사용됨.
+    throw new Error("EMPTY_APP_USERS");
+  }
+  return rows;
 }
 
 function invalidateAppUsers(qc: QueryClient) {
@@ -58,10 +69,17 @@ export function useAppUsers() {
     queryFn: fetchAppUsers,
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
+    // 인증 전 fetch 는 RLS 미통과로 빈 배열 → 그게 영속되어 race 발생.
+    // authUser 있을 때만 활성화. 첫 진입은 인증 후에 fetch.
+    enabled: !!authUser,
+    // 빈 결과 throw 가 일시적이라 한 번 더 재시도(인증 직후 RLS 적용 타이밍 보강).
+    retry: 2,
+    retryDelay: 300,
   });
 
   const users = usersQuery.data ?? [];
-  const loading = usersQuery.isPending;
+  // enabled=false 시 isPending 영구 true 라 의미가 없음 → authUser 게이팅과 결합.
+  const loading = !!authUser && usersQuery.isPending;
 
   // Realtime — app_users 변경 시 invalidate. 신규 사용자 가입, 프로필 색상
   // 변경, 아바타 업로드 등을 즉시 반영. 모든 사용자 행이 영향이라 filter 없음.
