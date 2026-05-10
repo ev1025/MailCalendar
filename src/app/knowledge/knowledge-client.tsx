@@ -208,7 +208,6 @@ function KnowledgePageInner() {
         setSelectedItemId(data.id);
         setDirty(false);
         setEditing(false);
-        toast.success("저장됐어요");
       }
       return;
     }
@@ -224,7 +223,6 @@ function KnowledgePageInner() {
     }
     setDirty(false);
     setEditing(false);
-    toast.success("저장됐어요");
   };
 
   const handleSaveDraft = () => {

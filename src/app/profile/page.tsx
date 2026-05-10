@@ -112,7 +112,6 @@ function ProfilePageInner() {
       toast.error(typeof error === "string" ? error : "저장 실패");
       return;
     }
-    toast.success("저장됐어요");
   }, [currentUser, name, emoji, color, avatarUrl, avatarMode, updateUser]);
 
   if (authLoading || !currentUser) {

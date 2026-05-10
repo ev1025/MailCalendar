@@ -139,7 +139,6 @@ export default function TransactionForm({
       return;
     }
     onOpenChange(false);
-    toast.success(isEdit ? "수정됐어요" : "저장됐어요");
   };
 
   const titleLabel = type === "income" ? "수입명" : "지출명";

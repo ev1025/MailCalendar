@@ -201,7 +201,6 @@ export default function TravelForm({
       return;
     }
     onOpenChange(false);
-    toast.success(item ? "수정됐어요" : "저장됐어요");
   };
 
   // 취소·뒤로가기·ESC·배경 클릭 등 닫기 경로에선 DB 저장 X — 명시적 "저장"
