@@ -6,16 +6,16 @@
 
 | 문서 | 라우트 | 적용 / 40 |
 |---|---|---|
-| [profile.md](./profile.md) | `/profile` | 7 |
-| [calendar-view.md](./calendar-view.md) | `/calendar?view=calendar` | 3 |
-| [calendar-database.md](./calendar-database.md) | `/calendar?view=database` | 1 |
-| [finance.md](./finance.md) | `/finance` | 2 |
-| [products.md](./products.md) | `/products` | 2 |
-| [knowledge.md](./knowledge.md) | `/knowledge` | 2 |
-| [travel.md](./travel.md) | `/travel` | 1 |
-| [travel-plans.md](./travel-plans.md) | `/travel/plans` | 2 |
+| [profile.md](./profile.md) | `/profile` | 14 |
+| [calendar-view.md](./calendar-view.md) | `/calendar?view=calendar` | 7 |
+| [calendar-database.md](./calendar-database.md) | `/calendar?view=database` | 6 |
+| [finance.md](./finance.md) | `/finance` | 5 |
+| [products.md](./products.md) | `/products` | 5 |
+| [knowledge.md](./knowledge.md) | `/knowledge` | 4 |
+| [travel.md](./travel.md) | `/travel` | 2 |
+| [travel-plans.md](./travel-plans.md) | `/travel/plans` | 3 |
 
-**총 20 / 320 적용**
+**총 46 / 320 적용**
 
 각 항목 라벨:
 - `H-N / M-N / L-N` — 기존 우선순위 분류

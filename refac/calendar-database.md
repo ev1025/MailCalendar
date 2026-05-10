@@ -27,7 +27,7 @@
 
 ## 코드 효율성 (10)
 
-### CE-1 ⏳ tagColorMap 매 렌더 재생성
+### CE-1 ✅ tagColorMap 매 렌더 재생성 — `e4dd33d`
 - `database-view.tsx` 매 렌더 reduce. `useMemo([tags])`.
 
 ### CE-2 ⏳ parseDay 함수 중복 정의 검토
@@ -42,7 +42,7 @@
 ### CE-5 ⏳ filterTags 토글 핸들러 useCallback
 - `setFilterTags((prev) => ...)` 인라인. 자식 FilterPanel memo 검증.
 
-### CE-6 ⏳ search debounce
+### CE-6 ✅ search debounce — `e4dd33d`
 - `database-view.tsx` SearchInput onChange 즉시 filter — 300ms debounce.
 
 ### CE-7 ⏳ sortField/sortDir state 통합
@@ -61,10 +61,10 @@
 
 ## 디자인 (10)
 
-### D-1 ⏳ 컬럼 헤더 hover 색
+### D-1 ✅ 컬럼 헤더 hover 색 — `e4dd33d`
 - 클릭 가능함을 cue. `hover:bg-accent/30 cursor-pointer`.
 
-### D-2 ⏳ 정렬 active 헤더 강조
+### D-2 ✅ 정렬 active 헤더 강조 — `e4dd33d`
 - 현재 ArrowUp/Down 만. 헤더 텍스트 굵기 + primary 색.
 
 ### D-3 ⏳ 행 height 일관
@@ -100,7 +100,7 @@
 ### A-2 ⏳ 정렬 변경 시 layout 이동
 - `motion.tr layout` 으로 부드러운 reorder (이미 적용 — 검증).
 
-### A-3 ⏳ 헤더 정렬 화살표 rotate
+### A-3 ✅ 헤더 정렬 화살표 rotate — `e4dd33d`
 - 클릭 시 `rotate-180` transition 200ms.
 
 ### A-4 ⏳ 검색 디바운스 — 결과 fade

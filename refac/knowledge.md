@@ -65,8 +65,8 @@
 ### D-1 ⏳ 폴더 트리 들여쓰기 시각
 - depth 별 indent + 폴더 이모지/아이콘.
 
-### D-2 ⏳ 활성 폴더/노트 강조
-- left bar 또는 bg-primary/10.
+### D-2 ✅ 활성 폴더/노트 강조 — `e4dd33d`
+- 활성 노트 inset shadow primary left bar + 아이콘 primary 색.
 
 ### D-3 ⏳ 노트 카드 미리보기
 - 제목 + 요약 + 수정시간. 현재 디자인 검증.
@@ -114,8 +114,8 @@
 ### A-6 ⏳ 에디터 진입 fade
 - 노트 클릭 → 에디터 fade-in.
 
-### A-7 ⏳ 폴더 펼침 chevron rotate
-- ChevronRight → ChevronDown transition 200ms.
+### A-7 ✅ 폴더 펼침 chevron rotate — `e4dd33d`
+- ChevronRight rotate-0/90° transition duration-200.
 
 ### A-8 ⏳ 노트 추가 시 list 위에서 slide
 - 새 노트 list top 에 추가 + slide-down.

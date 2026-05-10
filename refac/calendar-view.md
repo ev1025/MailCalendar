@@ -33,7 +33,7 @@
 ### CE-1 ⏳ `calendar-client.tsx` 535줄 분할
 - handlers/sub-components 별 파일 분리 — `calendar-handlers.ts`, `calendar-month-picker.tsx` 등.
 
-### CE-2 ⏳ MAX_VISIBLE_SLOTS / BAR_H 등 상수 분리
+### CE-2 ✅ MAX_VISIBLE_SLOTS / BAR_H 등 상수 분리 — `e4dd33d`
 - `calendar-view.tsx:38-42` — `lib/calendar/layout-constants.ts`.
 
 ### CE-3 ⏳ `weeks` `useMemo` deps
@@ -64,7 +64,7 @@
 
 ## 디자인 (10)
 
-### D-1 ⏳ DnD isOver 색 토큰화
+### D-1 ✅ DnD isOver 색 토큰화 — `e4dd33d`
 - `calendar-view.tsx:128` hardcoded `bg-blue-50`. accent 또는 primary 토큰.
 
 ### D-2 ⏳ 주말 색상 일관성
@@ -98,10 +98,10 @@
 
 ## 애니메이션 (10)
 
-### A-1 ⏳ 월 전환 셀 stagger fade
+### A-1 ✅ 월 전환 셀 stagger fade — `e4dd33d`
 - 새 월 마운트 시 `transition.staggerChildren: 0.012` 셀 fade.
 
-### A-2 ⏳ 일정 추가 시 셀 pulse
+### A-2 ✅ 일정 추가 시 셀 pulse — `e4dd33d`
 - 새 event 가 들어간 셀에 1초 background pulse.
 
 ### A-3 ⏳ DragOverlay 스케일·그림자

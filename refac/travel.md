@@ -35,8 +35,8 @@
 ### CE-2 ⏳ visibleItems 다단계 필터 통합
 - search + category + tags + visited 필터 매 변경 시 재계산. 단일 reducer.
 
-### CE-3 ⏳ TravelRow memo + 핸들러 useCallback
-- onEdit/onDelete 인라인 시 memo 무효.
+### CE-3 ✅ TravelRow memo + 핸들러 useCallback — `e4dd33d`
+- 핸들러 시그니처 (item)=>void 통일 + useCallback 으로 모든 행이 같은 reference 공유 → memo 실효.
 
 ### CE-4 ⏳ 정렬 키 안정화
 - useMemo([items, sortField, sortDir]).

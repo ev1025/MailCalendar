@@ -28,16 +28,16 @@
 
 ## 코드 효율성 (10)
 
-### CE-1 ⏳ PRESET_EMOJIS 를 `lib/preset-emojis.ts` 로 추출
+### CE-1 ✅ PRESET_EMOJIS 를 `lib/preset-emojis.ts` 로 추출 — `e4dd33d`
 - 다른 페이지(이모지 픽커) 재사용 + 트리쉐이킹.
 
-### CE-2 ⏳ `handleImageUpload` `useCallback`
+### CE-2 ✅ `handleImageUpload` `useCallback` — `e4dd33d`
 - input onChange 매 렌더 새 함수.
 
-### CE-3 ⏳ `handleUpdate` `useCallback`
+### CE-3 ✅ `handleUpdate` `useCallback` — `e4dd33d`
 - deps `[currentUser, name, emoji, color, avatarUrl, avatarMode, updateUser]`.
 
-### CE-4 ⏳ `AVATAR_MAX_BYTES` 상수화
+### CE-4 ✅ `AVATAR_MAX_BYTES` 상수화 — `e4dd33d`
 - `10_000_000` 매직 넘버 → `const AVATAR_MAX_BYTES = 10 * 1024 * 1024`.
 
 ### CE-5 ⏳ avatar 이미지 cleanup 일관화
@@ -86,7 +86,7 @@
 ### D-8 ⏳ 다크모드 radial wash 검증
 - `${color}25` 가 다크모드에서 너무 진하면 wash 무력. opacity 조절.
 
-### D-9 ⏳ "변경 없음" 라벨 vs "저장됨"
+### D-9 ✅ "변경 없음" 라벨 vs "저장됨" — `e4dd33d`
 - dirty=false 시 "변경 없음" → "저장됨 ✓" 가 더 긍정적 피드백.
 
 ### D-10 ⏳ 헤더 액션 gap
@@ -96,10 +96,10 @@
 
 ## 애니메이션 (10)
 
-### A-1 ⏳ Hero 첫 진입 fade-in
+### A-1 ✅ Hero 첫 진입 fade-in — `e4dd33d`
 - `motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}` 230ms.
 
-### A-2 ⏳ 페이지 stagger
+### A-2 ✅ 페이지 stagger — `e4dd33d`
 - Hero → 편집 카드 → 공유 카드 0.06s stagger.
 
 ### A-3 ⏳ 모드 토글 row 슬라이드

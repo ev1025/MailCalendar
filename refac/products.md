@@ -68,8 +68,8 @@
 ### D-2 ⏳ 제품 카드 vs row 디자인
 - 모바일은 카드, 데스크톱은 table row 형태.
 
-### D-3 ⏳ 활성 상태 시각화
-- `is_active` 토글 시 bg-emerald/5 또는 ring 강조.
+### D-3 ✅ 활성 상태 시각화 — `e4dd33d`
+- `is_active` 행 finance-gain/5 톤 + hover finance-gain/10 — 다크 모드 대비.
 
 ### D-4 ⏳ 최저가 배지 디자인
 - 메달 → 더 명확한 1/2/3 ranking.
@@ -83,8 +83,8 @@
 ### D-7 ⏳ 카테고리 chip 디자인 일관성
 - finance 의 카테고리 chip 과 시각 일관.
 
-### D-8 ⏳ 그룹 펼침 아이콘 transition
-- ChevronDown rotate 180° transition.
+### D-8 ✅ 그룹 펼침 아이콘 transition — `e4dd33d`
+- ChevronDown rotate 0/-90° duration-200 transition.
 
 ### D-9 ⏳ 모바일 그룹 헤더 sticky
 - 스크롤 시 그룹 헤더 sticky top.
@@ -96,8 +96,8 @@
 
 ## 애니메이션 (10)
 
-### A-1 ⏳ 그룹 펼침/접힘 height transition
-- grid-rows trick `[1fr]`/`[0fr]` 으로 부드러운 collapse.
+### A-1 ✅ 그룹 펼침/접힘 height transition — `e4dd33d`
+- AnimatePresence + motion.div height 0 ↔ auto 로 부드러운 collapse.
 
 ### A-2 ⏳ ProductRow enter/exit AnimatePresence
 - 추가/삭제 fade slide.

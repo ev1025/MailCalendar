@@ -34,10 +34,10 @@
 ### CE-2 ⏳ `baseTransactions` filter 단순화
 - `allTransactions.filter` 매번. `fixedByKey` 의존 → memo 정상이지만 추가 필터 layer 검토.
 
-### CE-3 ⏳ `baseTotalIncome` / `baseTotalExpense` 단일 reduce
+### CE-3 ✅ `baseTotalIncome` / `baseTotalExpense` 단일 reduce — `e4dd33d`
 - 두 개 useMemo. 단일 패스로 income+expense 동시 계산.
 
-### CE-4 ⏳ `incomeFixed` / `expenseFixed` 단일 분할
+### CE-4 ✅ `incomeFixed` / `expenseFixed` 단일 분할 — `e4dd33d`
 - `useMemo` 두 번. 단일 reduce 로 `{ income, expense }` 객체.
 
 ### CE-5 ⏳ category 정렬·필터 헬퍼 추출
@@ -65,8 +65,8 @@
 ### D-1 ⏳ 카드 톤 일관성
 - transaction list / category chart / fixed manager 모두 같은 rounded + border + bg-card.
 
-### D-2 ⏳ 잔액 카드 색상
-- 양수 = emerald / 음수 = red. 다크 모드 대비.
+### D-2 ✅ 잔액 카드 색상 — `e4dd33d`
+- 양수 = emerald / 음수 = red / 0 = muted. 다크 모드 대비.
 
 ### D-3 ⏳ 카테고리 차트 라벨 위치
 - recharts default 라벨이 작거나 가려짐. 위치 / 폰트 검증.
