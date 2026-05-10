@@ -292,8 +292,7 @@ export default function DatabaseView({
           )}
         </div>
       ) : (
-        <div className={`flex-1 min-h-0 overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
-          <div className="rounded-lg border">
+        <div className={`flex-1 min-h-0 rounded-lg border overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
           <table
             ref={tableRef}
             className="w-full border-collapse"
@@ -308,7 +307,7 @@ export default function DatabaseView({
                 return <col key={idx} style={{ width: widthStyle }} />;
               })}
             </colgroup>
-            <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm text-[11px] text-muted-foreground shadow-[0_1px_0_var(--border)]">
+            <thead className="sticky top-0 z-10 bg-muted text-[11px] text-muted-foreground">
               <tr>
                 {columns.map((col, idx) => {
                   const active = isSortActive(col.field);
@@ -404,7 +403,6 @@ export default function DatabaseView({
               </AnimatePresence>
             </tbody>
           </table>
-          </div>
         </div>
       )}
 

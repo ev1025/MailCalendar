@@ -21,7 +21,6 @@ import { X, MapPin, Search as SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 import { translateError } from "@/lib/api-errors";
 import { useTravelCategories, BUILTIN_TRAVEL_CATEGORIES } from "@/hooks/use-travel-categories";
-import { useFormDraft } from "@/hooks/use-form-draft";
 import type { TravelItem, TravelCategory, TravelTag, EventTag, PlaceInfo } from "@/types";
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -80,25 +79,11 @@ export default function TravelForm({
   const [visited, setVisited] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // 자동 저장 드래프트 — item 편집 시엔 id 별 키, 신규 생성 시엔 "new" 고정 키.
-  // 저장 안 누르고 모달 닫거나 탭 닫아도 입력값 복원됨.
-  const draftKey = item ? `travel-form:${item.id}` : "travel-form:new";
-  const draftValue = { title, color, region, category, month, selectedTags, notes, visited, places };
-  const { loadDraft, clearDraft } = useFormDraft(draftKey, draftValue, {
-    isEmpty: (v) =>
-      !v.title.trim() &&
-      !v.region.trim() &&
-      !v.notes.trim() &&
-      v.places.length === 0 &&
-      v.selectedTags.length === 0 &&
-      !v.category &&
-      v.month == null &&
-      !v.visited,
-  });
-
+  // 폼 열릴 때 item 기준으로 모든 입력을 셋팅. 닫혔다가 다시 열려도 매번 새로 셋팅
+  // 되므로 이전 입력 잔존 없음. (탭 닫혀도 복원되는 storage 드래프트는 사용자 의도와
+  // 어긋나 제거됨 — "취소 = 진짜 취소".)
   useEffect(() => {
     if (!open) return;
-    // 1) item 기준으로 세팅
     if (item) {
       setTitle(item.title);
       setColor(item.color || categoryColors[item.category] || "#3B82F6");
@@ -130,19 +115,6 @@ export default function TravelForm({
       setNotes("");
       setVisited(false);
       setPlaces([]);
-    }
-    // 2) 드래프트 있으면 우선 복원(자동) — 직전 세션 입력이 item 값보다 최신이므로.
-    const draft = loadDraft();
-    if (draft) {
-      setTitle(draft.title ?? "");
-      setColor(draft.color ?? randomDefaultColor());
-      setRegion(draft.region ?? "");
-      setCategory((draft.category as TravelCategory | "") ?? "");
-      setMonth(draft.month ?? null);
-      setSelectedTags(draft.selectedTags ?? []);
-      setNotes(draft.notes ?? "");
-      setVisited(draft.visited ?? false);
-      setPlaces(draft.places ?? []);
     }
     setPlaceQuery("");
     setPlaceResults([]);
@@ -228,16 +200,12 @@ export default function TravelForm({
       console.error("[travel-form save]", error);
       return;
     }
-    clearDraft();
     onOpenChange(false);
     toast.success(item ? "수정됐어요" : "저장됐어요");
   };
 
   // 취소·뒤로가기·ESC·배경 클릭 등 닫기 경로에선 DB 저장 X — 명시적 "저장"
-  // 버튼만 저장한다. 입력값 자체는 useFormDraft 가 localStorage 에 자동 보관하므로
-  // 실수로 닫혀도 다음 오픈 시 loadDraft 가 복원해줌.
-  // (이전엔 title+category 만족 시 자동 onSave 했으나 사용자 의도와 어긋남 — 취소는
-  //  진짜 취소여야 한다.)
+  // 버튼만 저장한다.
 
   return (
     <FormPage
