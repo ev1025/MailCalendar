@@ -1,63 +1,76 @@
 # MailCalendar 리팩토링 가이드
 
-시니어 풀스택 관점에서 네비게이션바 페이지별로 코드 비효율·애니메이션·UX 개선 항목을 **각 10개씩** 정리.
+시니어 풀스택 + 시니어 디자이너 관점에서 네비게이션바 페이지별 개선 항목을
+4개 카테고리로 정리.
+
+## 페이지별 항목 구성
+
+각 페이지 문서 = **40개 항목**:
+1. **기존 H/M/L** (10) — 코드 비효율·정합성·핵심 UX
+2. **코드 효율성** (10) — useMemo/useCallback, 파일 분할, 헬퍼 추출, 동적 import 등
+3. **디자인** (10) — 톤·간격·다크모드·빈 상태·일러스트
+4. **애니메이션** (10) — fade·spring·layoutId·stagger·transition
+
+총 **8 페이지 × 40 = 320 항목**.
 
 ## 페이지 목록
 
-| 문서 | 라우트 | 항목 수 | 적용 완료 |
-|---|---|---|---|
-| [profile.md](./profile.md) | `/profile` | 10 | 6 / 10 |
-| [calendar-view.md](./calendar-view.md) | `/calendar?view=calendar` | 10 | 3 / 10 |
-| [calendar-database.md](./calendar-database.md) | `/calendar?view=database` | 10 | 1 / 10 |
-| [finance.md](./finance.md) | `/finance` | 10 | 2 / 10 |
-| [products.md](./products.md) | `/products` | 10 | 2 / 10 |
-| [knowledge.md](./knowledge.md) | `/knowledge` | 10 | 2 / 10 |
-| [travel.md](./travel.md) | `/travel` | 10 | 1 / 10 |
-| [travel-plans.md](./travel-plans.md) | `/travel/plans` | 10 | 2 / 10 |
+| 문서 | 라우트 | 적용 / 320 |
+|---|---|---|
+| [profile.md](./profile.md) | `/profile` | 7 |
+| [calendar-view.md](./calendar-view.md) | `/calendar?view=calendar` | 3 |
+| [calendar-database.md](./calendar-database.md) | `/calendar?view=database` | 1 |
+| [finance.md](./finance.md) | `/finance` | 2 |
+| [products.md](./products.md) | `/products` | 2 |
+| [knowledge.md](./knowledge.md) | `/knowledge` | 2 |
+| [travel.md](./travel.md) | `/travel` | 1 |
+| [travel-plans.md](./travel-plans.md) | `/travel/plans` | 2 |
 
-**총 80개 항목 · 19개 적용 완료**
+**적용 완료: 20 / 320**
 
-## 우선순위
+## 우선순위 표시
 
-- **H (필수)** — 코드 비효율·정합성·핵심 UX. 사용자 또는 데이터에 직접 영향.
-- **M (권장)** — 애니메이션·일관성·중간 영역 개선. 폴리시 수준.
-- **L (있으면 좋음)** — 마이크로 인터랙션·접근성 보강·옵션.
-
-각 항목 앞 표시:
+각 항목 앞에:
 - ✅ 적용 완료 (커밋 hash 명시)
 - ⏳ 미적용
 
+분류:
+- **H (필수)** — 정합성·핵심 UX. 사용자/데이터에 직접 영향.
+- **M (권장)** — 일관성·폴리시.
+- **L (있으면 좋음)** — 마이크로 인터랙션·옵션.
+- **CE-N** — 코드 효율성.
+- **D-N** — 디자인.
+- **A-N** — 애니메이션.
+
 ## 공통 패턴
 
-### 1. 매 렌더 객체·배열 재생성 (가장 흔한 비효율)
-인라인 `[…]` / `{…}` / `() => …` 가 의존성 배열에 들어가면 매 렌더 재생성. `useMemo` / `useCallback` 으로 메모화.
+### 코드 효율성 — 자주 쓰이는 7가지
+1. **인라인 함수 → useCallback** — 자식 memo 무효화 방지.
+2. **인라인 객체/배열 → useMemo** — 의존성 안정화.
+3. **큰 컴포넌트 → 파일 분할** — 615+ 줄 client 는 sub-component 추출.
+4. **다단계 useMemo → 단일 reducer** — filter+sort+map 통합.
+5. **상수 추출** — 매직 넘버 → `lib/<domain>/constants.ts`.
+6. **동적 import** — tiptap, NaverMap 등 큰 lib lazy load.
+7. **타입 안전성** — `any` 제거, discriminated union 활용.
 
-### 2. 자식 memo 무효화
-메모화 안 된 핸들러를 `memo()` 자식에 prop 으로 넘기면 무용지물. 모든 핸들러를 `useCallback` 으로 안정화.
+### 디자인 — 7가지 일관 규칙
+1. **rounded** — 카드 `2xl`, row `xl`, chip `full`.
+2. **간격 시스템** — `gap-2 / 3 / 4` 통일.
+3. **색 토큰** — hex 직접 → CSS var (`--primary`, `--accent`).
+4. **다크모드 검증** — 모든 색 contrast / opacity 페어.
+5. **빈 상태 일러스트** — 텍스트만이 아닌 아이콘 + CTA.
+6. **터치 영역 44px** — 작은 액션 `p-1` 패딩.
+7. **focus-visible** — 모든 인터랙티브 요소.
 
-### 3. 리스트 가상화
-50+ 행 렌더되는 곳: `@tanstack/react-virtual` (동적 높이) 또는 `react-window` (고정 높이).
-
-### 4. Framer Motion 일관성
-- `<AnimatePresence mode="wait">` — 같은 슬롯의 진입/퇴출
-- `<motion.div layoutId>` — 위치 이동 (정렬 변경, 카드 ↔ 상세)
-- 통일 ease: `transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}`
-
-### 5. 모바일 터치 영역
-최소 44px (WCAG). 작은 액션 버튼은 `p-1` 패딩으로 hit-target 확보. TouchSensor 200ms delay 검증된 값.
-
-### 6. 영속성 (localStorage)
-사용자 토글 / 정렬 / 펼침 상태 등은 localStorage 영속. `persistent-cache.ts` 활용 권장.
-
-### 7. ARIA 보강
-모든 인터랙티브 요소에 `aria-label` 또는 visible label. 아이콘 only 버튼은 sr-only 또는 title.
+### 애니메이션 — 7가지 정석
+1. **fade-in stagger** — 페이지 진입.
+2. **AnimatePresence + motion.tr/div** — 리스트 enter/exit.
+3. **layoutId** — 위치 이동 (정렬 변경, 카드 ↔ 상세).
+4. **whileTap / whileHover** — 마이크로 인터랙션.
+5. **spring** — 토글, 체크.
+6. **공통 ease** — `[0.22, 1, 0.36, 1]` 통일.
+7. **transition-colors duration-200** — 색 변경.
 
 ## 진행 방식
 
-각 페이지 우선순위 (H 먼저) 에 따라 순차 적용. 페이지 fix 묶음 단위로 commit + push.
-
-```
-H 미적용 → M 미적용 → L 미적용
-```
-
-미적용 H 항목 목록은 각 문서 하단 "적용 순서" 섹션 참고.
+각 페이지 문서 하단의 **"적용 순서"** 섹션 우선. 작은 fix 묶음 단위로 commit + push.

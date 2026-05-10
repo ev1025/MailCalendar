@@ -6,54 +6,131 @@
 
 ---
 
-## H — 필수
+## 기존 10 항목
 
-### 1. ✅ ProductRow 핸들러 useCallback — `252089c`
-- onEdit/onDelete/onAddFixed/onTogglePurchased 4개 → useCallback 분리. ProductRow memo 활성.
+### H — 필수
+1. ✅ ProductRow 핸들러 useCallback — `252089c`
+2. ✅ expandedGroups localStorage 영속 — `252089c`
+3. ⏳ DndContext 중첩 → 단일 컨텍스트
+4. ⏳ grouped 매 렌더 재계산
 
-### 2. ✅ expandedGroups localStorage 영속화 — `252089c`
-- 새로고침 후 펼침 상태 유지.
+### M — 권장
+5. ⏳ 검색 결과 모바일 스크롤 보존
+6. ⏳ stats 로드 실패 silent
+7. ⏳ 카테고리 색상 맵 deps
+8. ⏳ 제품 순위 배지 hover
 
-### 3. ⏳ DndContext 중첩 → 단일 컨텍스트
-- 각 그룹마다 `<DndContext>` 재생성. 수백 제품 시 DOM 폭발.
-- → 최상위 1개 + 그룹별 `<SortableContext>` 만.
-
-### 4. ⏳ grouped 매 렌더 재계산
-- `products-client.tsx:338-361` `[filtered, stats]` 의존. `stats` 가 useEffect 비동기 갱신 → 매번 새 객체.
-- → stats 안정 ref 또는 grouped 의 stats 의존성 분리.
-
----
-
-## M — 권장
-
-### 5. ⏳ 검색 결과 모바일 스크롤 보존
-- 검색 후 매칭 그룹 자동 펼침. 스크롤 위치 보존 안 됨.
-- → IntersectionObserver 로 첫 매칭 그룹 viewport 진입 보장.
-
-### 6. ⏳ stats 로드 실패 silent
-- `products-client.tsx:301-307` 네트워크 실패 시 `-` 표시만. 재시도 버튼 또는 toast.
-
-### 7. ⏳ 카테고리 색상 맵 deps 정합성
-- `categoryColors` `useMemo([categoryTags])` 정상. 다만 `customCategorySet` 도 `customCategories` 변경마다 새 Set — deps 안정화 검토.
-
-### 8. ⏳ 제품 순위 배지 hover 애니메이션
-- 메달 정적. hover 시 scale 1.05 + rotate 살짝.
+### L
+9. ⏳ 드래그 haptic
+10. ⏳ 제품 폼 가격 inline 검증
 
 ---
 
-## L — 있으면 좋음
+## 코드 효율성 (10)
 
-### 9. ⏳ 드래그 haptic feedback
-- `lib/haptics.ts` 이미 있음. `onDragStart` 에서 `triggerHaptic("medium")` 호출.
+### CE-1 ⏳ `products-client.tsx` 875줄 분할
+- 카테고리 manager / row / stats / form 영역 sub-component 추출.
 
-### 10. ⏳ 제품 폼 가격 미설정 경고
-- 월 가격 미설정 시 고정비 다이얼로그에서만 경고. 제품 폼 자체에서도 inline 검증.
+### CE-2 ⏳ supabase product_purchases stats fetch 로직 → 별도 hook
+- `useProductStats(productIds)` 로 분리.
+
+### CE-3 ⏳ filtered 다단계 useMemo 의존성 정합
+- search + category + sub_category 단일 reducer 로 통합.
+
+### CE-4 ⏳ ProductRow memo prop equality
+- `p` reference 가 안정적인지 검증. shallow 변경 시 새 reference면 memo 무효.
+
+### CE-5 ⏳ categoryColors 매 렌더 reduce
+- 이미 useMemo. categoryTags reference 안정성 검증.
+
+### CE-6 ⏳ DnD onDragEnd 핸들러 useCallback
+- 그룹별 dragEnd 인라인. 안정화.
+
+### CE-7 ⏳ statsTick 패턴 재검토
+- `useState` tick → invalidate 로 대체 (TanStack 정석).
+
+### CE-8 ⏳ 정렬 비교 함수 외부 헬퍼
+- `cmpByField` 패턴 도입.
+
+### CE-9 ⏳ AddCategoryDialog state 분리
+- 페이지 내부에서 state 관리. 별도 컴포넌트.
+
+### CE-10 ⏳ ProductForm 폼 state 초기화
+- 닫힐 때 reset.
 
 ---
 
-## 적용 순서 (남은 미적용)
-1. ⏳ H3 DndContext 통합 (가장 큰 성능 영향)
-2. ⏳ H4 grouped 의존성 정리
-3. ⏳ M6 stats 재시도
-4. ⏳ M5 검색 스크롤
-5. ⏳ M8 hover 애니메이션
+## 디자인 (10)
+
+### D-1 ⏳ 그룹 헤더 색
+- 카테고리별 dot + 이름. 현재 색 정합 검토.
+
+### D-2 ⏳ 제품 카드 vs row 디자인
+- 모바일은 카드, 데스크톱은 table row 형태.
+
+### D-3 ⏳ 활성 상태 시각화
+- `is_active` 토글 시 bg-emerald/5 또는 ring 강조.
+
+### D-4 ⏳ 최저가 배지 디자인
+- 메달 → 더 명확한 1/2/3 ranking.
+
+### D-5 ⏳ 빈 상태 (제품 없음)
+- 일러스트 + "제품 추가" CTA.
+
+### D-6 ⏳ 검색 결과 매칭 highlight
+- `<mark>` 또는 bg-yellow tint.
+
+### D-7 ⏳ 카테고리 chip 디자인 일관성
+- finance 의 카테고리 chip 과 시각 일관.
+
+### D-8 ⏳ 그룹 펼침 아이콘 transition
+- ChevronDown rotate 180° transition.
+
+### D-9 ⏳ 모바일 그룹 헤더 sticky
+- 스크롤 시 그룹 헤더 sticky top.
+
+### D-10 ⏳ 제품 폼 다이얼로그 디자인
+- 입력 필드 정렬 + label 위치.
+
+---
+
+## 애니메이션 (10)
+
+### A-1 ⏳ 그룹 펼침/접힘 height transition
+- grid-rows trick `[1fr]`/`[0fr]` 으로 부드러운 collapse.
+
+### A-2 ⏳ ProductRow enter/exit AnimatePresence
+- 추가/삭제 fade slide.
+
+### A-3 ⏳ 드래그 시작 즉시 scale (Plans 패턴 적용)
+- TouchSensor delay 동안 시각 cue.
+
+### A-4 ⏳ 활성 토글 spring
+- ✓ 체크 fade-in.
+
+### A-5 ⏳ 검색 결과 fade
+- 검색어 변경 → 결과 fade.
+
+### A-6 ⏳ 그룹 헤더 hover
+- 카테고리 dot 약한 scale.
+
+### A-7 ⏳ 메달 배지 진입 spring
+- 1위 / 2위 / 3위 등장 시 spring scale.
+
+### A-8 ⏳ 카테고리 추가 시 chip enter
+- AnimatePresence chip scale 0→1.
+
+### A-9 ⏳ 폼 저장 성공 toast
+- success toast slide-in (sonner default — 검증).
+
+### A-10 ⏳ 드래그 drop 위치 시각 cue
+- 드롭 가능 위치 highlight.
+
+---
+
+## 적용 순서 (남은 미적용 우선)
+1. CE-1 파일 분할
+2. A-1 그룹 펼침 height transition
+3. D-3 활성 시각화
+4. A-2 row enter/exit
+5. CE-3 filtered 통합
