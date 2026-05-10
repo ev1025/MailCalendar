@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
@@ -15,18 +15,14 @@ import { toast } from "sonner";
 import { useSupabaseAuth } from "@/lib/auth-supabase";
 import { useAppUsers, useCurrentUser } from "@/lib/current-user";
 import { uploadToStorage, deleteFromStorage } from "@/lib/storage";
+import { PRESET_EMOJIS } from "@/lib/preset-emojis";
 import AvatarCropDialog from "@/components/layout/avatar-crop-dialog";
 import ShareManager from "@/components/calendar/share-manager";
 import PageHeader from "@/components/layout/page-header";
 import ColorPickerRow from "@/components/ui/color-picker-popover";
 
 const DEFAULT_COLOR = "#3B82F6";
-
-const PRESET_EMOJIS = [
-  "🙂", "💕", "🌸", "⭐", "🐱", "🍀", "☕", "🌙",
-  "🐶", "🦊", "🐼", "🐰", "🐻", "🦁", "🐯", "🐸",
-  "🌈", "🔥", "✨", "💎", "🎵", "🎨", "🚀", "⚡",
-];
+const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
 
 export default function ProfilePage() {
   return (
@@ -83,20 +79,23 @@ function ProfilePageInner() {
     return false;
   }, [currentUser, name, emoji, color, avatarUrl, avatarMode]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10_000_000) {
-      toast.error("10MB 이하 이미지만 선택할 수 있어요");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => setCropping({ src: reader.result as string });
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
+  const handleImageUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > AVATAR_MAX_BYTES) {
+        toast.error("10MB 이하 이미지만 선택할 수 있어요");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => setCropping({ src: reader.result as string });
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    },
+    [],
+  );
 
-  const handleUpdate = async () => {
+  const handleUpdate = useCallback(async () => {
     if (!currentUser || !name.trim()) {
       toast.error("이름을 입력하세요");
       return;
@@ -114,7 +113,7 @@ function ProfilePageInner() {
       return;
     }
     toast.success("저장됐어요");
-  };
+  }, [currentUser, name, emoji, color, avatarUrl, avatarMode, updateUser]);
 
   if (authLoading || !currentUser) {
     return (
@@ -159,8 +158,14 @@ function ProfilePageInner() {
 
       {/* ── Hero ───────────────────────────────────────
           사용자 색 기반 radial wash + 큰 아바타 + 이름 + 이메일.
-          색을 바꾸면 즉시 배경에 반영 — "이건 내 공간" 인지 강화. */}
-      <section className="relative px-6 pt-8 pb-7 overflow-hidden">
+          색을 바꾸면 즉시 배경에 반영 — "이건 내 공간" 인지 강화.
+          페이지 진입 시 Hero → 편집 카드 stagger fade-in. */}
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.23, ease: "easeOut" }}
+        className="relative px-6 pt-8 pb-7 overflow-hidden"
+      >
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 transition-colors duration-500"
@@ -200,10 +205,15 @@ function ProfilePageInner() {
             </p>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── 편집 카드 — 단일 통합. divide-y 로 row 구분 ── */}
-      <section className="px-4 md:px-6">
+      <motion.section
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.23, ease: "easeOut", delay: 0.06 }}
+        className="px-4 md:px-6"
+      >
         <div className="mx-auto w-full max-w-md">
           <div className="rounded-2xl border bg-card divide-y">
             {/* 이름 */}
@@ -333,10 +343,10 @@ function ProfilePageInner() {
             className="mt-4 h-11 w-full text-sm font-semibold"
           >
             <Check className="mr-1.5 h-4 w-4" />
-            {saving ? "저장 중..." : dirty ? "변경사항 저장" : "변경 없음"}
+            {saving ? "저장 중..." : dirty ? "변경사항 저장" : "저장됨"}
           </Button>
         </div>
-      </section>
+      </motion.section>
 
       <div className="mb-10" />
 

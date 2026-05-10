@@ -73,13 +73,13 @@ export function NoteTreeRow({ item, depth, selectMode, selected, onToggle, onCli
       onTouchEnd={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onTouchMove={() => { if (timerRef.current) clearTimeout(timerRef.current); }}
       onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
-      className={`flex items-center gap-1.5 rounded-lg py-2 pr-2 transition-colors select-none ${selected ? "bg-primary/10" : "hover:bg-accent/50"}`}
+      className={`flex items-center gap-1.5 rounded-lg py-2 pr-2 transition-colors select-none ${selected ? "bg-primary/10 shadow-[inset_3px_0_0_var(--primary)]" : "hover:bg-accent/50"}`}
       style={{ paddingLeft: depth * 16 }}
     >
       {/* 폴더 토글 화살표와 같은 크기(h-5 w-5) placeholder — 파일·폴더 아이콘 수직 정렬. */}
       <span className="h-5 w-5 shrink-0" />
       {selectMode && (selected ? <CheckSquare className="h-4 w-4 text-primary shrink-0" /> : <Square className="h-4 w-4 text-muted-foreground shrink-0" />)}
-      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+      <FileText className={`h-4 w-4 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
       <span className="flex-1 text-sm text-left truncate">{item.title || "(제목 없음)"}</span>
       {!selectMode && onToggleFavorite && item.pinned && (
         <button
@@ -181,7 +181,7 @@ export function FolderTreeRow({
             onClick={(e) => { e.stopPropagation(); onToggle(folder.id); }}
             className="flex h-5 w-5 items-center justify-center shrink-0 text-muted-foreground"
           >
-            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`} />
           </button>
         ) : (
           <span className="h-5 w-5 shrink-0" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState, useEffect } from "react";
+import { memo, useCallback, useMemo, useState, useEffect } from "react";
 import { Trash2, CalendarPlus, Check, ArrowUp, ArrowDown, Filter, X, Route } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import RowActionPopover from "@/components/ui/row-action-popover";
@@ -95,11 +95,13 @@ interface TravelRowProps {
   tagColorMap: Record<string, string>;
   categoryColors: Record<string, string>;
   dragEnabled: boolean;
-  onEdit: () => void;
-  onToggleVisited: () => void;
-  onAddToCalendar: () => void;
-  onAddToPlan: () => void;
-  onDelete: () => void;
+  // 핸들러는 모두 (item) => void 시그니처로 통일 — 부모가 useCallback 으로 한 번만
+  // 만들고 모든 행에 같은 reference 를 전달 → memo 가 실제로 동작.
+  onEdit: (item: TravelItem) => void;
+  onToggleVisited: (item: TravelItem) => void;
+  onAddToCalendar: (item: TravelItem) => void;
+  onAddToPlan: (item: TravelItem) => void;
+  onDelete: (item: TravelItem) => void;
 }
 
 // TravelRow 는 자주 리렌더되는 큰 리스트 항목 — memo 로 props 변경 없을 땐 스킵.
@@ -131,7 +133,7 @@ const TravelRow = memo(function TravelRow({
       ref={setNodeRef}
       style={style}
       className={`hover:bg-accent/50 transition-colors border-b last:border-b-0 cursor-pointer ${item.visited ? "opacity-60" : ""}`}
-      onClick={onEdit}
+      onClick={() => onEdit(item)}
     >
       {/* 왼쪽 드래그 핸들 + 액션 팝오버 — 너비·여백 최소화로 본문 영역 확보. */}
       <td className="px-0 py-1 border-r whitespace-nowrap w-6 align-middle" onClick={(e) => e.stopPropagation()}>
@@ -146,23 +148,23 @@ const TravelRow = memo(function TravelRow({
                 iconClassName: "text-finance-gain",
                 label: item.visited ? "가본 곳 해제" : "가본 곳으로 표시",
                 textClassName: item.visited ? "text-finance-gain" : undefined,
-                onClick: onToggleVisited,
+                onClick: () => onToggleVisited(item),
               },
               {
                 icon: <CalendarPlus className="h-3.5 w-3.5 text-blue-600" />,
                 label: "달력에 추가",
-                onClick: onAddToCalendar,
+                onClick: () => onAddToCalendar(item),
               },
               {
                 icon: <Route className="h-3.5 w-3.5 text-purple-600" />,
                 label: "계획에 추가",
-                onClick: onAddToPlan,
+                onClick: () => onAddToPlan(item),
               },
               {
                 icon: <Trash2 className="h-3.5 w-3.5" />,
                 label: "삭제",
                 destructive: true,
-                onClick: onDelete,
+                onClick: () => onDelete(item),
               },
             ]}
           />
@@ -266,6 +268,26 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
   const [planItem, setPlanItem] = useState<TravelItem | null>(null);
   // 삭제 확인 다이얼로그 — 행 메뉴의 삭제 클릭 시 즉시 삭제 대신 확인 단계.
   const [deletingItem, setDeletingItem] = useState<TravelItem | null>(null);
+
+  // 행 핸들러는 안정 reference 로 한 번만 만들어 모든 TravelRow 가 공유 → memo 동작.
+  // (이전엔 인라인 lambda 라 매 부모 렌더마다 새 함수 → memo 무력화)
+  const handleRowEdit = useCallback((item: TravelItem) => {
+    setEditing(item);
+    setFormOpen(true);
+  }, []);
+  const handleRowToggleVisited = useCallback(
+    (item: TravelItem) => toggleVisited(item.id, item.visited),
+    [toggleVisited],
+  );
+  const handleRowAddToCalendar = useCallback((item: TravelItem) => {
+    setCalendarItem(item);
+  }, []);
+  const handleRowAddToPlan = useCallback((item: TravelItem) => {
+    setPlanItem(item);
+  }, []);
+  const handleRowDelete = useCallback((item: TravelItem) => {
+    setDeletingItem(item);
+  }, []);
 
   // 매 렌더 새 객체·배열 생성 회피 — useMemo 로 tags / items 변경 시만 재계산.
   const tagColorMap = useMemo(() => {
@@ -631,11 +653,11 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
                       tagColorMap={tagColorMap}
                       categoryColors={categoryColors}
                       dragEnabled={dragEnabled}
-                      onEdit={() => { setEditing(item); setFormOpen(true); }}
-                      onToggleVisited={() => toggleVisited(item.id, item.visited)}
-                      onAddToCalendar={() => setCalendarItem(item)}
-                      onAddToPlan={() => setPlanItem(item)}
-                      onDelete={() => setDeletingItem(item)}
+                      onEdit={handleRowEdit}
+                      onToggleVisited={handleRowToggleVisited}
+                      onAddToCalendar={handleRowAddToCalendar}
+                      onAddToPlan={handleRowAddToPlan}
+                      onDelete={handleRowDelete}
                     />
                   ))}
                 </SortableContext>

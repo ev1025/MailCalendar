@@ -111,8 +111,12 @@ export default function PlanDaySection({
 }: Props) {
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold">{formatDayLabel(day)}</h3>
+      {/* 일자 헤더 — 부모 스크롤 컨테이너 안에서 sticky. 큰 타이포 + 반투명
+          backdrop 으로 task 행이 헤더 아래로 스쳐 지나가도 가독성 유지. */}
+      <div className="sticky top-0 z-10 -mx-2 px-2 py-1.5 flex items-center gap-2 bg-background/85 backdrop-blur-sm">
+        <h3 className="text-base md:text-lg font-bold tracking-tight">
+          {formatDayLabel(day)}
+        </h3>
         <div className="flex-1 h-px bg-border" />
       </div>
       <DayDropZone day={day}>

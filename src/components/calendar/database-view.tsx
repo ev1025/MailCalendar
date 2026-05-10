@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { parseYmd } from "@/lib/date-utils";
-import { ArrowUp, ArrowDown, Filter, X } from "lucide-react";
+import { ArrowUp, Filter, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import FilterPanel from "@/components/ui/filter-panel";
 import SearchInput from "@/components/ui/search-input";
@@ -51,10 +51,22 @@ export default function DatabaseView({
   onEdit,
   onDelete,
 }: DatabaseViewProps) {
-  const tagColorMap: Record<string, string> = {};
-  for (const t of tagList) tagColorMap[t.name] = t.color;
+  // tagList 가 안 바뀌면 같은 reference 유지 — 매 렌더 reduce 회피.
+  const tagColorMap = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    for (const t of tagList) m[t.name] = t.color;
+    return m;
+  }, [tagList]);
 
+  // 검색 입력은 즉시 반영(input 반응성), filter 는 300ms debounce 로 200+ 이벤트
+  // 시 매 keystroke filter/sort 회피.
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [tagFilterOpen, setTagFilterOpen] = useState(false);
@@ -98,19 +110,31 @@ export default function DatabaseView({
     });
   };
 
+  // 정렬 활성 시 화살표는 ArrowUp 한 종류만 쓰고 desc 일 때 180° rotate transition.
+  // (ArrowDown 으로 교체하면 enter/exit 가 뚝 끊김.) 기준 색은 primary 로 일관.
   const SortIcon = ({ field }: { field: SortField }) => {
     const idx = sortKeys.findIndex((k) => k.field === field);
     if (idx === -1) return null;
     const k = sortKeys[idx];
     return (
-      <span className="inline-flex items-center ml-0.5">
-        {k.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+      <span className="inline-flex items-center ml-0.5 text-primary">
+        <ArrowUp
+          className={`h-3 w-3 transition-transform duration-200 ${
+            k.dir === "desc" ? "rotate-180" : "rotate-0"
+          }`}
+        />
         {sortKeys.length > 1 && (
           <span className="ml-0.5 text-[10px] tabular-nums font-semibold text-primary">{idx + 1}</span>
         )}
       </span>
     );
   };
+
+  // 헤더 active 판정 — 정렬 적용된 컬럼만 굵기·색 강조.
+  const isSortActive = useCallback(
+    (field: SortField | null) => !!field && sortKeys.some((k) => k.field === field),
+    [sortKeys],
+  );
 
   const onResizeStart = useCallback((colIdx: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -194,7 +218,7 @@ export default function DatabaseView({
       {/* 검색 + 태그 필터 */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <SearchInput value={search} onChange={setSearch} size="md" />
+          <SearchInput value={searchInput} onChange={setSearchInput} size="md" />
           {allTags.length > 0 && (
             <div
               className={`flex items-center shrink-0 rounded-md border h-9 text-xs transition-colors ${
@@ -253,6 +277,7 @@ export default function DatabaseView({
             <button
               type="button"
               onClick={() => {
+                setSearchInput("");
                 setSearch("");
                 setFilterTags([]);
               }}
@@ -285,16 +310,18 @@ export default function DatabaseView({
             </colgroup>
             <thead className="sticky top-0 z-10 bg-muted/40 text-[11px] text-muted-foreground">
               <tr>
-                {columns.map((col, idx) => (
+                {columns.map((col, idx) => {
+                  const active = isSortActive(col.field);
+                  return (
                   <th
                     key={col.label}
-                    className={`relative text-left font-medium px-2 py-1.5 border-b border-r last:border-r-0 select-none whitespace-nowrap ${
-                      col.field ? "cursor-pointer hover:bg-muted/60" : ""
-                    }`}
+                    className={`relative text-left px-2 py-1.5 border-b border-r last:border-r-0 select-none whitespace-nowrap transition-colors ${
+                      col.field ? "cursor-pointer hover:bg-accent/40" : ""
+                    } ${active ? "text-primary font-semibold bg-primary/5" : "font-medium"}`}
                     onClick={col.field ? () => cycleSort(col.field!) : undefined}
                   >
                     {col.field ? (
-                      <div className="flex items-center font-medium pr-3">
+                      <div className="flex items-center pr-3">
                         {col.label} <SortIcon field={col.field} />
                       </div>
                     ) : (
@@ -305,7 +332,8 @@ export default function DatabaseView({
                       onMouseDown={(e) => { e.stopPropagation(); onResizeStart(idx, e); }}
                     />
                   </th>
-                ))}
+                  );
+                })}
               </tr>
             </thead>
             <tbody>

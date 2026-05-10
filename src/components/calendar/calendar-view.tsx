@@ -26,20 +26,20 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useState, useMemo, useRef, useEffect } from "react";
+import { motion } from "motion/react";
 import { parseYmd } from "@/lib/date-utils";
 import { KO_WEEKDAYS as WEEKDAYS } from "@/lib/calendar/repeat-helpers";
+import {
+  MAX_VISIBLE_SLOTS,
+  BAR_H,
+  BAR_STEP,
+  BAR_FONT,
+  CELL_HEADER_PX,
+  CELL_PLUSN_PX,
+} from "@/lib/calendar/layout-constants";
 import type { CalendarEvent, WeatherData } from "@/types";
 import WeatherIcon from "./weather-icon";
 import { useHolidayMap } from "@/lib/holidays";
-
-/* ── 레이아웃 상수 ──
-   모바일에서 1셀 ~70px 안에 3건 표시되도록 BAR_H/BAR_STEP/top 오프셋 조정.
-   font-size 는 공휴일 크기(7px)로 통일 — 사용자가 명시한 작은 사이즈. */
-const MAX_VISIBLE_SLOTS = 3;
-const BAR_H = 11;
-const BAR_GAP = 1;
-const BAR_STEP = BAR_H + BAR_GAP;
-const BAR_FONT = 7;
 
 interface CalendarViewProps {
   year: number;
@@ -107,15 +107,19 @@ function DraggableBar({ seg, onClickDate }: { seg: Seg; onClickDate: (d: string)
   );
 }
 
-/* ── 드롭 셀 ── */
+/* ── 드롭 셀 ──
+   isOver 시 사용자 액센트 토큰(primary/10, primary/30) 사용 — 다크모드/액센트 변경 시
+   자동 따라감. 'pulse' 는 새로 추가된 이벤트가 속한 셀을 짧게 하이라이트. */
 function DropCell({
   dateStr,
   isOver,
+  pulse,
   onClick,
   children,
 }: {
   dateStr: string;
   isOver: boolean;
+  pulse: boolean;
   onClick: () => void;
   children: React.ReactNode;
 }) {
@@ -124,8 +128,9 @@ function DropCell({
     <div
       ref={setNodeRef}
       onClick={onClick}
-      className={`flex min-h-0 min-w-0 cursor-pointer flex-col border-b border-r text-left transition-colors ${
-        isOver ? "bg-blue-50 ring-1 ring-blue-300 ring-inset" : "hover:bg-accent/50"
+      data-pulse={pulse ? "true" : undefined}
+      className={`flex min-h-0 min-w-0 cursor-pointer flex-col border-b border-r text-left transition-colors data-[pulse=true]:cell-add-pulse ${
+        isOver ? "bg-primary/10 ring-1 ring-primary/30 ring-inset" : "hover:bg-accent/50"
       }`}
     >
       {children}
@@ -208,9 +213,7 @@ export default function CalendarView({
     if (!el) return;
     const calc = () => {
       const h = el.getBoundingClientRect().height;
-      // 사용 가능 높이 = 행 높이 - 헤더+상단여백(약 25px) - +N 영역(약 6px).
-      // 이전 -40px 차감으로 모바일 작은 행에서 최대 2건만 들어가던 걸 -31 로 완화 → 3건.
-      const available = h - 25 - 6;
+      const available = h - CELL_HEADER_PX - CELL_PLUSN_PX;
       const fits = Math.max(0, Math.min(MAX_VISIBLE_SLOTS, Math.floor(available / BAR_STEP)));
       setDynamicMax(fits);
     };
@@ -219,6 +222,29 @@ export default function CalendarView({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // A-2 일정 추가 pulse: events ID set 의 차분으로 새로 등장한 ID 추적 →
+  // 해당 start_date 셀에 1.2초 짧은 ring/배경 pulse. 첫 마운트(prev = null)는
+  // 모든 ID 가 "새로움" 으로 잡혀 전체 셀이 pulse 되는 걸 막기 위해 prev 가 있을 때만.
+  const prevIdsRef = useRef<Set<string> | null>(null);
+  const [pulseDates, setPulseDates] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    const curr = new Set(events.map((e) => e.id));
+    const prev = prevIdsRef.current;
+    if (prev) {
+      const added: string[] = [];
+      for (const ev of events) {
+        if (!prev.has(ev.id)) added.push(ev.start_date);
+      }
+      if (added.length > 0) {
+        setPulseDates(new Set(added));
+        const t = setTimeout(() => setPulseDates(new Set()), 1200);
+        prevIdsRef.current = curr;
+        return () => clearTimeout(t);
+      }
+    }
+    prevIdsRef.current = curr;
+  }, [events]);
 
   const weeks = useMemo(() => {
     const r: Date[][] = [];
@@ -332,15 +358,29 @@ export default function CalendarView({
         {/* 주 행 — 키보드/채팅창 등으로 viewport 가 축소될 때 행 높이가 너무 작아져
             헤더와 바가 겹치는 "찌그러짐" 방지: minHeight 2.5rem 보장 + 부모는 필요 시 스크롤.
             마지막 주 셀의 하단 테두리 제거 — 모바일 바텀네비의 상단 테두리(border-t)와
-            나란히 두 줄로 겹쳐 보이는 미관 문제 해결. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto [&>*:last-child>*]:border-b-0">
+            나란히 두 줄로 겹쳐 보이는 미관 문제 해결.
+            월/년 변경 시 key 가 바뀌어 리마운트 → staggerChildren 으로 주 행 fade. */}
+        <motion.div
+          key={`${year}-${month}`}
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: {},
+            show: { transition: { staggerChildren: 0.012 } },
+          }}
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto [&>*:last-child>*]:border-b-0"
+        >
           {weeks.map((week, wi) => {
             const segs = weekSegs[wi];
             const hidden = weekHidden[wi];
             return (
-              <div
+              <motion.div
                 key={wi}
                 ref={wi === 0 ? rowRef : undefined}
+                variants={{
+                  hidden: { opacity: 0, y: 4 },
+                  show: { opacity: 1, y: 0, transition: { duration: 0.18 } },
+                }}
                 className="relative grid flex-1 grid-cols-7 overflow-hidden [&>*:nth-child(7)]:border-r-0"
                 style={{ minHeight: "2.5rem" }}
               >
@@ -357,7 +397,13 @@ export default function CalendarView({
                   const hc = hidden[di];
 
                   return (
-                    <DropCell key={ds} dateStr={ds} isOver={ov} onClick={() => onDateClick(ds)}>
+                    <DropCell
+                      key={ds}
+                      dateStr={ds}
+                      isOver={ov}
+                      pulse={pulseDates.has(ds)}
+                      onClick={() => onDateClick(ds)}
+                    >
                       {/* 날짜 + 날씨 */}
                       <div className={`flex shrink-0 items-start justify-between gap-1 overflow-hidden pl-1 pr-[26px] pt-1 md:pl-1.5 md:pr-2 ${!inM ? "opacity-30" : ""}`}>
                         <span
@@ -403,10 +449,10 @@ export default function CalendarView({
                       <DraggableBar key={seg.event.id + "-" + wi} seg={seg} onClickDate={onDateClick} />
                     ))}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
 
       <DragOverlay>

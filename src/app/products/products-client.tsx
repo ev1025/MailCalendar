@@ -2,10 +2,10 @@
 
 import { Suspense, memo, useCallback, useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Plus,
   ChevronDown,
-  ChevronRight,
   Wallet,
   ShoppingBag,
   Trash2,
@@ -98,7 +98,11 @@ const ProductRow = memo(function ProductRow({
     <tr
       ref={setNodeRef}
       style={style}
-      className="border-t hover:bg-accent/50 cursor-pointer group"
+      className={`border-t cursor-pointer group transition-colors ${
+        p.is_active
+          ? "bg-finance-gain/5 hover:bg-finance-gain/10"
+          : "hover:bg-accent/50"
+      }`}
       onClick={() => onEdit(p)}
     >
       {/* 드래그바 메뉴 — 탭하면 메뉴, 드래그(마우스 5px / 터치 200ms) 하면 정렬. */}
@@ -631,62 +635,71 @@ function ProductsPageInner() {
                         onClick={() => toggleGroup(groupKey)}
                         className="w-full flex items-center gap-1.5 px-2.5 py-2 hover:bg-accent/50 transition-colors"
                       >
-                        {expanded ? (
-                          <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                        )}
+                        <ChevronDown
+                          className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${
+                            expanded ? "rotate-0" : "-rotate-90"
+                          }`}
+                        />
                         <span className="text-xs font-semibold">{sub}</span>
                       </button>
-                      {expanded && (
-                        <div className="border-t overflow-x-auto">
-                          <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={(e) => handleDragEnd(e, groupKey)}
+                      <AnimatePresence initial={false}>
+                        {expanded && (
+                          <motion.div
+                            key="content"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                            style={{ overflow: "hidden" }}
+                            className="border-t"
                           >
-                            <table className="w-full text-xs" style={{ tableLayout: "auto" }}>
-                              {/* 4컬럼: [드래그바] [순위] [제품·브랜드] [최저가].
-                                  시각적 thead 는 디자인상 표시 안 함 — 스크린리더용으로만 sr-only.
-                                  드래그바는 탭=메뉴(고정비 추가/삭제), 드래그=정렬. */}
-                              <colgroup>
-                                <col style={{ width: "1.75rem" }} />
-                                <col style={{ width: "2rem" }} />
-                                <col />
-                                <col style={{ width: "1%" }} />
-                              </colgroup>
-                              <thead className="sr-only">
-                                <tr>
-                                  <th scope="col">메뉴</th>
-                                  <th scope="col">순위</th>
-                                  <th scope="col">제품 정보</th>
-                                  <th scope="col">최저가</th>
-                                </tr>
-                              </thead>
-                              <SortableContext
-                                items={list.map((p) => p.id)}
-                                strategy={verticalListSortingStrategy}
+                            <div className="overflow-x-auto">
+                              <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={(e) => handleDragEnd(e, groupKey)}
                               >
-                                <tbody>
-                                  {list.map((p, idx) => (
-                                    <ProductRow
-                                      key={p.id}
-                                      p={p}
-                                      idx={idx}
-                                      stat={stats[p.id]}
-                                      onEdit={handleProductEdit}
-                                      onDelete={handleProductDelete}
-                                      onAddFixed={handleProductAddFixed}
-                                      onTogglePurchased={handleProductTogglePurchased}
-                                      onDuplicate={handleDuplicate}
-                                    />
-                                  ))}
-                                </tbody>
-                              </SortableContext>
-                            </table>
-                          </DndContext>
-                        </div>
-                      )}
+                                <table className="w-full text-xs" style={{ tableLayout: "auto" }}>
+                                  <colgroup>
+                                    <col style={{ width: "1.75rem" }} />
+                                    <col style={{ width: "2rem" }} />
+                                    <col />
+                                    <col style={{ width: "1%" }} />
+                                  </colgroup>
+                                  <thead className="sr-only">
+                                    <tr>
+                                      <th scope="col">메뉴</th>
+                                      <th scope="col">순위</th>
+                                      <th scope="col">제품 정보</th>
+                                      <th scope="col">최저가</th>
+                                    </tr>
+                                  </thead>
+                                  <SortableContext
+                                    items={list.map((p) => p.id)}
+                                    strategy={verticalListSortingStrategy}
+                                  >
+                                    <tbody>
+                                      {list.map((p, idx) => (
+                                        <ProductRow
+                                          key={p.id}
+                                          p={p}
+                                          idx={idx}
+                                          stat={stats[p.id]}
+                                          onEdit={handleProductEdit}
+                                          onDelete={handleProductDelete}
+                                          onAddFixed={handleProductAddFixed}
+                                          onTogglePurchased={handleProductTogglePurchased}
+                                          onDuplicate={handleDuplicate}
+                                        />
+                                      ))}
+                                    </tbody>
+                                  </SortableContext>
+                                </table>
+                              </DndContext>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 })}

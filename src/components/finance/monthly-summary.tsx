@@ -83,11 +83,16 @@ export default function MonthlySummary({
     </div>
   );
 
-  // 이번달 잔액 = 수입 - 이번달 지출. 양수면 흑자(녹), 음수면 적자(빨강).
+  // 이번달 잔액 = 수입 - 이번달 지출. 양수=흑자(emerald), 음수=적자(red),
+  // 0=중립(muted). 다크모드 대비는 finance-gain/loss 토큰이 자체 처리.
   const balance = totalIncome - totalExpense;
-  const isUp = balance >= 0;
-  const balanceColor = isUp ? "text-finance-gain" : "text-finance-loss";
-  const balanceSign = isUp ? "+" : "-";
+  const balanceColor =
+    balance > 0
+      ? "text-finance-gain"
+      : balance < 0
+        ? "text-finance-loss"
+        : "text-muted-foreground";
+  const balanceSign = balance > 0 ? "+" : balance < 0 ? "-" : "";
 
   return (
     <div className="flex flex-col gap-1.5 md:gap-3 md:h-full">

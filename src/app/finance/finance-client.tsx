@@ -104,22 +104,21 @@ function FinancePageInner() {
     applyFixedToMonth,
   } = useFixedExpenses();
 
-  // 고정 지출 (=type:expense) 만 — 수입(type:income) 도 fixed_expenses 에 영속하지만
-  // 별도 매니저(수입 관리) 로 분리되어 노출.
-  const expenseFixedExpenses = useMemo(
-    () => fixedExpenses.filter((f) => f.type !== "income"),
-    [fixedExpenses],
-  );
-  const incomeFixedExpenses = useMemo(
-    () => fixedExpenses.filter((f) => f.type === "income"),
-    [fixedExpenses],
-  );
-  // monthly-summary 가 자체 훅 인스턴스를 쓰면 변경이 즉시 반영 안 되므로
-  // 여기서 합계 계산해 prop 으로 내려보냄.
-  const totalFixed = useMemo(
-    () => expenseFixedExpenses.reduce((s, f) => s + f.amount, 0),
-    [expenseFixedExpenses],
-  );
+  // 고정비를 income/expense 로 단일 패스 분할 + 지출 합계까지 한 번에 계산.
+  // 이전: 두 번의 filter + 별도 reduce. 거래 수 200+ 에선 매 변경마다 3-pass.
+  const { expenseFixedExpenses, incomeFixedExpenses, totalFixed } = useMemo(() => {
+    const exp: typeof fixedExpenses = [];
+    const inc: typeof fixedExpenses = [];
+    let total = 0;
+    for (const f of fixedExpenses) {
+      if (f.type === "income") inc.push(f);
+      else {
+        exp.push(f);
+        total += f.amount;
+      }
+    }
+    return { expenseFixedExpenses: exp, incomeFixedExpenses: inc, totalFixed: total };
+  }, [fixedExpenses]);
 
   // FixedExpenseManager 두 인스턴스(income/expense) 가 공유하는 핸들러 묶음.
   // 이전엔 두 인스턴스가 각각 ~50줄 동일 핸들러를 인라인 정의 → -100줄 리팩토링.
@@ -265,14 +264,17 @@ function FinancePageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allTransactions, includeFixed, fixedByKey]);
 
-  const baseTotalIncome = useMemo(
-    () => baseTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
-    [baseTransactions],
-  );
-  const baseTotalExpense = useMemo(
-    () => baseTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0),
-    [baseTransactions],
-  );
+  // income/expense 합계 + 카테고리별 지출 누적까지 단일 패스로 계산.
+  // 거래 수 N 일 때 이전 3-pass(filter*2 + reduce) → 1-pass.
+  const { baseTotalIncome, baseTotalExpense } = useMemo(() => {
+    let inc = 0;
+    let exp = 0;
+    for (const t of baseTransactions) {
+      if (t.type === "income") inc += t.amount;
+      else if (t.type === "expense") exp += t.amount;
+    }
+    return { baseTotalIncome: inc, baseTotalExpense: exp };
+  }, [baseTransactions]);
   const baseExpenseByCategory = useMemo(() => {
     return baseTransactions
       .filter((t) => t.type === "expense" && t.category)
