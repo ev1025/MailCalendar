@@ -86,6 +86,13 @@ export function useFormDraft<T>(
 
   const clearDraft = () => {
     if (typeof window === "undefined") return;
+    // 디바운스 대기 중인 timer 취소 — clearDraft 직후 timer 가 발동해 다시
+    // 같은 값을 storage 에 쓰면 다음 폼 오픈 시 loadDraft 가 복원해버림.
+    // (저장 성공 → clearDraft → onOpenChange(false) 순서에서 발생하던 잔존 버그.)
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
     localStorage.removeItem(storageKey);
     setHasDraft(false);
   };

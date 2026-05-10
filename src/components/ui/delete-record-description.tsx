@@ -35,22 +35,35 @@ interface Props {
 }
 
 export default function DeleteRecordDescription({ fields, footnote }: Props) {
-  // ConfirmDialog 본문이 flex-col items-center text-center 라 description 이 기본적으로
-  // 가운데로 몰림. w-full + text-left 로 좌측 정렬·전폭 강제 → 라벨/값이 깔끔하게 정렬.
+  // ConfirmDialog 본문은 items-center text-center 정렬이라 description 도 기본 가운데로
+  // 몰림. 라벨/값이 가운데 정렬되면 라벨이 어디서 끝나는지 안 보여 가독성 ↓ — 그래서
+  // muted 박스 + 라벨 좌·값 우 양쪽 정렬로 정보 단위 명확화.
   return (
-    <span className="block w-full text-left">
-      <span className="block space-y-0.5">
-        {fields.map((f, i) => (
-          <span key={i} className="flex items-baseline gap-2 text-foreground">
-            <span className="text-xs text-muted-foreground shrink-0 w-12">
-              {f.label}
+    <span className="block w-full">
+      <span className="block w-full rounded-md bg-muted/50 px-3 py-2.5 text-left">
+        <span className="block divide-y divide-border/40">
+          {fields.map((f, i) => (
+            <span
+              key={i}
+              className="flex items-baseline justify-between gap-3 py-1 first:pt-0 last:pb-0"
+            >
+              <span className="text-[11px] font-medium text-muted-foreground shrink-0">
+                {f.label}
+              </span>
+              <span
+                className={
+                  "text-[12.5px] text-foreground text-right truncate " +
+                  (f.valueClassName ?? "")
+                }
+              >
+                {f.value}
+              </span>
             </span>
-            <span className={f.valueClassName}>{f.value}</span>
-          </span>
-        ))}
+          ))}
+        </span>
       </span>
       {footnote && (
-        <span className="block mt-2 text-xs text-muted-foreground/70 break-keep">
+        <span className="mt-2 block text-center text-[11.5px] text-muted-foreground/80 break-keep">
           {footnote}
         </span>
       )}

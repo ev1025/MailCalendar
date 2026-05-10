@@ -308,7 +308,7 @@ export default function DatabaseView({
                 return <col key={idx} style={{ width: widthStyle }} />;
               })}
             </colgroup>
-            <thead className="sticky top-0 z-10 bg-muted/40 text-[11px] text-muted-foreground">
+            <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm text-[11px] text-muted-foreground shadow-[0_1px_0_var(--border)]">
               <tr>
                 {columns.map((col, idx) => {
                   const active = isSortActive(col.field);
