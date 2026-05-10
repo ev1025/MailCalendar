@@ -39,8 +39,10 @@ export default function DeleteRecordDescription({ fields, footnote }: Props) {
   // 몰림. 라벨/값이 가운데 정렬되면 라벨이 어디서 끝나는지 안 보여 가독성 ↓ — 그래서
   // muted 박스 + 라벨 좌·값 우 양쪽 정렬로 정보 단위 명확화.
   return (
-    <span className="block w-full">
-      <span className="block w-full rounded-md bg-muted/50 px-3 py-2.5 text-left">
+    // -mt-1 — ConfirmDialog 본문의 gap(6px) 위에 박스가 살짝 떠 보이는 시각적
+    // 여백을 줄임. 다른 ConfirmDialog 호출자(단순 string description) 는 영향 X.
+    <span className="block w-full -mt-1">
+      <span className="block w-full rounded-md bg-muted/50 px-3 py-2 text-left">
         <span className="block divide-y divide-border/40">
           {fields.map((f, i) => (
             <span

@@ -703,7 +703,7 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
         travelItem={planItem}
       />
 
-      {/* 여행 항목 삭제 확인 — 가계부와 동일한 ConfirmDialog + DeleteRecordDescription 패턴. */}
+      {/* 여행 항목 삭제 확인 — 분류 + 첫 장소만 표시. footnote 없음. */}
       <ConfirmDialog
         open={!!deletingItem}
         onOpenChange={(o) => { if (!o) setDeletingItem(null); }}
@@ -713,10 +713,14 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
             <DeleteRecordDescription
               fields={[
                 { label: "분류", value: deletingItem.category },
-                ...(deletingItem.region ? [{ label: "위치", value: deletingItem.region }] : []),
-                ...(deletingItem.month ? [{ label: "시기", value: `${deletingItem.month}월` }] : []),
+                ...((() => {
+                  const place =
+                    deletingItem.places?.[0]?.name ??
+                    deletingItem.place_name ??
+                    null;
+                  return place ? [{ label: "장소", value: place }] : [];
+                })()),
               ]}
-              footnote="삭제하면 되돌릴 수 없어요."
             />
           ) : null
         }
