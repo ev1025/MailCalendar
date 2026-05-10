@@ -233,38 +233,16 @@ export default function TravelForm({
     toast.success(item ? "수정됐어요" : "저장됐어요");
   };
 
-  // 닫기 인터셉트 — 유의미 입력이 있으면 자동 저장 후 닫기.
-  // "유의미" 기준: 최소한 title + category 가 채워진 상태.
-  // (일부만 채운 상태로 닫으면 드래프트는 로컬에 남아 재오픈 시 복원됨.)
-  const handleOpenChange = async (next: boolean) => {
-    if (next) {
-      onOpenChange(true);
-      return;
-    }
-    // 닫기 전환. 저장 조건 만족 시 자동 저장.
-    if (title.trim() && category) {
-      try {
-        setSaving(true);
-        const { error } = await onSave(buildPayload());
-        if (error) {
-          const raw = error instanceof Error ? error.message : typeof error === "string" ? error : null;
-          toast.error(`자동 저장 실패: ${translateError(raw)}`);
-          console.error("[travel-form auto-save]", error);
-          // 실패해도 닫기는 진행 — 드래프트 로컬에 남아있음.
-        } else {
-          clearDraft();
-        }
-      } finally {
-        setSaving(false);
-      }
-    }
-    onOpenChange(false);
-  };
+  // 취소·뒤로가기·ESC·배경 클릭 등 닫기 경로에선 DB 저장 X — 명시적 "저장"
+  // 버튼만 저장한다. 입력값 자체는 useFormDraft 가 localStorage 에 자동 보관하므로
+  // 실수로 닫혀도 다음 오픈 시 loadDraft 가 복원해줌.
+  // (이전엔 title+category 만족 시 자동 onSave 했으나 사용자 의도와 어긋남 — 취소는
+  //  진짜 취소여야 한다.)
 
   return (
     <FormPage
       open={open}
-      onOpenChange={handleOpenChange}
+      onOpenChange={onOpenChange}
       title={item ? "여행 항목 수정" : "여행 항목 추가"}
       submitDisabled={!title.trim() || !category}
       saving={saving}
