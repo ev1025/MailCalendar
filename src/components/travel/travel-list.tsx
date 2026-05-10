@@ -733,7 +733,6 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
             toast.error("삭제 실패");
             return;
           }
-          toast.success("삭제됐어요");
           setDeletingItem(null);
         }}
       />

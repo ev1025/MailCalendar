@@ -39,22 +39,24 @@ export default function DeleteRecordDescription({ fields, footnote }: Props) {
   // 몰림. 라벨/값이 가운데 정렬되면 라벨이 어디서 끝나는지 안 보여 가독성 ↓ — 그래서
   // muted 박스 + 라벨 좌·값 우 양쪽 정렬로 정보 단위 명확화.
   return (
-    // -mt-1 — ConfirmDialog 본문의 gap(6px) 위에 박스가 살짝 떠 보이는 시각적
-    // 여백을 줄임. 다른 ConfirmDialog 호출자(단순 string description) 는 영향 X.
-    <span className="block w-full -mt-1">
+    // 제목(ConfirmDialog title) 과 정보 박스 사이 시각적 여백 확보.
+    // 라벨 = 고정 폭 좌측, 값 = 그 옆에 좌측 정렬 — "분류 │ 분류내용" 형태로
+    // 라벨/값이 자연스럽게 한 줄로 읽힘. (이전 justify-between 양쪽 정렬은 짧은
+    // 값일 때 라벨/값 사이 공백이 너무 커 시선이 끊어졌음.)
+    <span className="block w-full mt-2">
       <span className="block w-full rounded-md bg-muted/50 px-3 py-2 text-left">
         <span className="block divide-y divide-border/40">
           {fields.map((f, i) => (
             <span
               key={i}
-              className="flex items-baseline justify-between gap-3 py-1 first:pt-0 last:pb-0"
+              className="flex items-baseline gap-2 py-1 first:pt-0 last:pb-0"
             >
-              <span className="text-[11px] font-medium text-muted-foreground shrink-0">
+              <span className="text-[11px] font-medium text-muted-foreground shrink-0 w-14">
                 {f.label}
               </span>
               <span
                 className={
-                  "text-[12.5px] text-foreground text-right truncate " +
+                  "text-[12.5px] text-foreground text-left flex-1 min-w-0 truncate " +
                   (f.valueClassName ?? "")
                 }
               >

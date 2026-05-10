@@ -282,7 +282,6 @@ function KnowledgePageInner() {
       return;
     }
     if (selectedItemId === id) setSelectedItemId(null);
-    toast.success("삭제됐어요");
   };
 
   // pendingNew(드래프트 에디터) 상태도 "노트 뷰" 로 취급 — PageHeader 숨김·전체화면 적용.
