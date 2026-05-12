@@ -31,9 +31,9 @@ function TempRange({
 }: TempRangeProps) {
   return (
     <>
-      <span className={`${size} text-blue-500 shrink-0`}>{min}°</span>
+      <span className={`${size} text-blue-500 dark:text-blue-400 shrink-0`}>{min}°</span>
       <span className={`${size} ${separatorColor} shrink-0`}> / </span>
-      <span className={`${size} text-red-500 shrink-0`}>{max}°</span>
+      <span className={`${size} text-red-500 dark:text-red-400 shrink-0`}>{max}°</span>
     </>
   );
 }
@@ -70,11 +70,11 @@ export default function WeatherIcon({
           className="h-[14px] w-[14px] md:h-[18px] md:w-[18px] shrink-0 -mb-0.5"
         />
         <div className="flex items-center leading-[1] whitespace-nowrap tabular-nums">
-          <span className="text-[6.5px] md:text-[8px] text-blue-400">
+          <span className="text-[6.5px] md:text-[8px] text-blue-500 dark:text-blue-400">
             {weather.temperature_min}°
           </span>
           <span className="text-[6.5px] md:text-[8px] text-muted-foreground/60">/</span>
-          <span className="text-[6.5px] md:text-[8px] text-red-400">
+          <span className="text-[6.5px] md:text-[8px] text-red-500 dark:text-red-400">
             {weather.temperature_max}°
           </span>
         </div>

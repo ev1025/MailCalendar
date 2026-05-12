@@ -76,7 +76,7 @@ export default function PageHeader({
             >
               <Bell className="h-[22px] w-[22px]" strokeWidth={1.6} />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-background">
+                <span className="absolute top-1.5 right-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}

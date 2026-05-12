@@ -236,9 +236,9 @@ export default function DayDetail({
         <div className="flex flex-col gap-2 min-h-0">
           {/* 공휴일 — 삭제 불가 고정 항목 */}
           {holiday && (
-            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 pl-3 pr-2.5 py-2">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-400 shrink-0" />
-              <p className="text-sm font-medium text-red-600 flex-1">{holiday}</p>
+            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 pl-3 pr-2.5 py-2 dark:border-red-900/40 dark:bg-red-950/30">
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-400 dark:bg-red-500 shrink-0" />
+              <p className="text-sm font-medium text-red-600 dark:text-red-400 flex-1">{holiday}</p>
             </div>
           )}
           {dayEvents.length === 0 && !holiday ? (

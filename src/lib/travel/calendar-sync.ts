@@ -150,9 +150,10 @@ export async function syncPlanCalendarEvents(params: {
       .from("travel_plan_tasks")
       .select("*")
       .eq("plan_id", planId)
+      // 클라이언트 sortTasks 와 동일 우선순위 — day_index → manual_order → start_time.
       .order("day_index")
-      .order("start_time", { nullsFirst: false })
-      .order("manual_order"),
+      .order("manual_order")
+      .order("start_time", { nullsFirst: false }),
     userId
       ? supabase.from("travel_categories").select("name, color").eq("user_id", userId)
       : Promise.resolve({ data: null, error: null }),

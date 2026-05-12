@@ -57,7 +57,8 @@ export default function CategoryChart({
                 cy={cy}
                 r={radius}
                 fill="none"
-                stroke="hsl(var(--muted))"
+                // --muted 는 oklch 값 — hsl() 로 감싸면 무효 색이 되어 트랙이 안 보였음.
+                stroke="var(--muted)"
                 strokeWidth={18}
               />
               {slices.map((slice) => {

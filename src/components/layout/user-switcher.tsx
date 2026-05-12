@@ -225,13 +225,13 @@ export default function UserSwitcher({ open, onOpenChange, allowClose = true }: 
             )}
 
             {authStatus.type === "info" ? (
-              <div className="flex flex-col gap-2 rounded-md border bg-green-50 p-4 text-sm text-green-900">
+              <div className="flex flex-col gap-2 rounded-md border border-success/20 bg-success-bg p-4 text-sm text-success">
                 <div className="flex items-center gap-2 font-medium">
                   <Mail className="h-4 w-4" />
                   메일 발송 완료
                 </div>
                 <p className="text-xs">{authStatus.message}</p>
-                <p className="text-xs text-green-700">
+                <p className="text-xs text-success/80">
                   메일의 링크를 누르면 처리됩니다. 스팸함도 확인해보세요.
                 </p>
                 <Button

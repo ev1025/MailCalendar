@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { sanitizeRichHTML } from "@/lib/sanitize";
 import type { KnowledgeItem } from "@/types";
 
 interface Props {
@@ -27,6 +29,12 @@ function formatRelative(iso: string): string {
 }
 
 export default function NoteReaderView({ item, onEdit, onExit }: Props) {
+  // 저장 시점에도 sanitize 하지만, 캐시/구 데이터/직접 마이그레이션된 row 는 검증
+  // 안 됐을 수 있으므로 렌더 시점에 한 번 더 — 최종 방어선(XSS).
+  const safeHtml = useMemo(
+    () => (item.content ? sanitizeRichHTML(item.content) : ""),
+    [item.content],
+  );
   return (
     <>
       <div className="flex items-center gap-2 border-b px-3 h-14 shrink-0">
@@ -77,7 +85,7 @@ export default function NoteReaderView({ item, onEdit, onExit }: Props) {
         {item.content ? (
           <div
             className="tiptap-editor"
-            dangerouslySetInnerHTML={{ __html: item.content }}
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
           />
         ) : (
           <p className="text-sm text-muted-foreground text-center py-12">

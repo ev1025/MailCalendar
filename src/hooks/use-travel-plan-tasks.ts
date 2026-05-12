@@ -22,13 +22,16 @@ async function fetchPlanTasks(
   planId: string | null,
 ): Promise<TravelPlanTask[]> {
   if (!planId) return [];
+  // 정렬 우선순위는 클라이언트 sortTasks 와 동일하게 — day_index → manual_order →
+  // start_time. (이전엔 DB 가 start_time 우선이라 초기 렌더 / calendar-sync 가
+  // 클라이언트 표시 순서와 어긋났음.)
   const { data } = await supabase
     .from("travel_plan_tasks")
     .select("*")
     .eq("plan_id", planId)
     .order("day_index", { ascending: true })
-    .order("start_time", { ascending: true, nullsFirst: false })
-    .order("manual_order", { ascending: true });
+    .order("manual_order", { ascending: true })
+    .order("start_time", { ascending: true, nullsFirst: false });
   return ((data as TravelPlanTask[]) ?? []);
 }
 

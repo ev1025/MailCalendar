@@ -383,21 +383,36 @@ export function useFixedExpenses() {
 
       const startDate = monthBounds(year, month).start;
 
-      let txQ = supabase
+      // 1차: FK(fixed_expense_id) 로 정확히 매칭. 2차: FK 없던 구 거래만 amount+description
+      // fallback. (이전엔 amount+description 만으로 매칭 → 같은 금액·설명의 수동 거래까지
+      // 잘못 변경되던 버그. deleteFixedWithScope 와 동일한 안전 패턴.)
+      let txFkQ = supabase
         .from("expenses")
         .select("id, date")
         .gte("date", startDate)
-        .eq("amount", fx.amount);
-      if (fx.description === null) txQ = txQ.is("description", null);
-      else txQ = txQ.eq("description", fx.description);
-      if (userId) txQ = txQ.eq("user_id", userId);
+        .eq("fixed_expense_id", id);
+      if (userId) txFkQ = txFkQ.eq("user_id", userId);
 
-      const [r1, txsRes] = await Promise.all([
+      let txLegacyQ = supabase
+        .from("expenses")
+        .select("id, date")
+        .gte("date", startDate)
+        .is("fixed_expense_id", null)
+        .eq("amount", fx.amount);
+      if (fx.description === null) txLegacyQ = txLegacyQ.is("description", null);
+      else txLegacyQ = txLegacyQ.eq("description", fx.description);
+      if (userId) txLegacyQ = txLegacyQ.eq("user_id", userId);
+
+      const [r1, txFkRes, txLegacyRes] = await Promise.all([
         updateFixed(id, updates),
-        txQ,
+        txFkQ,
+        txLegacyQ,
       ]);
       if (r1.error) return { error: r1.error };
-      const txs = txsRes.data;
+      const txs = [
+        ...((txFkRes.data ?? []) as { id: string; date: string }[]),
+        ...((txLegacyRes.data ?? []) as { id: string; date: string }[]),
+      ];
 
       if (!txs || txs.length === 0) {
         invalidateTx();
