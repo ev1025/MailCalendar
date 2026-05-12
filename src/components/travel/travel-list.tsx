@@ -87,6 +87,22 @@ type SortField = "title" | "category" | "region" | "tag" | "month";
 type SortDir = "asc" | "desc";
 type SortKey = { field: SortField; dir: SortDir };
 
+// 모듈 스코프 — 부모 리렌더마다 remount 되지 않도록 (렌더 본문 안 정의 금지).
+function SortIcon({ field, sortKeys }: { field: SortField; sortKeys: SortKey[] }) {
+  const idx = sortKeys.findIndex((k) => k.field === field);
+  // 정렬되지 않은 열에는 화살표 숨김
+  if (idx === -1) return null;
+  const k = sortKeys[idx];
+  return (
+    <span className="inline-flex items-center ml-0.5">
+      {k.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+      {sortKeys.length > 1 && (
+        <span className="ml-0.5 text-[10px] tabular-nums font-semibold text-primary">{idx + 1}</span>
+      )}
+    </span>
+  );
+}
+
 // 빌트인 카테고리 색은 use-travel-categories 의 DEFAULT_SEED 가 단일 SoT.
 // 여기선 그 맵을 import 해서 fallback 으로 사용 → 두 곳에 색을 따로 적어놓는 위험 제거.
 
@@ -322,21 +338,6 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
       }
       return prev.filter((k) => k.field !== field);
     });
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    const idx = sortKeys.findIndex((k) => k.field === field);
-    // 정렬되지 않은 열에는 화살표 숨김
-    if (idx === -1) return null;
-    const k = sortKeys[idx];
-    return (
-      <span className="inline-flex items-center ml-0.5">
-        {k.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-        {sortKeys.length > 1 && (
-          <span className="ml-0.5 text-[10px] tabular-nums font-semibold text-primary">{idx + 1}</span>
-        )}
-      </span>
-    );
   };
 
   const hasActiveSortOrFilter =
@@ -637,7 +638,7 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
                     >
                       {col.field ? (
                         <div className="flex items-center font-medium">
-                          {col.label} <SortIcon field={col.field} />
+                          {col.label} <SortIcon field={col.field} sortKeys={sortKeys} />
                         </div>
                       ) : null}
                     </th>

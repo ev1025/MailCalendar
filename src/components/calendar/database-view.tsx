@@ -43,6 +43,27 @@ function cmpByField(a: CalendarEvent, b: CalendarEvent, field: SortField): numbe
   return (a.tag || "").localeCompare(b.tag || "");
 }
 
+// 정렬 활성 시 화살표 — ArrowUp 한 종류로 두고 desc 일 때 180° rotate transition.
+// (ArrowDown 으로 교체하면 enter/exit 가 뚝 끊김.) 모듈 스코프 컴포넌트여야 부모
+// 리렌더마다 remount 되지 않아 transition 이 실제로 동작함.
+function SortIcon({ field, sortKeys }: { field: SortField; sortKeys: SortKey[] }) {
+  const idx = sortKeys.findIndex((k) => k.field === field);
+  if (idx === -1) return null;
+  const k = sortKeys[idx];
+  return (
+    <span className="inline-flex items-center ml-0.5 text-primary">
+      <ArrowUp
+        className={`h-3 w-3 transition-transform duration-200 ${
+          k.dir === "desc" ? "rotate-180" : "rotate-0"
+        }`}
+      />
+      {sortKeys.length > 1 && (
+        <span className="ml-0.5 text-[10px] tabular-nums font-semibold text-primary">{idx + 1}</span>
+      )}
+    </span>
+  );
+}
+
 export default function DatabaseView({
   events,
   weatherMap,
@@ -108,26 +129,6 @@ export default function DatabaseView({
       }
       return prev.filter((k) => k.field !== field);
     });
-  };
-
-  // 정렬 활성 시 화살표는 ArrowUp 한 종류만 쓰고 desc 일 때 180° rotate transition.
-  // (ArrowDown 으로 교체하면 enter/exit 가 뚝 끊김.) 기준 색은 primary 로 일관.
-  const SortIcon = ({ field }: { field: SortField }) => {
-    const idx = sortKeys.findIndex((k) => k.field === field);
-    if (idx === -1) return null;
-    const k = sortKeys[idx];
-    return (
-      <span className="inline-flex items-center ml-0.5 text-primary">
-        <ArrowUp
-          className={`h-3 w-3 transition-transform duration-200 ${
-            k.dir === "desc" ? "rotate-180" : "rotate-0"
-          }`}
-        />
-        {sortKeys.length > 1 && (
-          <span className="ml-0.5 text-[10px] tabular-nums font-semibold text-primary">{idx + 1}</span>
-        )}
-      </span>
-    );
   };
 
   // 헤더 active 판정 — 정렬 적용된 컬럼만 굵기·색 강조.
@@ -321,7 +322,7 @@ export default function DatabaseView({
                   >
                     {col.field ? (
                       <div className="flex items-center pr-3">
-                        {col.label} <SortIcon field={col.field} />
+                        {col.label} <SortIcon field={col.field} sortKeys={sortKeys} />
                       </div>
                     ) : (
                       <span>{col.label}</span>

@@ -241,34 +241,6 @@ function ProductsPageInner() {
   const { addFixed } = useFixedExpenses();
   const userId = useCurrentUserId();
 
-  // 행 메뉴의 "복제" — 제품 + 구매기록 모두 복사. 이름은 그대로 두고 사용자가 필요 시 수정.
-  // (suffix 자동 부여하면 매번 "(복제)" 가 붙어 검색·정렬 지저분해짐.)
-  const handleDuplicate = async (p: Product) => {
-    const { id, created_at, updated_at, sort_order, ...rest } = p;
-    void id; void created_at; void updated_at; void sort_order;
-    const { data: newProduct, error } = await addProduct(rest);
-    if (error || !newProduct) {
-      toast.error("복제 실패");
-      return;
-    }
-    // 구매기록도 함께 복제 — 최저가 표시·가격 추이가 의미 있게 남도록.
-    const { data: purchases } = await supabase
-      .from("product_purchases")
-      .select("total_price, points, quantity, quantity_unit, purchased_at, store, link, notes")
-      .eq("product_id", p.id);
-    if (purchases && purchases.length > 0) {
-      await supabase.from("product_purchases").insert(
-        purchases.map((row) => ({
-          ...row,
-          product_id: newProduct.id,
-          ...(userId ? { user_id: userId } : {}),
-        })),
-      );
-    }
-    setStatsTick((t) => t + 1);
-    toast.success("복제됨");
-  };
-
   // expense_categories 룩업 (분류 → 가계부 카테고리 매핑).
   const todayIso = todayYmd();
   const { categories: expCategories } = useTransactions(todayIso, todayIso);
@@ -362,6 +334,36 @@ function ProductsPageInner() {
       await updateProduct(prod.id, { is_active: !prod.is_active });
     },
     [updateProduct],
+  );
+  // 행 메뉴의 "복제" — 제품 + 구매기록 모두 복사. 이름은 그대로 두고 사용자가 필요 시 수정.
+  // (suffix 자동 부여하면 매번 "(복제)" 가 붙어 검색·정렬 지저분해짐.)
+  const handleDuplicate = useCallback(
+    async (p: Product) => {
+      const { id, created_at, updated_at, sort_order, ...rest } = p;
+      void id; void created_at; void updated_at; void sort_order;
+      const { data: newProduct, error } = await addProduct(rest);
+      if (error || !newProduct) {
+        toast.error("복제 실패");
+        return;
+      }
+      // 구매기록도 함께 복제 — 최저가 표시·가격 추이가 의미 있게 남도록.
+      const { data: purchases } = await supabase
+        .from("product_purchases")
+        .select("total_price, points, quantity, quantity_unit, purchased_at, store, link, notes")
+        .eq("product_id", p.id);
+      if (purchases && purchases.length > 0) {
+        await supabase.from("product_purchases").insert(
+          purchases.map((row) => ({
+            ...row,
+            product_id: newProduct.id,
+            ...(userId ? { user_id: userId } : {}),
+          })),
+        );
+      }
+      setStatsTick((t) => t + 1);
+      toast.success("복제됨");
+    },
+    [addProduct, userId],
   );
 
   const filtered = useMemo(() => {
