@@ -329,21 +329,11 @@ function SettingsPageInner() {
       />
       <div className="mx-auto max-w-2xl px-4 py-4 md:mx-0 md:px-6 md:py-5">
 
-      {/* 한 줄 안내 — 큰 "설정" 타이틀은 PageHeader 와 중복이라 제거(세로 압축). */}
-      <motion.p
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-3 px-0.5 text-xs text-muted-foreground"
-      >
-        테마·일기예보·D-day·계정·연동을 관리해요.
-      </motion.p>
-
-      {/* 탭 — segmented. 좌우 동일 폭. */}
+      {/* 탭 — segmented. 좌우 동일 폭. (안내 문구는 PageHeader 가 이미 "설정"이라 생략 — 세로 압축) */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         className="mb-4 inline-flex w-full rounded-2xl border bg-muted/40 p-1"
       >
         {(["general", "account", "api"] as const).map((t) => {
@@ -401,10 +391,10 @@ function SettingsPageInner() {
                 })}
               </div>
 
-              {/* 액센트 컬러 — 사이드바 활성, 토스트, 강조 등에 적용. 6개 색상. */}
-              <div className="mt-4 pt-4 border-t flex flex-col gap-2">
-                <p className="text-xs text-muted-foreground">액센트 컬러</p>
-                <div className="flex flex-wrap gap-2">
+              {/* 액센트 컬러 — 사이드바 활성, 토스트, 강조 등에 적용. 6개 색상. 작은 스와치. */}
+              <div className="mt-3 pt-3 border-t flex items-center gap-2.5">
+                <span className="shrink-0 text-[11px] text-muted-foreground">강조 색</span>
+                <div className="flex flex-wrap gap-1.5">
                   {ACCENT_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -412,9 +402,9 @@ function SettingsPageInner() {
                       onClick={() => applyAccent(opt.value)}
                       aria-label={opt.label}
                       title={opt.label}
-                      className={`group relative flex h-9 w-9 items-center justify-center rounded-full transition-all tap-feedback ${
+                      className={`relative flex h-6 w-6 items-center justify-center rounded-full transition-all tap-feedback ${
                         accent === opt.value
-                          ? "ring-2 ring-offset-2 ring-offset-background"
+                          ? "ring-2 ring-offset-1 ring-offset-background"
                           : "hover:scale-110"
                       }`}
                       style={{
@@ -423,7 +413,7 @@ function SettingsPageInner() {
                       }}
                     >
                       {accent === opt.value && (
-                        <span className="text-white text-xs font-bold">✓</span>
+                        <span className="text-white text-[9px] font-bold">✓</span>
                       )}
                     </button>
                   ))}

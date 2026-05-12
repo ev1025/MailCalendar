@@ -18,7 +18,7 @@ export default function CardTitleIcon({
   className?: string;
 }) {
   return (
-    <CardTitle className={cn("flex items-center gap-2 text-sm font-bold", className)}>
+    <CardTitle className={cn("flex items-center gap-2 text-base font-bold", className)}>
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
         <Icon className="h-3.5 w-3.5" />
       </span>
