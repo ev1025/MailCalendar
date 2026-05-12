@@ -11,7 +11,7 @@ import {
 import {
   Calendar,
   Plane,
-  Wallet,
+  PiggyBank,
   ShoppingBag,
   BookOpen,
   User,
@@ -77,7 +77,7 @@ export default function CommandPalette({
       { group: "이동", label: "캘린더", icon: Calendar, keywords: "calendar 달력 일정", run: () => go("/calendar") },
       { group: "이동", label: "여행", icon: Plane, keywords: "travel trip 데이트 여행지", run: () => go("/travel") },
       { group: "이동", label: "여행 계획", icon: Plane, keywords: "travel plans 일정표 동선", run: () => go("/travel/plans") },
-      { group: "이동", label: "가계부", icon: Wallet, keywords: "finance money 지출 수입 돈", run: () => go("/finance") },
+      { group: "이동", label: "가계부", icon: PiggyBank, keywords: "finance money 지출 수입 돈", run: () => go("/finance") },
       { group: "이동", label: "쇼핑기록", icon: ShoppingBag, keywords: "products 제품 영양제 구매 단가", run: () => go("/products") },
       { group: "이동", label: "지식창고", icon: BookOpen, keywords: "knowledge note 메모 노트 폴더", run: () => go("/knowledge") },
       { group: "이동", label: "내 프로필", icon: User, keywords: "profile 계정 아바타", run: () => go("/profile") },

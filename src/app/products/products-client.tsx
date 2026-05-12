@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Plus,
   ChevronDown,
-  Wallet,
+  PiggyBank,
   ShoppingBag,
   Trash2,
   Repeat,
@@ -119,7 +119,7 @@ const ProductRow = memo(function ProductRow({
           dragListeners={dragProps.listeners}
           items={[
             {
-              icon: <Wallet className="h-3.5 w-3.5 text-amber-500" />,
+              icon: <PiggyBank className="h-3.5 w-3.5 text-amber-500" />,
               label: p.is_active ? "구매 취소" : "구매",
               onClick: () => onTogglePurchased(p),
             },
@@ -167,7 +167,7 @@ const ProductRow = memo(function ProductRow({
             <span className="text-[10px] text-muted-foreground shrink-0">· {p.brand}</span>
           )}
           {p.is_active && (
-            <Wallet
+            <PiggyBank
               className="h-3 w-3 text-amber-500 shrink-0"
               aria-label="구매됨"
             />
@@ -491,7 +491,7 @@ function ProductsPageInner() {
               {
                 key: "finance",
                 label: "가계부",
-                icon: Wallet,
+                icon: PiggyBank,
                 onSelect: () => router.push("/finance"),
               },
               {

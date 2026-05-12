@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Calendar,
   Plane,
-  Wallet,
+  PiggyBank,
   BookOpen,
   PanelLeftClose,
   PanelLeftOpen,
@@ -30,7 +30,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/calendar", label: "캘린더", icon: Calendar, isCalendarDefault: true },
   { href: "/travel", label: "여행", icon: Plane },
-  { href: "/finance", label: "가계부", icon: Wallet },
+  { href: "/finance", label: "가계부", icon: PiggyBank },
   { href: "/knowledge", label: "지식창고", icon: BookOpen },
 ];
 

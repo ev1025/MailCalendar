@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { Calendar, Plane, Wallet, BookOpen, User } from "lucide-react";
+import { Calendar, Plane, PiggyBank, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
 
@@ -21,7 +21,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/calendar", label: "캘린더", icon: Calendar },
   { href: "/travel", label: "여행", icon: Plane },
-  { href: "/finance", label: "가계부", icon: Wallet, also: ["/products"] },
+  { href: "/finance", label: "가계부", icon: PiggyBank, also: ["/products"] },
   { href: "/knowledge", label: "지식", icon: BookOpen },
 ];
 

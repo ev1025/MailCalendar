@@ -4,7 +4,7 @@ import { Suspense, useCallback, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { Wallet, ShoppingBag, X, Check, Repeat, Filter, Receipt } from "lucide-react";
+import { PiggyBank, ShoppingBag, X, Check, Repeat, Filter, Receipt } from "lucide-react";
 import DateRangePicker from "@/components/layout/date-range-picker";
 import PageHeader from "@/components/layout/page-header";
 import { useTransactions } from "@/hooks/use-transactions";
@@ -352,7 +352,7 @@ function FinancePageInner() {
               {
                 key: "finance",
                 label: "가계부",
-                icon: Wallet,
+                icon: PiggyBank,
                 active: true,
                 onSelect: () => {},
               },
