@@ -136,13 +136,11 @@ export default function PlanDetail({ planId, backHref }: Props) {
     return Array.from(set).sort((a, b) => a - b);
   }, [sorted, plan?.start_date, plan?.end_date]);
 
+  // "1일차" 우선 + 날짜 있는 계획은 " · 5/10(토)" 덧붙임. 날짜 없으면 "1일차"만(가짜 날짜 X).
   const formatDayLabel = (dayIndex: number): string => {
-    const today = new Date();
-    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    const baseIso = plan?.start_date ?? todayIso;
-    const iso = addDaysISO(baseIso, dayIndex);
-    const d = parseYmd(iso);
-    return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
+    if (!plan?.start_date) return `${dayIndex + 1}일차`;
+    const d = parseYmd(addDaysISO(plan.start_date, dayIndex));
+    return `${dayIndex + 1}일차 · ${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})`;
   };
 
   // 시작·종료 둘 다 → 차이 + 1, 시작만 → 1일, 둘 다 없음 → 0.
@@ -151,6 +149,19 @@ export default function PlanDetail({ planId, backHref }: Props) {
     : plan?.start_date
       ? 1
       : 0;
+
+  // 헤더 부제 — 스크롤 중에도 "어느 여행/기간인지" 유지. (장소 개수는 일부러 안 넣음.)
+  const headerSubtitle = useMemo(() => {
+    const md = (iso: string) => {
+      const d = parseYmd(iso);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    };
+    if (plan?.start_date && plan?.end_date && plan.start_date !== plan.end_date) {
+      return `${md(plan.start_date)} ~ ${md(plan.end_date)} · ${totalDays}일`;
+    }
+    if (plan?.start_date) return `${md(plan.start_date)} · ${Math.max(1, totalDays)}일`;
+    return "기간 미정";
+  }, [plan?.start_date, plan?.end_date, totalDays]);
 
   const visibleLegs = useMemo(() => {
     if (segment.mode === "all") return legsWithCoords;
@@ -297,33 +308,38 @@ export default function PlanDetail({ planId, backHref }: Props) {
         title={plan.title}
         backHref={backHref}
         onRename={(next) => updatePlan(plan.id, { title: next })}
+        subtitle={headerSubtitle}
       />
 
-      <div>
-        <div className="mx-auto w-full max-w-2xl">
-          <PlanDateRange
-            startDate={plan.start_date}
-            endDate={plan.end_date}
-            totalDays={totalDays}
-            onChangeStart={(iso) => updatePlan(plan.id, { start_date: iso })}
-            onChangeEnd={(iso) => updatePlan(plan.id, { end_date: iso })}
-          />
+      <div className="mx-auto w-full max-w-2xl lg:max-w-6xl">
+        <PlanDateRange
+          startDate={plan.start_date}
+          endDate={plan.end_date}
+          totalDays={totalDays}
+          onChangeStart={(iso) => updatePlan(plan.id, { start_date: iso })}
+          onChangeEnd={(iso) => updatePlan(plan.id, { end_date: iso })}
+        />
 
-          {/* 경로맵 */}
-          <div className="flex flex-col gap-2 p-3 border-b">
-            <PlanSegmentTabs
-              segment={segment}
-              onChange={setSegment}
-              days={days}
-              legs={legsWithCoords}
-            />
-            <PlanRouteMap pins={pins} legs={mapLegs} heightClass="h-60 md:h-[28rem]" />
+        {/* lg+ 2단: 왼쪽=일자 타임라인(스크롤) / 오른쪽=경로맵(sticky). 모바일은 한 단(위: 맵 → 아래: 타임라인). */}
+        <div className="lg:grid lg:grid-cols-[1fr_28rem] lg:items-start lg:gap-6">
+          {/* 경로맵 — DOM 상 먼저(모바일 위) / lg: 오른쪽 sticky */}
+          <div className="lg:order-2">
+            <div className="flex flex-col gap-2 border-b p-3 lg:sticky lg:top-16 lg:border-b-0">
+              <PlanSegmentTabs
+                segment={segment}
+                onChange={setSegment}
+                days={days}
+                legs={legsWithCoords}
+              />
+              <PlanRouteMap pins={pins} legs={mapLegs} heightClass="h-60 lg:h-[calc(100dvh-12rem)]" />
+            </div>
           </div>
 
-          {/* 일자별 섹션 — 전체를 하나의 DndContext 로 감싸 일자 간 이동도 지원 */}
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={sorted.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="flex flex-col gap-3 p-3">
+          {/* 일자별 섹션 — DOM 상 나중(모바일 아래) / lg: 왼쪽. 하나의 DndContext 로 일자 간 이동 지원. */}
+          <div className="lg:order-1 lg:min-w-0">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={sorted.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                <div className="flex flex-col gap-3 p-3">
                 {days
                   .filter((day) => {
                     // 일자별: 선택 일자만.
@@ -397,9 +413,10 @@ export default function PlanDetail({ planId, backHref }: Props) {
                       />
                     );
                   })}
-              </div>
-            </SortableContext>
-          </DndContext>
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
         </div>
       </div>
 

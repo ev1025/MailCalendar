@@ -177,7 +177,7 @@ function PlanTaskRowImpl({
               </span>
             )}
             <span
-              className={`text-xs md:text-sm font-medium truncate ${
+              className={`text-sm font-medium truncate ${
                 isCompleted ? "line-through" : ""
               }`}
             >

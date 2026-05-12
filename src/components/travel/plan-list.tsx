@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { parseYmd, daysBetween } from "@/lib/date-utils";
-import { Trash2, Copy, CalendarPlus, CalendarMinus, Check } from "lucide-react";
+import { Trash2, Copy, CalendarPlus, CalendarMinus, Check, Route, Search, Plus } from "lucide-react";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import ListToolbar from "@/components/ui/list-toolbar";
 import PromptDialog from "@/components/ui/prompt-dialog";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import EmptyState from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTravelPlans } from "@/hooks/use-travel-plans";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { supabase } from "@/lib/supabase";
@@ -73,6 +75,30 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
   // 드래그 시작 — click/drag 충돌 없음.
   const dragBindings = dragEnabled ? { ...attributes, ...listeners } : {};
 
+  // 여행 상태로 시각 단서를 줌(색·배지에 "의미" 부여): 다가옴=액센트+D-N / 진행중=초록+여행중 / 다녀옴=회색·흐리게.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDay = plan.start_date ? parseYmd(plan.start_date) : null;
+  startDay?.setHours(0, 0, 0, 0);
+  const endDay = plan.end_date ? parseYmd(plan.end_date) : startDay;
+  endDay?.setHours(0, 0, 0, 0);
+  let status: "upcoming" | "ongoing" | "past" | "unscheduled";
+  let dDay: number | null = null;
+  if (!startDay) status = "unscheduled";
+  else if (today.getTime() < startDay.getTime()) {
+    status = "upcoming";
+    dDay = Math.round((startDay.getTime() - today.getTime()) / 86400000);
+  } else if (!endDay || today.getTime() <= endDay.getTime()) status = "ongoing";
+  else status = "past";
+  const stripCls =
+    status === "ongoing"
+      ? "bg-finance-gain"
+      : status === "upcoming"
+        ? "bg-accent-color"
+        : status === "unscheduled"
+          ? "bg-muted-foreground/15"
+          : "bg-muted-foreground/25";
+
   return (
     <div
       ref={setNodeRef}
@@ -81,15 +107,29 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
       onClick={onSelect}
       // touch-action: pan-y 로 모바일 vertical 스크롤 허용. TouchSensor 는 delay 200ms 후
       // 활성화되므로 빠른 스크롤·탭은 자연스럽게 처리되고 길게 누를 때만 드래그.
-      className={`group relative rounded-lg border p-3 hover:bg-accent/50 transition-colors ${
+      className={`group relative overflow-hidden rounded-lg border bg-card py-3 pl-3.5 pr-3 transition-colors hover:bg-accent/50 ${
         dragEnabled ? "touch-pan-y cursor-grab active:cursor-grabbing" : "cursor-pointer"
-      }`}
+      } ${status === "past" ? "opacity-70" : ""}`}
     >
-      <h3 className="text-sm font-semibold truncate pr-8">{plan.title}</h3>
-      <p className="mt-1 text-xs text-muted-foreground">
+      {/* 왼쪽 상태 색 띠 */}
+      <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${stripCls}`} />
+      <div className="flex items-start gap-2">
+        <h3 className="min-w-0 flex-1 truncate text-base font-semibold leading-snug">{plan.title}</h3>
+        {status === "upcoming" && dDay !== null && (
+          <span className="mt-0.5 shrink-0 rounded-full bg-accent-color-soft px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-accent-color">
+            {dDay === 0 ? "D-DAY" : `D-${dDay}`}
+          </span>
+        )}
+        {status === "ongoing" && (
+          <span className="mt-0.5 shrink-0 rounded-full bg-finance-gain/15 px-1.5 py-0.5 text-[10px] font-bold text-finance-gain">
+            여행 중
+          </span>
+        )}
+      </div>
+      <p className="mt-1 truncate pr-7 text-xs text-muted-foreground">
         {formatPlanPeriod(plan.start_date, plan.end_date)}
       </p>
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 md:opacity-0 md:group-hover:opacity-100 transition">
+      <div className="absolute bottom-1 right-1.5 md:opacity-0 md:transition md:group-hover:opacity-100">
         <RowActionPopover
           trigger="more-h"
           triggerLabel="계획 메뉴"
@@ -397,20 +437,30 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
 
       <div className="flex-1 min-h-0 overflow-y-auto pt-3 md:flex-none md:overflow-visible">
         {loading ? (
-          <p className="text-xs text-muted-foreground text-center py-8">불러오는 중…</p>
-        ) : ordered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-            <p className="text-sm text-muted-foreground">
-              {plans.length === 0
-                ? "아직 계획이 없습니다"
-                : "검색 결과가 없습니다"}
-            </p>
-            {plans.length === 0 && (
-              <p className="text-xs text-muted-foreground/70">
-                검색창 옆 추가 버튼을 눌러 첫 여행 계획을 세워보세요
-              </p>
-            )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-hidden>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-lg border bg-card py-3 pl-3.5 pr-3">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="mt-2 h-3 w-1/2" />
+              </div>
+            ))}
           </div>
+        ) : ordered.length === 0 ? (
+          plans.length === 0 ? (
+            <EmptyState
+              icon={Route}
+              title="아직 여행 계획이 없습니다"
+              description="가고 싶은 여행을 만들고 일정·동선을 짜보세요"
+              action={{ label: "새 계획", icon: Plus, onClick: () => setNewOpen(true) }}
+            />
+          ) : (
+            <EmptyState
+              icon={Search}
+              title="검색 결과가 없습니다"
+              description="다른 검색어를 입력하거나 '가본 곳 포함'을 켜보세요"
+              secondaryAction={{ label: "검색 지우기", onClick: () => setSearch("") }}
+            />
+          )
         ) : (
           <DndContext
             sensors={sensors}
@@ -418,7 +468,7 @@ export default function PlanList({ onSelectPlan, visibleUserIds }: Props) {
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={ordered.map((p) => p.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {ordered.map((p) => (
                   <PlanCard
                     key={p.id}
