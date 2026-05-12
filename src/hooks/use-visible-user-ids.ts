@@ -68,14 +68,12 @@ export function useVisibleUserIds(initialIds?: string[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId, initialKey]);
 
-  // localStorage persist.
+  // localStorage persist. (useEffect 는 브라우저에서만 실행 → typeof window 가드 불필요.)
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (visibleUserIds.length > 0) {
-      try {
-        localStorage.setItem(VISIBLE_KEY, JSON.stringify(visibleUserIds));
-      } catch {}
-    }
+    if (visibleUserIds.length === 0) return;
+    try {
+      localStorage.setItem(VISIBLE_KEY, JSON.stringify(visibleUserIds));
+    } catch {}
   }, [visibleUserIds]);
 
   const toggleVisible = (uid: string) => {

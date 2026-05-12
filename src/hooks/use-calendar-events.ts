@@ -101,10 +101,19 @@ export function useCalendarEvents(
   const endDate =
     month === 12 ? `${year + 1}-01-01` : monthBounds(year, month + 1).start;
 
+  // visibleUserIds 는 prop 배열이라 부모 리렌더마다 참조가 새것 → 정렬+join 문자열을
+  // deps 로 써서 "내용 같으면 queryKey 안정" 보장(불필요한 재패칭 방지). prefetch effect 도 이걸 씀.
+  const visibleKey = useMemo(
+    () => [...visibleUserIds].sort().join(","),
+    [visibleUserIds],
+  );
+
   const queryKey = useMemo(
     () =>
       calendarEventsQueryKey(currentUserId, startDate, endDate, visibleUserIds),
-    [currentUserId, startDate, endDate, visibleUserIds],
+    // visibleKey 가 visibleUserIds 의 안정적 대체 — exhaustive-deps 룰만 raw 배열을 요구.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentUserId, startDate, endDate, visibleKey],
   );
 
   const enabled = !!currentUserId && visibleUserIds.length > 0;
@@ -118,11 +127,7 @@ export function useCalendarEvents(
     gcTime: GC_TIME,
   });
 
-  // 인접 월 ±1 prefetch — 사용자가 스와이프했을 때 캐시 hit으로 즉시 표시.
-  const visibleKey = useMemo(
-    () => [...visibleUserIds].sort().join(","),
-    [visibleUserIds],
-  );
+  // 인접 월 ±1 prefetch — 사용자가 스와이프했을 때 캐시 hit으로 즉시 표시. (visibleKey 는 위에서 선언)
   useEffect(() => {
     if (!enabled) return;
     const prefetchMonth = (y: number, m: number) => {

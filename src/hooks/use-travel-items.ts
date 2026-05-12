@@ -68,9 +68,15 @@ export function useTravelItems(visibleUserIds?: string[]) {
   const userId = useCurrentUserId();
   const queryClient = useQueryClient();
 
+  // visibleUserIds 배열 참조가 매 렌더 바뀌어도 내용 같으면 queryKey 안정 (재패칭 방지).
+  const visibleKey = useMemo(
+    () => (visibleUserIds ?? []).slice().sort().join(","),
+    [visibleUserIds],
+  );
   const queryKey = useMemo(
     () => travelItemsQueryKey(userId, visibleUserIds),
-    [userId, visibleUserIds],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userId, visibleKey],
   );
 
   const itemsQuery = useQuery<TravelItem[]>({
