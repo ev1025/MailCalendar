@@ -3,33 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import {
-  CalendarBlank,
-  AirplaneTilt,
-  PiggyBank,
-  Book,
-  User,
-  type IconProps,
-} from "@phosphor-icons/react";
-import type { ComponentType } from "react";
+import { Calendar, Plane, Wallet, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
 
 // 모바일 하단 네비. 캘린더 | 여행 | 가계부 | 지식 | 프로필
+// 아이콘은 사이드바와 동일하게 lucide 로 통일 — 데스크탑/모바일 같은 글리프.
 
 type NavItem = {
   href: string;
   label: string;
-  icon: ComponentType<IconProps>;
+  icon: React.ElementType;
   /** 추가 match path prefix */
   also?: string[];
 };
 
 const navItems: NavItem[] = [
-  { href: "/calendar", label: "캘린더", icon: CalendarBlank },
-  { href: "/travel", label: "여행", icon: AirplaneTilt },
-  { href: "/finance", label: "가계부", icon: PiggyBank, also: ["/products"] },
-  { href: "/knowledge", label: "지식", icon: Book },
+  { href: "/calendar", label: "캘린더", icon: Calendar },
+  { href: "/travel", label: "여행", icon: Plane },
+  { href: "/finance", label: "가계부", icon: Wallet, also: ["/products"] },
+  { href: "/knowledge", label: "지식", icon: BookOpen },
 ];
 
 // 활성 탭 색상 — 사용자 액센트 컬러 (data-accent) 따라감. 미지정 시 forest green.
@@ -70,7 +63,7 @@ export default function BottomNav() {
                   transition={{ type: "spring", stiffness: 380, damping: 32 }}
                 />
               )}
-              <item.icon size={22} weight={active ? "fill" : "regular"} />
+              <item.icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.3 : 1.7} />
               <span>{item.label}</span>
             </Link>
           );
@@ -114,7 +107,7 @@ export default function BottomNav() {
               )}
             </span>
           ) : (
-            <User size={22} weight={profileActive ? "fill" : "regular"} />
+            <User className="h-[22px] w-[22px]" strokeWidth={profileActive ? 2.3 : 1.7} />
           )}
           <span>프로필</span>
         </Link>

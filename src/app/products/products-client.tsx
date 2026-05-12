@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import EmptyState from "@/components/ui/empty-state";
 import SearchInput from "@/components/ui/search-input";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import { useUrlStringParam } from "@/hooks/use-url-param";
@@ -610,18 +611,27 @@ function ProductsPageInner() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
-          <p className="text-sm text-muted-foreground">
-            {products.length === 0
-              ? "등록된 제품이 없습니다"
-              : "검색 결과가 없습니다"}
-          </p>
-          {products.length === 0 && (
-            <p className="text-xs text-muted-foreground/70">
-              + 버튼으로 제품을 추가하고 구매 가격을 기록해보세요
-            </p>
-          )}
-        </div>
+        <EmptyState
+          icon={ShoppingBag}
+          title={products.length === 0 ? "등록된 제품이 없습니다" : "검색 결과가 없습니다"}
+          description={
+            products.length === 0
+              ? "제품을 추가하고 시점별 구매 가격·실제단가를 기록해보세요"
+              : undefined
+          }
+          action={
+            products.length === 0
+              ? {
+                  label: "제품 추가",
+                  icon: Plus,
+                  onClick: () => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  },
+                }
+              : undefined
+          }
+        />
       ) : (
         <div className="flex flex-col gap-4">
           {Object.keys(grouped).map((cat) => {

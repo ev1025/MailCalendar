@@ -3,9 +3,10 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { parseYmd } from "@/lib/date-utils";
-import { ArrowUp, Filter, X } from "lucide-react";
+import { ArrowUp, Filter, X, CalendarSearch, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import EmptyState from "@/components/ui/empty-state";
 import FilterPanel from "@/components/ui/filter-panel";
 import SearchInput from "@/components/ui/search-input";
 import WeatherIcon from "./weather-icon";
@@ -286,30 +287,26 @@ export default function DatabaseView({
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <p className="text-sm text-muted-foreground">
-            {search || filterTags.length > 0
-              ? "검색 결과가 없습니다"
-              : "이 달의 일정이 없습니다"}
-          </p>
-          {(search || filterTags.length > 0) ? (
-            <button
-              type="button"
-              onClick={() => {
+        search || filterTags.length > 0 ? (
+          <EmptyState
+            icon={CalendarSearch}
+            title="검색 결과가 없습니다"
+            secondaryAction={{
+              label: "필터 해제하기",
+              onClick: () => {
                 setSearchInput("");
                 setSearch("");
                 setFilterTags([]);
-              }}
-              className="text-xs text-info hover:underline"
-            >
-              필터 해제하기
-            </button>
-          ) : (
-            <p className="text-xs text-muted-foreground/70 break-keep">
-              달력 뷰에서 날짜를 눌러 일정을 추가해보세요
-            </p>
-          )}
-        </div>
+              },
+            }}
+          />
+        ) : (
+          <EmptyState
+            icon={CalendarDays}
+            title="이 달의 일정이 없습니다"
+            description="달력 뷰에서 날짜를 눌러 일정을 추가해보세요"
+          />
+        )
       ) : (
         <div className={`flex-1 min-h-0 rounded-lg border overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
           <table

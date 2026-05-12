@@ -1,14 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
-import RichEditor from "@/components/knowledge/rich-editor";
 import DraftsPopover from "@/components/knowledge/drafts-popover";
 import type { KnowledgeItem } from "@/types";
 import type { KnowledgeDraft } from "@/hooks/use-knowledge-drafts";
+
+// tiptap 번들이 큼 — 노트 편집 화면 진입 시점에 lazy load. SSR 불필요.
+const RichEditor = dynamic(() => import("@/components/knowledge/rich-editor"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col gap-2 p-4">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-5/6" />
+    </div>
+  ),
+});
 
 interface Props {
   item: KnowledgeItem;

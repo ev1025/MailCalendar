@@ -4,7 +4,7 @@ import { Suspense, useCallback, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { Wallet, ShoppingBag, X, Check, Repeat } from "lucide-react";
+import { Wallet, ShoppingBag, X, Check, Repeat, Filter, Receipt } from "lucide-react";
 import DateRangePicker from "@/components/layout/date-range-picker";
 import PageHeader from "@/components/layout/page-header";
 import { useTransactions } from "@/hooks/use-transactions";
@@ -17,6 +17,7 @@ import TransactionForm from "@/components/finance/transaction-form";
 import CategoryChart from "@/components/finance/category-chart";
 import FixedExpenseManager from "@/components/finance/fixed-expense-manager";
 import { Skeleton } from "@/components/ui/skeleton";
+import EmptyState from "@/components/ui/empty-state";
 import PullToRefresh from "@/components/ui/pull-to-refresh";
 import { monthBounds, parseYmd } from "@/lib/date-utils";
 import { formatMoney } from "@/lib/format-money";
@@ -495,30 +496,25 @@ function FinancePageInner() {
               ))}
             </div>
           ) : filteredTransactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <p className="text-sm text-muted-foreground">
-                {categoryFilter || !includeFixed
-                  ? "조건에 맞는 내역이 없습니다"
-                  : "이 달의 내역이 없습니다"}
-              </p>
-              {/* 다음 행동 유도 — 필터 활성 시 해제 버튼, 비활성 시 입력 안내. */}
-              {(categoryFilter || !includeFixed) ? (
-                <button
-                  type="button"
-                  onClick={() => {
+            categoryFilter || !includeFixed ? (
+              <EmptyState
+                icon={Filter}
+                title="조건에 맞는 내역이 없습니다"
+                secondaryAction={{
+                  label: "필터 해제하기",
+                  onClick: () => {
                     if (categoryFilter) setCategoryFilter(null);
                     if (!includeFixed) setIncludeFixed(true);
-                  }}
-                  className="text-xs text-info hover:underline"
-                >
-                  필터 해제하기
-                </button>
-              ) : (
-                <p className="text-xs text-muted-foreground/70 break-keep">
-                  위 카드의 + 아이콘으로 수입·지출을 기록해보세요
-                </p>
-              )}
-            </div>
+                  },
+                }}
+              />
+            ) : (
+              <EmptyState
+                icon={Receipt}
+                title="이 달의 내역이 없습니다"
+                description="위 카드의 + 아이콘으로 수입·지출을 기록해보세요"
+              />
+            )
           ) : (
             <TransactionList
               transactions={filteredTransactions}
