@@ -181,27 +181,8 @@ function ProfilePageInner() {
       />
 
       {/* ── Hero ──────────────────────────────────────────────────────
-          이모지 모드: 사용자 색 그라데이션 워시. 이미지 모드: 워시 없음(아바타가
-          주인공이라 뒤 색이 비치면 지저분). 컴팩트하게 — 1뷰포트 안에 편집부까지. */}
-      <section className="relative overflow-hidden">
-        {!isImageAvatar && (
-          <motion.div
-            aria-hidden
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="pointer-events-none absolute inset-0 -z-10"
-          >
-            <div
-              className="absolute inset-0 transition-[background] duration-500"
-              style={{
-                background: `radial-gradient(76% 100% at 28% -12%, ${color}3a, transparent 56%), radial-gradient(60% 80% at 92% 4%, ${color}1f, transparent 52%)`,
-              }}
-            />
-            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-background" />
-          </motion.div>
-        )}
-
+          배경 색 워시 없음(아바타가 주인공). 컴팩트하게 — 1뷰포트 안에 편집부까지. */}
+      <section className="relative">
         <div className="flex flex-col items-center gap-2.5 px-6 pt-5 pb-4 md:pt-7 md:pb-5">
           <motion.button
             {...reveal(0.04)}

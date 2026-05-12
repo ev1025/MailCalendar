@@ -561,6 +561,81 @@
   color: inherit;
   font-size: inherit;
 }
+.tiptap-editor pre code.hljs {
+  display: block;
+}
+
+/* highlight.js / lowlight 토큰 색 — 코드 블록(pre)은 항상 다크라 한 팔레트(github-dark 계열).
+   에디터: lowlight 데코레이션이 span.hljs-* 를 입힘 / reader: highlight.js 가 렌더 후 칠함. */
+.tiptap-editor .hljs-comment,
+.tiptap-editor .hljs-quote {
+  color: #8b949e;
+  font-style: italic;
+}
+.tiptap-editor .hljs-keyword,
+.tiptap-editor .hljs-selector-tag,
+.tiptap-editor .hljs-literal,
+.tiptap-editor .hljs-section,
+.tiptap-editor .hljs-doctag,
+.tiptap-editor .hljs-name {
+  color: #ff7b72;
+}
+.tiptap-editor .hljs-string,
+.tiptap-editor .hljs-regexp,
+.tiptap-editor .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+.tiptap-editor .hljs-number,
+.tiptap-editor .hljs-symbol,
+.tiptap-editor .hljs-bullet,
+.tiptap-editor .hljs-meta,
+.tiptap-editor .hljs-built_in,
+.tiptap-editor .hljs-class .hljs-title {
+  color: #79c0ff;
+}
+.tiptap-editor .hljs-title,
+.tiptap-editor .hljs-title.function_,
+.tiptap-editor .hljs-function .hljs-title {
+  color: #d2a8ff;
+}
+.tiptap-editor .hljs-attr,
+.tiptap-editor .hljs-attribute,
+.tiptap-editor .hljs-variable,
+.tiptap-editor .hljs-template-variable,
+.tiptap-editor .hljs-type,
+.tiptap-editor .hljs-params,
+.tiptap-editor .hljs-selector-attr,
+.tiptap-editor .hljs-selector-pseudo,
+.tiptap-editor .hljs-selector-class,
+.tiptap-editor .hljs-selector-id {
+  color: #ffa657;
+}
+.tiptap-editor .hljs-tag {
+  color: #7ee787;
+}
+.tiptap-editor .hljs-deletion {
+  color: #ffa198;
+  background: #67060c;
+}
+.tiptap-editor .hljs-addition {
+  color: #7ee787;
+  background: #033a16;
+}
+.tiptap-editor .hljs-emphasis {
+  font-style: italic;
+}
+.tiptap-editor .hljs-strong {
+  font-weight: 700;
+}
+
+/* 다크 모드 — 인라인 code / 표 헤더 배경이 라이트 고정이라 깨지던 것 보정 */
+.dark .tiptap-editor code {
+  background: oklch(1 0 0 / 0.1);
+  color: #f0a8c8;
+}
+.dark .tiptap-editor th {
+  background: oklch(1 0 0 / 0.06);
+}
 
 .tiptap-editor hr {
   border: none;

@@ -1,14 +1,23 @@
 "use client";
 
-import { useEditor, EditorContent, type Editor } from "@tiptap/react";
+import {
+  useEditor,
+  EditorContent,
+  ReactNodeViewRenderer,
+  type Editor,
+} from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle, Color } from "@tiptap/extension-text-style";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import { lowlight } from "@/lib/knowledge/lowlight";
+import ImageNodeView from "@/components/knowledge/editor/image-node-view";
+import CodeBlockNodeView from "@/components/knowledge/editor/code-block-node-view";
 import {
   Bold,
   Italic,
@@ -351,12 +360,28 @@ function Toolbar({ editor }: { editor: Editor }) {
   );
 }
 
+// Image — 편집 시 ✕ 삭제 버튼이 달린 NodeView 사용 (백스페이스 없이 클릭 삭제).
+const ImageWithControls = Image.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView);
+  },
+}).configure({ inline: false, allowBase64: true });
+
+// CodeBlock — lowlight 문법 하이라이팅 + 블록별 언어 선택 드롭다운 NodeView.
+const CodeBlockWithLang = CodeBlockLowlight.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(CodeBlockNodeView);
+  },
+}).configure({ lowlight, defaultLanguage: "plaintext" });
+
 export default function RichEditor({ content, onChange, placeholder }: Props) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      // StarterKit 의 기본 codeBlock 은 끔 — CodeBlockWithLang 으로 대체.
+      StarterKit.configure({ codeBlock: false }),
       Underline,
-      Image.configure({ inline: false, allowBase64: true }),
+      ImageWithControls,
+      CodeBlockWithLang,
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,

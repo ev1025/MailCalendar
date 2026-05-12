@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { sanitizeRichHTML } from "@/lib/sanitize";
@@ -35,6 +35,20 @@ export default function NoteReaderView({ item, onEdit, onExit }: Props) {
     () => (item.content ? sanitizeRichHTML(item.content) : ""),
     [item.content],
   );
+  // 저장된 HTML 엔 하이라이트 span 이 없으므로 렌더 후 highlight.js 로 코드 블록을 칠함.
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || !safeHtml) return;
+    if (!el.querySelector("pre code")) return;
+    let cancelled = false;
+    import("@/lib/knowledge/highlight-reader").then(({ highlightCodeBlocks }) => {
+      if (!cancelled && contentRef.current) highlightCodeBlocks(contentRef.current);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [safeHtml]);
   return (
     <>
       <div className="flex items-center gap-2 border-b px-3 h-14 shrink-0">
@@ -84,6 +98,7 @@ export default function NoteReaderView({ item, onEdit, onExit }: Props) {
         )}
         {item.content ? (
           <div
+            ref={contentRef}
             className="tiptap-editor"
             dangerouslySetInnerHTML={{ __html: safeHtml }}
           />
