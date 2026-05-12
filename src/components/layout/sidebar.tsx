@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Home,
   Calendar,
   Plane,
   Wallet,
@@ -28,6 +29,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { href: "/", label: "홈", icon: Home },
   { href: "/calendar", label: "캘린더", icon: Calendar, isCalendarDefault: true },
   { href: "/travel", label: "여행", icon: Plane },
   { href: "/finance", label: "가계부", icon: Wallet },

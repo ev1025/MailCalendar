@@ -3,22 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { Calendar, Plane, Wallet, BookOpen, User } from "lucide-react";
+import { Home, Calendar, Plane, Wallet, BookOpen, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
 
-// 모바일 하단 네비. 캘린더 | 여행 | 가계부 | 지식 | 프로필
+// 모바일 하단 네비. 홈 | 캘린더 | 여행 | 가계부 | 지식 | 프로필
 // 아이콘은 사이드바와 동일하게 lucide 로 통일 — 데스크탑/모바일 같은 글리프.
 
 type NavItem = {
   href: string;
   label: string;
   icon: React.ElementType;
+  /** 정확 일치만 active (prefix 매치 안 함) — "/" 처럼 모든 경로의 접두사인 href 용. */
+  exact?: boolean;
   /** 추가 match path prefix */
   also?: string[];
 };
 
 const navItems: NavItem[] = [
+  { href: "/", label: "홈", icon: Home, exact: true },
   { href: "/calendar", label: "캘린더", icon: Calendar },
   { href: "/travel", label: "여행", icon: Plane },
   { href: "/finance", label: "가계부", icon: Wallet, also: ["/products"] },
@@ -35,6 +38,7 @@ export default function BottomNav() {
   const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
 
   const isActive = (item: NavItem): boolean => {
+    if (item.exact) return pathname === item.href;
     if (pathname === item.href || pathname.startsWith(item.href + "/")) return true;
     if (item.also?.some((p) => pathname === p || pathname.startsWith(p + "/"))) return true;
     return false;
