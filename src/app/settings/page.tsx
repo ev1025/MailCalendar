@@ -114,7 +114,8 @@ function Note({ tone = "info", children }: { tone?: "info" | "warning"; children
   );
 }
 
-/** 외부 링크 푸터 — 모든 ApiSection 의 마지막에 동일한 위치/스타일. */
+/** 외부 링크 푸터 — 모든 ApiSection 의 마지막에 동일한 위치/스타일.
+ *  외부로 나가는 링크는 항상 underline(인앱 이동과 구분되는 어포던스). */
 function LinkFooter({ href, label }: { href: string; label: string }) {
   return (
     <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-border/50 text-[11px]">
@@ -123,7 +124,7 @@ function LinkFooter({ href, label }: { href: string; label: string }) {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-1 text-info hover:underline"
+        className="flex items-center gap-1 text-info underline underline-offset-2 hover:text-info/80"
       >
         {label} <ExternalLink className="h-3 w-3" />
       </a>
@@ -693,11 +694,11 @@ function SettingsPageInner() {
               <button
                 onClick={refetchUsage}
                 disabled={usageLoading}
-                className="text-info hover:underline disabled:opacity-50"
+                className="text-primary hover:underline disabled:opacity-50"
               >
                 새로고침
               </button>
-              <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-info hover:underline">
+              <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-info underline underline-offset-2 hover:text-info/80">
                 대시보드 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
