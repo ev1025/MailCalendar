@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { FileText, CheckSquare, Square, Folder, Star, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -191,27 +192,48 @@ export default function FolderNoteList({
           <div className="py-20" aria-hidden />
         ) : (
           <div className="flex flex-col gap-0.5">
-            {subFolders.map((sf) => (
-              <FolderRow
-                key={sf.id}
-                sf={sf}
-                selectMode={selectMode}
-                selected={selFolders.has(sf.id)}
-                onClick={() => selectMode ? toggleSel(sf.id, "folder") : onSelectFolder(sf.id)}
-                onLongPress={() => handleLongPress(sf.id, "folder")}
-              />
-            ))}
-            {folderItems.map((item) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                selectMode={selectMode}
-                selected={selItems.has(item.id)}
-                onClick={() => selectMode ? toggleSel(item.id, "item") : onSelectItem(item.id)}
-                onLongPress={() => handleLongPress(item.id, "item")}
-                onTogglePin={onTogglePinItem}
-              />
-            ))}
+            {/* 행 추가/삭제 시 부드럽게 — 삭제 시 height collapse + fade (뚝 점프 방지). */}
+            <AnimatePresence initial={false}>
+              {subFolders.map((sf) => (
+                <motion.div
+                  key={`f-${sf.id}`}
+                  layout="position"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <FolderRow
+                    sf={sf}
+                    selectMode={selectMode}
+                    selected={selFolders.has(sf.id)}
+                    onClick={() => selectMode ? toggleSel(sf.id, "folder") : onSelectFolder(sf.id)}
+                    onLongPress={() => handleLongPress(sf.id, "folder")}
+                  />
+                </motion.div>
+              ))}
+              {folderItems.map((item) => (
+                <motion.div
+                  key={`i-${item.id}`}
+                  layout="position"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <ItemRow
+                    item={item}
+                    selectMode={selectMode}
+                    selected={selItems.has(item.id)}
+                    onClick={() => selectMode ? toggleSel(item.id, "item") : onSelectItem(item.id)}
+                    onLongPress={() => handleLongPress(item.id, "item")}
+                    onTogglePin={onTogglePinItem}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>

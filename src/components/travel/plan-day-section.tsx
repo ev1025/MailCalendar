@@ -49,8 +49,11 @@ function SortableTaskRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.55 : 1,
     zIndex: isDragging ? 10 : undefined,
+    // 드래그 중 살짝 떠 보이게 — shadow + 모서리 둥글림(자식 카드와 맞춤).
+    boxShadow: isDragging ? "0 10px 28px -8px rgba(0,0,0,0.28)" : undefined,
+    borderRadius: isDragging ? 8 : undefined,
   };
   return (
     <div ref={setNodeRef} style={style}>

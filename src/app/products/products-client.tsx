@@ -100,10 +100,13 @@ const ProductRow = memo(function ProductRow({
     <tr
       ref={setNodeRef}
       style={style}
+      // 드래그 중 — <tr> 는 shadow 가 안 먹어서 outline + bg-card 로 "들린" 느낌.
       className={`border-t cursor-pointer group transition-colors ${
-        p.is_active
-          ? "bg-finance-gain/5 hover:bg-finance-gain/10"
-          : "hover:bg-accent/50"
+        isDragging
+          ? "bg-card outline outline-2 -outline-offset-2 outline-primary/50"
+          : p.is_active
+            ? "bg-finance-gain/5 hover:bg-finance-gain/10"
+            : "hover:bg-accent/50"
       }`}
       onClick={() => onEdit(p)}
     >
