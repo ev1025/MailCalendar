@@ -56,7 +56,9 @@ export default function DeleteRecordDescription({ fields, footnote }: Props) {
               </span>
               <span
                 className={
-                  "text-[12.5px] text-foreground text-left flex-1 min-w-0 truncate " +
+                  // 삭제 확인은 "무엇을 지우는지" 보여주는 게 핵심 — 긴 이름도 잘리지
+                  // 않게 줄바꿈 허용 (break-keep 으로 한국어 어절 단위).
+                  "text-[12.5px] text-foreground text-left flex-1 min-w-0 break-keep " +
                   (f.valueClassName ?? "")
                 }
               >

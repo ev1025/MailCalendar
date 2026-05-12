@@ -404,14 +404,15 @@
   transform: scale(0.97);
 }
 
-/* 오늘 날짜 셀 호흡 효과 — 1.5px 까지만 ring 으로 매우 절제. 시각 면적 거의
-   안 늘어나고 호흡감만 표현. 2.6s 주기. */
+/* 오늘 날짜 셀 호흡 효과 — 주기마다 한 번 작은 ring 이 살짝 퍼지며 사라짐(ripple).
+   rest 상태(60~100%)는 ring 없음 → 시각 노이즈 최소. 2.6s 주기.
+   (이전엔 visible 프레임의 spread 가 0px 라 사실상 안 보였음.) */
 @keyframes todayPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 oklch(from var(--primary) l c h / 0.55);
+  0% {
+    box-shadow: 0 0 0 0 oklch(from var(--primary) l c h / 0.5);
   }
-  50% {
-    box-shadow: 0 0 0 1.5px oklch(from var(--primary) l c h / 0);
+  60%, 100% {
+    box-shadow: 0 0 0 4px oklch(from var(--primary) l c h / 0);
   }
 }
 .today-pulse {

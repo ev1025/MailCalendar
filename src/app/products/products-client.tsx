@@ -142,11 +142,11 @@ const ProductRow = memo(function ProductRow({
           aria-label={`${idx + 1}위`}
           className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
             idx === 0
-              ? "bg-yellow-100 text-yellow-700 ring-1 ring-yellow-300"
+              ? "bg-yellow-100 text-yellow-700 ring-1 ring-yellow-300 dark:bg-yellow-500/20 dark:text-yellow-300 dark:ring-yellow-500/40"
               : idx === 1
-                ? "bg-gray-100 text-gray-700 ring-1 ring-gray-300"
+                ? "bg-gray-100 text-gray-700 ring-1 ring-gray-300 dark:bg-gray-400/20 dark:text-gray-200 dark:ring-gray-400/40"
                 : idx === 2
-                  ? "bg-orange-100 text-orange-700 ring-1 ring-orange-300"
+                  ? "bg-orange-100 text-orange-700 ring-1 ring-orange-300 dark:bg-orange-500/20 dark:text-orange-300 dark:ring-orange-500/40"
                   : "text-muted-foreground"
           }`}
         >

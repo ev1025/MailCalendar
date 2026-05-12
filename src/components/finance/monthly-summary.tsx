@@ -100,7 +100,7 @@ export default function MonthlySummary({
       <div className="grid gap-1.5 md:gap-3 grid-cols-2 md:flex-1 md:min-h-0">
         <Cell
           label="수입"
-          color="text-info"
+          color="text-finance-gain"
           action={
             onOpenIncome ? (
               <ActionBtn
@@ -116,7 +116,7 @@ export default function MonthlySummary({
         />
         <Cell
           label="고정비"
-          color="text-foreground"
+          color="text-finance-loss"
           action={
             onOpenFixed ? (
               <ActionBtn

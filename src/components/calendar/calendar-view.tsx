@@ -347,7 +347,11 @@ export default function CalendarView({
               key={d}
               aria-label={i === 0 ? "일요일" : i === 6 ? "토요일" : `${d}요일`}
               className={`py-2 text-center text-sm font-semibold ${
-                i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-muted-foreground"
+                i === 0
+                  ? "text-red-500 dark:text-red-400"
+                  : i === 6
+                    ? "text-blue-500 dark:text-blue-400"
+                    : "text-muted-foreground"
               }`}
             >
               {d}
@@ -422,7 +426,11 @@ export default function CalendarView({
                           ) : (
                             <span
                               className={`text-xs font-semibold md:text-xs ${
-                                hol ? "text-red-500" : dow === 6 ? "text-blue-500" : ""
+                                hol
+                                  ? "text-red-500 dark:text-red-400"
+                                  : dow === 6
+                                    ? "text-blue-500 dark:text-blue-400"
+                                    : ""
                               }`}
                             >
                               {format(day, "d")}
