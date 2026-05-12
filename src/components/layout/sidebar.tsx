@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   Calendar,
   Plane,
-  PiggyBank,
   BookOpen,
   PanelLeftClose,
   PanelLeftOpen,
@@ -14,6 +13,7 @@ import {
   Settings,
   User,
 } from "lucide-react";
+import { PiggyBank } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import NotificationsPanel from "./notifications-panel";
 import { useCurrentUser } from "@/lib/current-user";

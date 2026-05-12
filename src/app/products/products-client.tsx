@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Plus,
   ChevronDown,
-  PiggyBank,
   ShoppingBag,
   Trash2,
   Repeat,
@@ -14,6 +13,7 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
+import { PiggyBank } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/ui/empty-state";

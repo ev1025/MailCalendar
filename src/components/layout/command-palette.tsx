@@ -11,7 +11,6 @@ import {
 import {
   Calendar,
   Plane,
-  PiggyBank,
   ShoppingBag,
   BookOpen,
   User,
@@ -21,6 +20,7 @@ import {
   Monitor,
   Search,
 } from "lucide-react";
+import { PiggyBank } from "@phosphor-icons/react";
 
 /**
  * ⌘K / Ctrl+K 빠른 이동 팔레트. AppShell 에서 전역 키 리스너로 토글.

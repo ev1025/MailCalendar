@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { Calendar, Plane, PiggyBank, BookOpen, User } from "lucide-react";
+import { Calendar, Plane, BookOpen, User } from "lucide-react";
+import { PiggyBank } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/current-user";
 
 // 모바일 하단 네비. 캘린더 | 여행 | 가계부 | 지식 | 프로필
-// 아이콘은 사이드바와 동일하게 lucide 로 통일 — 데스크탑/모바일 같은 글리프.
+// 대부분 lucide, 가계부만 Phosphor PiggyBank(통통한 돼지저금통 — 이전 디자인 유지).
 
 type NavItem = {
   href: string;
