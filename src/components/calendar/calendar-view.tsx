@@ -81,7 +81,9 @@ function DraggableBar({ seg, onClickDate }: { seg: Seg; onClickDate: (d: string)
       }}
       // select-none + touch-none + iOS callout 차단 — 모바일에서 바를 길게 눌러
       // 드래그하려 할 때 텍스트 선택/복사 메뉴가 뜨면서 드래그가 막히던 문제.
-      className={`pointer-events-auto flex select-none touch-none items-center justify-center overflow-hidden text-white cursor-grab active:cursor-grabbing [-webkit-touch-callout:none] ${
+      // 다크모드: 사용자 지정 색이 어두운 배경 위에서 너무 쨍해 보여 배경색과 18%
+      //  섞어 톤다운(bg-[color-mix]). 텍스트는 별도 요소라 영향 안 받음.
+      className={`pointer-events-auto flex select-none touch-none items-center justify-center overflow-hidden text-white cursor-grab active:cursor-grabbing [-webkit-touch-callout:none] bg-[var(--bar-color)] dark:bg-[color-mix(in_oklab,var(--bar-color)_82%,var(--background))] ${
         isDragging ? "opacity-30" : ""
       }`}
       style={{
@@ -91,7 +93,7 @@ function DraggableBar({ seg, onClickDate }: { seg: Seg; onClickDate: (d: string)
         alignSelf: "start",
         marginTop: slot * BAR_STEP,
         height: BAR_H,
-        backgroundColor: event.color,
+        ["--bar-color" as string]: event.color,
         borderTopLeftRadius: isEventStart ? 3 : 0,
         borderBottomLeftRadius: isEventStart ? 3 : 0,
         borderTopRightRadius: isEventEnd ? 3 : 0,
@@ -469,7 +471,10 @@ export default function CalendarView({
 
       <DragOverlay>
         {activeEvent && (
-          <div className="rounded px-2 py-1 text-xs text-white shadow-lg" style={{ backgroundColor: activeEvent.color }}>
+          <div
+            className="rounded px-2 py-1 text-xs text-white shadow-lg bg-[var(--bar-color)] dark:bg-[color-mix(in_oklab,var(--bar-color)_82%,var(--background))]"
+            style={{ ["--bar-color" as string]: activeEvent.color }}
+          >
             {activeEvent.title}
           </div>
         )}
