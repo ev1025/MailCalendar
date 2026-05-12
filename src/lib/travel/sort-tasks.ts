@@ -15,7 +15,11 @@ export function sortTasks(tasks: TravelPlanTask[]): TravelPlanTask[] {
     if (a.start_time && b.start_time) {
       if (a.start_time < b.start_time) return -1;
       if (a.start_time > b.start_time) return 1;
+      return 0;
     }
+    // 한쪽만 시간이 있으면 시간 있는 쪽을 먼저 (드래그 동률 시 안정 정렬).
+    if (a.start_time) return -1;
+    if (b.start_time) return 1;
     return 0;
   });
 }

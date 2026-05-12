@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 /**
@@ -18,17 +18,21 @@ import { supabase } from "@/lib/supabase";
  *  - cleanup 시 모든 리스너 해제
  */
 export function useAutoRefetch(fetchFn: () => void | Promise<void>) {
+  // fetchFn 을 ref 로 잡아 effect deps 에서 제외 — caller 가 inline lambda 를 넘겨도
+  // 매 렌더마다 리스너를 재등록하지 않음(Realtime/visibilitychange 채널 churn 방지).
+  const fnRef = useRef(fetchFn);
+  fnRef.current = fetchFn;
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === "visible") fetchFn();
+      if (document.visibilityState === "visible") fnRef.current();
     };
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") fetchFn();
+      if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") fnRef.current();
     });
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       sub.subscription.unsubscribe();
     };
-  }, [fetchFn]);
+  }, []);
 }

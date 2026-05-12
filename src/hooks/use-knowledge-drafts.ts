@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { stripHtml } from "@/lib/sanitize";
 
 // 지식창고 노트의 임시저장(drafts) 을 localStorage 로 관리하는 훅.
@@ -42,10 +42,19 @@ function writeToStorage(drafts: KnowledgeDraft[]) {
 export function useKnowledgeDrafts() {
   const [drafts, setDrafts] = useState<KnowledgeDraft[]>([]);
   const [autoSavedAt, setAutoSavedAt] = useState<string | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setDrafts(readFromStorage());
   }, []);
+
+  // unmount 시 미발동 자동저장 타이머 정리.
+  useEffect(
+    () => () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    },
+    [],
+  );
 
   const saveDraft = useCallback(
     (input: Omit<KnowledgeDraft, "id" | "savedAt" | "auto">) => {
@@ -72,7 +81,8 @@ export function useKnowledgeDrafts() {
     });
   }, []);
 
-  // 자동 저장 — 호출 후 60초 idle 이면 저장. 의존 값이 다시 바뀌면 타이머 리셋.
+  // 자동 저장 — 호출 후 60초 idle 이면 저장. 다시 호출되면 이전 예약을 취소하고 새로
+  // 잡음(훅 내부 ref 로 관리 → 호출자가 cleanup 을 안 써도 타이머가 누적되지 않음).
   // 빈 내용(공백·HTML 태그만) 은 저장하지 않음.
   const armAutoSave = useCallback(
     (input: {
@@ -82,11 +92,16 @@ export function useKnowledgeDrafts() {
       folder_id: string | null;
       enabled: boolean;
     }) => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
       if (!input.enabled) return;
       const textOnly = stripHtml(input.content);
       if (!input.title.trim() && !textOnly) return;
 
-      const timer = setTimeout(() => {
+      autoSaveTimerRef.current = setTimeout(() => {
+        autoSaveTimerRef.current = null;
         const key = input.source_id ?? "__new__";
         const now = new Date().toISOString();
         const entry: KnowledgeDraft = {
@@ -106,7 +121,12 @@ export function useKnowledgeDrafts() {
         setAutoSavedAt(now);
       }, AUTOSAVE_DELAY_MS);
 
-      return () => clearTimeout(timer);
+      return () => {
+        if (autoSaveTimerRef.current) {
+          clearTimeout(autoSaveTimerRef.current);
+          autoSaveTimerRef.current = null;
+        }
+      };
     },
     []
   );

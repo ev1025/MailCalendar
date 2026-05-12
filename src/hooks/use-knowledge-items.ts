@@ -145,10 +145,13 @@ export async function searchKnowledge(
 ): Promise<KnowledgeItem[]> {
   if (!query.trim()) return [];
   const q = query.trim();
+  // PostgREST .or() 는 문자열 파싱이라 q 안의 , ( ) 등이 필터 구조를 깨뜨릴 수 있음.
+  // 값을 "..." 로 감싸면 PostgREST 가 리터럴로 취급 → \ 와 " 만 이스케이프하면 안전.
+  const safe = q.replace(/[\\"]/g, "\\$&");
   const { data, error } = await supabase
     .from("knowledge_items")
     .select("*")
-    .or(`title.ilike.%${q}%,content.ilike.%${q}%`)
+    .or(`title.ilike."%${safe}%",content.ilike."%${safe}%"`)
     .order("updated_at", { ascending: false })
     .limit(30);
   if (error || !data) return [];

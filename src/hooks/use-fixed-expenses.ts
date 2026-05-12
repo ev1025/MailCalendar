@@ -51,12 +51,15 @@ async function fetchFixedExpenses(
   if (userId) query = query.eq("user_id", userId);
   const { data, error } = await query;
   if (error) {
-    const fallback = await supabase
+    // 1차 실패 재시도 — userId 필터는 유지(다른 사용자 데이터 노출 방지).
+    let fallback = supabase
       .from("fixed_expenses")
       .select("*, category:expense_categories(*)")
       .eq("is_active", true)
       .order("day_of_month");
-    return ((fallback.data as FixedExpense[]) ?? []);
+    if (userId) fallback = fallback.eq("user_id", userId);
+    const r = await fallback;
+    return ((r.data as FixedExpense[]) ?? []);
   }
   return ((data as FixedExpense[]) ?? []);
 }
@@ -316,7 +319,8 @@ export function useFixedExpenses() {
         .gte("date", startDate)
         .eq("fixed_expense_id", id);
       if (userId) qFk = qFk.eq("user_id", userId);
-      await qFk;
+      const fkDel = await qFk;
+      if (fkDel.error) return { error: fkDel.error };
 
       let qLegacy = supabase
         .from("expenses")
@@ -327,7 +331,8 @@ export function useFixedExpenses() {
       if (fx.description === null) qLegacy = qLegacy.is("description", null);
       else qLegacy = qLegacy.eq("description", fx.description);
       if (userId) qLegacy = qLegacy.eq("user_id", userId);
-      await qLegacy;
+      const legacyDel = await qLegacy;
+      if (legacyDel.error) return { error: legacyDel.error };
 
       let countFkQ = supabase
         .from("expenses")
@@ -358,10 +363,11 @@ export function useFixedExpenses() {
           .eq("id", id);
         if (r.error) return { error: r.error };
       } else {
-        await supabase
+        const r = await supabase
           .from("fixed_expenses")
           .update({ repeat_months: remaining })
           .eq("id", id);
+        if (r.error) return { error: r.error };
       }
 
       invalidate();

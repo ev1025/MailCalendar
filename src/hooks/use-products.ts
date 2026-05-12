@@ -31,13 +31,16 @@ async function fetchProducts(
   if (userId) query = query.eq("user_id", userId);
   const { data, error } = await query;
   if (error) {
-    const fallback = await supabase
+    // 1차 실패 재시도 — 정렬 컬럼만 줄이고 userId 필터는 유지(타인 데이터 노출 방지).
+    let fallback = supabase
       .from("products")
       .select("*")
       .order("is_active", { ascending: false })
       .order("category")
       .order("name");
-    return ((fallback.data as Product[]) ?? []);
+    if (userId) fallback = fallback.eq("user_id", userId);
+    const r = await fallback;
+    return ((r.data as Product[]) ?? []);
   }
   return ((data as Product[]) ?? []);
 }
