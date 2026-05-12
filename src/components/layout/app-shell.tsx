@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "./sidebar";
 import BottomNav from "./bottom-nav";
 import UserSwitcher from "./user-switcher";
+import CommandPalette from "./command-palette";
 import { useSupabaseAuth } from "@/lib/auth-supabase";
 import { useCurrentUser, useAppUsers } from "@/lib/current-user";
 import { supabase } from "@/lib/supabase";
@@ -13,6 +14,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [gateOpen, setGateOpen] = useState(false);
+  const [cmdkOpen, setCmdkOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -60,6 +62,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [hydrated, authLoading, usersLoading, authUser, currentUser]);
 
   const allowClose = !!authUser && !!currentUser;
+
+  // ⌘K / Ctrl+K — 빠른 이동 팔레트 토글. 로그인 게이트가 닫혀 있을 때만(=정상 사용 중).
+  useEffect(() => {
+    if (!allowClose) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdkOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [allowClose]);
 
   // 레이아웃 전략:
   //  - 모바일: 전체 화면 고정(fixed inset-0 h-dvh) + main 내부 스크롤.
@@ -112,6 +127,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         }}
         allowClose={allowClose}
       />
+
+      {allowClose && <CommandPalette open={cmdkOpen} onOpenChange={setCmdkOpen} />}
     </>
   );
 }
