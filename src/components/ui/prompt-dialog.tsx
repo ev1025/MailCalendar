@@ -59,9 +59,8 @@ export default function PromptDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-[17px] font-semibold leading-tight break-keep">
-            {title}
-          </DialogTitle>
+          {/* 크기·굵기는 DialogTitle 프리미티브(text-base font-semibold)에 위임 — 통일. */}
+          <DialogTitle className="break-keep">{title}</DialogTitle>
         </DialogHeader>
         <Input
           value={value}

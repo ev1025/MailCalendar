@@ -50,9 +50,7 @@ export default function PanelDialog({
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <DialogTitle className="text-[17px] font-semibold leading-none flex-1 min-w-0">
-            {title}
-          </DialogTitle>
+          <DialogTitle className="flex-1 min-w-0 truncate">{title}</DialogTitle>
           {headerAction && <div className="shrink-0">{headerAction}</div>}
         </div>
 
