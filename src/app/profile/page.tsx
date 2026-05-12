@@ -22,6 +22,7 @@ import AvatarCropDialog from "@/components/layout/avatar-crop-dialog";
 import ShareManager from "@/components/calendar/share-manager";
 import PageHeader from "@/components/layout/page-header";
 import ColorPickerRow from "@/components/ui/color-picker-popover";
+import SectionLabel from "@/components/ui/section-label";
 
 const DEFAULT_COLOR = "#3B82F6";
 const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
@@ -32,14 +33,6 @@ const reveal = (delay: number) => ({
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const, delay },
 });
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-      {children}
-    </p>
-  );
-}
 
 export default function ProfilePage() {
   return (
@@ -205,7 +198,7 @@ function ProfilePageInner() {
           </motion.button>
 
           <motion.div {...reveal(0.1)} className="text-center">
-            <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black leading-none tracking-tight text-foreground md:text-[28px]">
+            <h1 className="font-display text-2xl font-black leading-none tracking-tight text-foreground md:text-[28px]">
               {name || "이름 없음"}
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">{authUser?.email}</p>

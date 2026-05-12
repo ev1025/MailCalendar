@@ -73,14 +73,14 @@ function CountCell({
       style={{ backgroundColor: bg }}
     >
       <span
-        // Montserrat — 이전 iframe 디자인의 그 글자 (변수는 layout.tsx 에서 주입).
-        className="font-[family-name:var(--font-montserrat)] text-4xl font-black tabular-nums leading-none tracking-tight sm:text-5xl"
+        // 큰 디스플레이 타이포 — font-display 토큰(= Montserrat, globals.css 참고).
+        className="font-display text-4xl font-black tabular-nums leading-none tracking-tight sm:text-5xl"
         style={{ color: NAVY }}
       >
         {value}
       </span>
       <span
-        className="font-[family-name:var(--font-montserrat)] mt-1.5 text-xs font-bold uppercase tracking-widest sm:text-sm"
+        className="font-display mt-1.5 text-xs font-bold uppercase tracking-widest sm:text-sm"
         style={{ color: label }}
       >
         {unit}
