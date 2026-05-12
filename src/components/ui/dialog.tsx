@@ -235,12 +235,12 @@ function DialogIcon({
       ? "bg-destructive/10 text-destructive"
       : tone === "success"
       ? "bg-success-bg text-success"
-      : "bg-primary/10 text-primary"
+      : "bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20"
   return (
     <span
       data-slot="dialog-icon"
       className={cn(
-        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
         toneCls,
         className
       )}

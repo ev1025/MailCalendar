@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import CardTitleIcon from "@/components/ui/card-title-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -369,12 +370,7 @@ function SettingsPageInner() {
         <div key="general" className="flex flex-col gap-3 stagger-list">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
-                  <Palette className="h-3.5 w-3.5" />
-                </span>
-                테마
-              </CardTitle>
+              <CardTitleIcon icon={Palette}>테마</CardTitleIcon>
             </CardHeader>
             <CardContent>
               {/* 세그먼트 컨트롤 — 다른 곳(탭·프로필 표시모드)과 같은 시각 언어로 통일.
@@ -437,12 +433,7 @@ function SettingsPageInner() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
-                  <CloudSun className="h-3.5 w-3.5" />
-                </span>
-                일기예보
-              </CardTitle>
+              <CardTitleIcon icon={CloudSun}>일기예보</CardTitleIcon>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {!locEditing ? (
@@ -517,12 +508,7 @@ function SettingsPageInner() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                  </span>
-                  D-day
-                </CardTitle>
+                <CardTitleIcon icon={CalendarDays}>D-day</CardTitleIcon>
                 <button
                   type="button"
                   role="switch"
@@ -590,12 +576,7 @@ function SettingsPageInner() {
           {/* 계정 — 비밀번호 변경 + 로그아웃 + 프로필 삭제 */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
-                  <UserCircle className="h-3.5 w-3.5" />
-                </span>
-                계정
-              </CardTitle>
+              <CardTitleIcon icon={UserCircle}>계정</CardTitleIcon>
             </CardHeader>
             <CardContent className="flex flex-col gap-1">
               <button
