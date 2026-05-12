@@ -69,10 +69,14 @@ export function useWeather(year: number, month: number) {
     }
     return map;
   };
-  const [weatherMap, setWeatherMap] = useState<Record<string, WeatherData>>(computeInitialMap);
-  const [loading, setLoading] = useState(
-    () => Object.keys(computeInitialMap()).length === 0,
-  );
+  // localStorage 를 한 번만 읽어 map·loading 둘 다 초기화 (이전엔 computeInitialMap 을
+  // useState 초기값으로 2번 호출 → 마운트 때 localStorage 2번 읽음).
+  const initial = useState(() => {
+    const map = computeInitialMap();
+    return { map, loading: Object.keys(map).length === 0 };
+  })[0];
+  const [weatherMap, setWeatherMap] = useState<Record<string, WeatherData>>(initial.map);
+  const [loading, setLoading] = useState(initial.loading);
 
   useEffect(() => {
     const abortController = new AbortController();

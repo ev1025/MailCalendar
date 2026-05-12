@@ -35,6 +35,10 @@ export default function PullToRefresh({
   const startYRef = useRef<number | null>(null);
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  // 핸들러가 항상 최신값을 보게 ref 로 미러링 — pull/refreshing 을 effect deps 에 넣으면
+  // touchmove 마다(초당 수십 번) 4개 리스너를 떼었다 다시 다는 낭비 + stale 클로저 발생.
+  const pullRef = useRef(0);
+  const refreshingRef = useRef(false);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -43,37 +47,43 @@ export default function PullToRefresh({
       ? (document.querySelector(scrollableSelector) as HTMLElement | null) ?? el
       : el;
 
+    const setPullBoth = (v: number) => {
+      pullRef.current = v;
+      setPull(v);
+    };
+
     const onTouchStart = (e: TouchEvent) => {
-      if (refreshing) return;
+      if (refreshingRef.current) return;
       // 스크롤 최상단에서만 트리거.
       if (scrollable.scrollTop > 0) return;
       startYRef.current = e.touches[0].clientY;
     };
     const onTouchMove = (e: TouchEvent) => {
-      if (refreshing || startYRef.current == null) return;
+      if (refreshingRef.current || startYRef.current == null) return;
       const dy = e.touches[0].clientY - startYRef.current;
       if (dy <= 0) {
-        setPull(0);
+        setPullBoth(0);
         return;
       }
       // 저항감 — 실제 손가락 이동의 50% 만 따라감.
       const resisted = Math.min(dy * 0.5, threshold * 1.6);
-      setPull(resisted);
+      setPullBoth(resisted);
     };
     const onTouchEnd = async () => {
       const startY = startYRef.current;
       startYRef.current = null;
       if (startY == null) return;
-      const reachedThreshold = pull >= threshold;
-      if (reachedThreshold) {
+      if (pullRef.current >= threshold) {
+        refreshingRef.current = true;
         setRefreshing(true);
         try {
           await onRefresh();
         } finally {
+          refreshingRef.current = false;
           setRefreshing(false);
         }
       }
-      setPull(0);
+      setPullBoth(0);
     };
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -86,7 +96,7 @@ export default function PullToRefresh({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [onRefresh, threshold, pull, refreshing, scrollableSelector]);
+  }, [onRefresh, threshold, scrollableSelector]);
 
   const ready = pull >= threshold;
   const indicatorY = refreshing ? threshold : pull;

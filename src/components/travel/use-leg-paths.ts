@@ -25,6 +25,9 @@ export function legPathKey(
 export function useLegPaths(visibleLegs: TaskLeg[]): LegPathMap {
   const [legPaths, setLegPaths] = useState<LegPathMap>({});
   const pending = useRef<Set<string>>(new Set());
+  // 이미 path 를 받은 key 들 — effect 가 legPaths(state)를 읽으면 stale 클로저라
+  // visibleLegs 가 바뀔 때마다 해결된 경로까지 재패칭함 → ref 로 추적해 항상 최신값 참조.
+  const resolved = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +49,7 @@ export function useLegPaths(visibleLegs: TaskLeg[]): LegPathMap {
           leg.toTask.place_lng,
           mode
         );
-        if (legPaths[key] || pending.current.has(key)) continue;
+        if (resolved.current.has(key) || pending.current.has(key)) continue;
         pending.current.add(key);
         try {
           const result = await getRouteData(
@@ -56,6 +59,7 @@ export function useLegPaths(visibleLegs: TaskLeg[]): LegPathMap {
           );
           if (cancelled) return;
           if (result?.path && result.path.length > 1) {
+            resolved.current.add(key);
             setLegPaths((p) => ({ ...p, [key]: result.path! }));
           }
         } finally {
@@ -64,8 +68,6 @@ export function useLegPaths(visibleLegs: TaskLeg[]): LegPathMap {
       }
     })();
     return () => { cancelled = true; };
-    // legPaths 는 의도적 제외 — pending ref 로 중복 방지
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleLegs]);
 
   return legPaths;
