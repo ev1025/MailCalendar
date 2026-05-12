@@ -46,6 +46,7 @@ import { useFixedExpenses } from "@/hooks/use-fixed-expenses";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useCurrentUserId } from "@/lib/current-user";
 import ProductForm from "@/components/products/product-form";
+import PullToRefresh from "@/components/ui/pull-to-refresh";
 import type { Product } from "@/types";
 import PageHeader from "@/components/layout/page-header";
 import HeaderViewMenu from "@/components/layout/header-view-menu";
@@ -217,6 +218,7 @@ function ProductsPageInner() {
     updateProduct,
     deleteProduct,
     batchUpdateSortOrder,
+    refetch,
   } = useProducts();
   const {
     categories: midCategories,
@@ -504,7 +506,10 @@ function ProductsPageInner() {
         }
       />
     <div className="flex flex-col h-[calc(100%-3.5rem)]">
-    <div className="flex-1 overflow-y-auto p-4 md:p-6 animate-page-in">
+    <PullToRefresh
+      onRefresh={async () => { await refetch(); }}
+      className="flex-1 overflow-y-auto p-4 md:p-6 animate-page-in"
+    >
       <div className="w-full md:max-w-5xl md:mx-auto">
 
       <div className="mb-4 flex flex-col gap-3">
@@ -950,7 +955,7 @@ function ProductsPageInner() {
         </DialogContent>
       </Dialog>
       </div>
-    </div>
+    </PullToRefresh>
     </div>
     </>
   );
