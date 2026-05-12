@@ -15,6 +15,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import SearchInput from "@/components/ui/search-input";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import { useUrlStringParam } from "@/hooks/use-url-param";
@@ -576,7 +577,8 @@ function ProductsPageInner() {
                       e.stopPropagation();
                       setPendingDeleteCategory(c);
                     }}
-                    className="flex h-4 w-4 items-center justify-center rounded-full opacity-60 hover:opacity-100 hover:bg-black/10"
+                    // 시각은 작게, hit area 는 -m-1.5 + p-1.5 로 ~28px 확보(레이아웃 영향 없음).
+                    className="-m-1.5 flex items-center justify-center rounded-full p-1.5 opacity-60 hover:bg-black/10 hover:opacity-100"
                     aria-label={`${c} 삭제`}
                   >
                     <X className="h-3 w-3" />
@@ -589,7 +591,24 @@ function ProductsPageInner() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">불러오는 중...</p>
+        <div className="flex flex-col gap-3" aria-hidden>
+          {Array.from({ length: 3 }).map((_, g) => (
+            <div key={g} className="rounded-lg border bg-card overflow-hidden">
+              <div className="px-2.5 py-2">
+                <Skeleton className="h-3.5 w-24" />
+              </div>
+              <div className="border-t flex flex-col divide-y">
+                {Array.from({ length: 3 }).map((_, r) => (
+                  <div key={r} className="flex items-center gap-3 px-2 py-2">
+                    <Skeleton className="h-4 w-5 shrink-0" />
+                    <Skeleton className="h-3 flex-1" />
+                    <Skeleton className="h-3 w-12 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
           <p className="text-sm text-muted-foreground">

@@ -325,29 +325,24 @@ function SettingsPageInner() {
           background: `radial-gradient(72% 100% at 28% -20%, ${accentWash}24, transparent 60%)`,
         }}
       />
-      <div className="mx-auto max-w-2xl px-4 py-5 md:mx-0 md:px-6 md:py-6">
+      <div className="mx-auto max-w-2xl px-4 py-4 md:mx-0 md:px-6 md:py-5">
 
-      {/* 페이지 인트로 — 큰 디스플레이 타이포 + 한 줄 안내. */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
+      {/* 한 줄 안내 — 큰 "설정" 타이틀은 PageHeader 와 중복이라 제거(세로 압축). */}
+      <motion.p
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-5"
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-3 px-0.5 text-xs text-muted-foreground"
       >
-        <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black tracking-tight text-foreground">
-          설정
-        </h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          테마·일기예보·D-day·계정·연동을 관리해요.
-        </p>
-      </motion.div>
+        테마·일기예보·D-day·계정·연동을 관리해요.
+      </motion.p>
 
       {/* 탭 — segmented. 좌우 동일 폭. */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
-        className="mb-6 inline-flex w-full rounded-2xl border bg-muted/40 p-1"
+        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+        className="mb-4 inline-flex w-full rounded-2xl border bg-muted/40 p-1"
       >
         {(["general", "account", "api"] as const).map((t) => {
           const label =
@@ -371,11 +366,11 @@ function SettingsPageInner() {
       </motion.div>
 
       {tab === "general" ? (
-        <div key="general" className="flex flex-col gap-4 stagger-list">
+        <div key="general" className="flex flex-col gap-3 stagger-list">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
                   <Palette className="h-3.5 w-3.5" />
                 </span>
                 테마
@@ -435,7 +430,7 @@ function SettingsPageInner() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
                   <CloudSun className="h-3.5 w-3.5" />
                 </span>
                 일기예보
@@ -515,7 +510,7 @@ function SettingsPageInner() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
                     <CalendarDays className="h-3.5 w-3.5" />
                   </span>
                   D-day
@@ -588,7 +583,7 @@ function SettingsPageInner() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-color-soft text-accent-color ring-1 ring-accent-color/20">
                   <UserCircle className="h-3.5 w-3.5" />
                 </span>
                 계정

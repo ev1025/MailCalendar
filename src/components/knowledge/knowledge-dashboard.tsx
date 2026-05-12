@@ -85,7 +85,7 @@ export function NoteTreeRow({ item, depth, selectMode, selected, onToggle, onCli
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-          className="shrink-0 p-1 rounded hover:bg-accent"
+          className="shrink-0 -m-1 p-2 rounded-md hover:bg-accent"
           aria-label="즐겨찾기 해제"
         >
           <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
@@ -509,7 +509,7 @@ export default function KnowledgeDashboard({
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onTogglePinItem(item.id, item.pinned); }}
-                        className="shrink-0 p-1 rounded hover:bg-accent"
+                        className="shrink-0 -m-1 p-2 rounded-md hover:bg-accent"
                         aria-label="즐겨찾기 해제"
                       >
                         <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />

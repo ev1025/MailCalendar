@@ -244,11 +244,13 @@
     -ms-overflow-style: none;    /* IE 10+ */
   }
 
-  /* 키보드 포커스 링 — 마우스 hover 와 분리. 키보드 사용자만 명확한 포커스 표시. */
+  /* 키보드 포커스 링 — 마우스 hover 와 분리. 키보드 사용자만 명확한 포커스 표시.
+     border-radius: inherit 로 둥근/사각 요소 모두 자기 모양대로 outline (이전엔 고정값이라
+     rounded-full 칩·rounded-[2rem] 아바타에 사각 outline 이 그려졌음). */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
-    border-radius: calc(var(--radius) * 0.5);
+    border-radius: inherit;
     transition: outline-offset 120ms ease;
   }
 

@@ -381,7 +381,7 @@ export default function DatabaseView({
                             ? "text-blue-500 dark:text-blue-400"
                             : "text-foreground";
                       return (
-                        <span className="text-[10px] tabular-nums">
+                        <span className="text-xs tabular-nums">
                           <span className={dowColor(s.dow)}>
                             {s.month}/{s.day}({s.weekday})
                           </span>
@@ -407,13 +407,13 @@ export default function DatabaseView({
                   </td>
                   {/* 제목 */}
                   <td className="px-2 py-1.5 border-r overflow-hidden min-w-0">
-                    <div className="text-[11px] font-medium truncate">{ev.title}</div>
+                    <div className="text-xs font-medium truncate">{ev.title}</div>
                   </td>
                   {/* 태그 */}
                   <td className="px-2 py-1.5 overflow-hidden min-w-0">
                     <div className="flex gap-1 overflow-hidden whitespace-nowrap">
                       {ev.tag ? ev.tag.split(",").map((t) => (
-                        <Badge key={t} className="text-[10px] h-4 font-normal px-1.5 py-0 shrink-0" style={{ backgroundColor: (tagColorMap[t] || "#6B7280") + "20", color: tagColorMap[t] || "#6B7280", borderColor: (tagColorMap[t] || "#6B7280") + "40" }}>
+                        <Badge key={t} className="text-[11px] h-5 font-normal px-1.5 py-0 shrink-0" style={{ backgroundColor: (tagColorMap[t] || "#6B7280") + "20", color: tagColorMap[t] || "#6B7280", borderColor: (tagColorMap[t] || "#6B7280") + "40" }}>
                           {t}
                         </Badge>
                       )) : <span className="text-[11px] text-muted-foreground/40">-</span>}

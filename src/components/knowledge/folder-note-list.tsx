@@ -329,7 +329,7 @@ function ItemRow({ item, selectMode, selected, onClick, onLongPress, onTogglePin
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onTogglePin(item.id, item.pinned); }}
-          className="shrink-0 p-1 rounded hover:bg-accent"
+          className="shrink-0 -m-1 p-2 rounded-md hover:bg-accent"
           aria-label="즐겨찾기 해제"
         >
           <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
