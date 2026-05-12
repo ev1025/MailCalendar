@@ -275,8 +275,8 @@ function KnowledgePageInner() {
     setDraftsOpen(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await deleteItem(id);
+  const handleDelete = async (id: string, opts?: { undo?: boolean }) => {
+    const { error } = await deleteItem(id, opts);
     if (error) {
       toast.error("삭제 실패");
       return;
@@ -557,7 +557,7 @@ function KnowledgePageInner() {
                     onSelectFolder={(fid) => setViewFolderId(fid)}
                     onNavigateToFolder={(fid) => setViewFolderId(fid)}
                     onDeleteItems={async (ids) => {
-                      for (const id of ids) await handleDelete(id);
+                      for (const id of ids) await handleDelete(id, { undo: false });
                     }}
                     onDeleteFolders={async (ids) => {
                       for (const id of ids) deleteFolder(id);
@@ -593,7 +593,7 @@ function KnowledgePageInner() {
                     searchQuery={search}
                     searchResults={searchResults}
                     onDeleteItems={async (ids) => {
-                      for (const id of ids) await handleDelete(id);
+                      for (const id of ids) await handleDelete(id, { undo: false });
                     }}
                     onDeleteFolders={async (ids) => {
                       for (const id of ids) deleteFolder(id);

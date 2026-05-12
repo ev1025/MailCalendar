@@ -9,6 +9,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useCurrentUserId } from "@/lib/current-user";
 import { stripHtml } from "@/lib/sanitize";
+import { toast } from "sonner";
 import type { KnowledgeItem } from "@/types";
 
 const STALE_TIME = 5 * 60 * 1000;
@@ -100,16 +101,61 @@ export function useKnowledgeItems(folderId: string | null) {
     [inv],
   );
 
+  /**
+   * 노트 삭제 — 낙관적 제거. `opts.undo`(기본 true)면 "실행취소" 토스트 노출.
+   * 노트는 leaf(다른 테이블이 참조 안 함)라 삭제 즉시 실행하고, 실행취소 시
+   * 원본 행을 같은 id 로 다시 insert 해 완전 복원. 일괄 삭제(여러 건 루프)는
+   * 토스트 폭주를 막으려 호출처에서 `{ undo: false }` 로 끔(이미 확인 모달 통과).
+   */
   const deleteItem = useCallback(
-    async (id: string) => {
+    async (id: string, opts?: { undo?: boolean }) => {
+      const showUndo = opts?.undo ?? true;
+      // 모든 knowledge-items 캐시에서 원본 행 확보 + 낙관적 제거.
+      let original: KnowledgeItem | null = null;
+      queryClient
+        .getQueryCache()
+        .findAll({ queryKey: ["knowledge-items"] })
+        .forEach((q) => {
+          const data = q.state.data as KnowledgeItem[] | undefined;
+          if (!data) return;
+          const found = data.find((it) => it.id === id);
+          if (!found) return;
+          if (!original) original = found;
+          queryClient.setQueryData(
+            q.queryKey,
+            data.filter((it) => it.id !== id),
+          );
+        });
+
       const { error } = await supabase
         .from("knowledge_items")
         .delete()
         .eq("id", id);
-      if (!error) inv();
-      return { error };
+      if (error) {
+        inv(); // 실패 → 캐시 복원
+        return { error };
+      }
+
+      if (showUndo && original) {
+        const orig = original as KnowledgeItem;
+        toast("노트를 삭제했어요", {
+          duration: 5000,
+          action: {
+            label: "실행취소",
+            onClick: async () => {
+              const { error: reErr } = await supabase
+                .from("knowledge_items")
+                .insert(orig);
+              inv();
+              if (reErr) toast.error("복원 실패");
+            },
+          },
+        });
+      }
+      inv();
+      return { error: null };
     },
-    [inv],
+    [queryClient, inv],
   );
 
   /**
