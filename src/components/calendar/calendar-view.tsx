@@ -79,7 +79,9 @@ function DraggableBar({ seg, onClickDate }: { seg: Seg; onClickDate: (d: string)
         e.stopPropagation();
         if (!isDragging) onClickDate(event.start_date);
       }}
-      className={`pointer-events-auto flex items-center justify-center overflow-hidden text-white cursor-grab active:cursor-grabbing ${
+      // select-none + touch-none + iOS callout 차단 — 모바일에서 바를 길게 눌러
+      // 드래그하려 할 때 텍스트 선택/복사 메뉴가 뜨면서 드래그가 막히던 문제.
+      className={`pointer-events-auto flex select-none touch-none items-center justify-center overflow-hidden text-white cursor-grab active:cursor-grabbing [-webkit-touch-callout:none] ${
         isDragging ? "opacity-30" : ""
       }`}
       style={{
@@ -99,7 +101,7 @@ function DraggableBar({ seg, onClickDate }: { seg: Seg; onClickDate: (d: string)
         whiteSpace: "nowrap",
       }}
     >
-      <span className="truncate px-1">
+      <span className="truncate px-1 select-none">
         {event.title}
         {endLabel && <span className="ml-0.5 opacity-80">({endLabel})</span>}
       </span>
@@ -129,7 +131,9 @@ function DropCell({
       ref={setNodeRef}
       onClick={onClick}
       data-pulse={pulse ? "true" : undefined}
-      className={`flex min-h-0 min-w-0 cursor-pointer flex-col border-b border-r text-left transition-colors data-[pulse=true]:cell-add-pulse ${
+      // select-none + iOS callout 차단 — 셀 내 날짜·날씨 텍스트를 길게 눌러도
+      // 선택/복사 메뉴가 안 뜨게 (드래그 시작 방해 방지).
+      className={`flex min-h-0 min-w-0 cursor-pointer select-none flex-col border-b border-r text-left transition-colors [-webkit-touch-callout:none] data-[pulse=true]:cell-add-pulse ${
         isOver ? "bg-primary/10 ring-1 ring-primary/30 ring-inset" : "hover:bg-accent/50"
       }`}
     >

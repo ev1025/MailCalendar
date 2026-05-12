@@ -349,15 +349,17 @@ export default function DatabaseView({
               </tr>
             </thead>
             <tbody>
+              {/* <tr> 에 transform(layout / x) 을 주면 브라우저가 셀 정렬을 깨뜨림
+                  (특히 검색으로 행이 자주 추가·제거될 때 transform 잔류). opacity 만으로
+                  enter/exit — 시각적으로도 표에선 fade 가 더 자연스러움. */}
               <AnimatePresence initial={false}>
               {filtered.map((ev) => (
                 <motion.tr
                   key={ev.id}
-                  layout="position"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: 16 }}
-                  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.14 }}
                   className="cursor-pointer hover:bg-accent/50 transition-colors border-b last:border-b-0"
                   onClick={() => onEdit(ev)}
                 >
