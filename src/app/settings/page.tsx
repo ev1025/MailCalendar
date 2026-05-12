@@ -377,23 +377,31 @@ function SettingsPageInner() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
+              {/* 세그먼트 컨트롤 — 다른 곳(탭·프로필 표시모드)과 같은 시각 언어로 통일.
+                  (이전엔 채워진/외곽 버튼 3개라 "토글" 패턴이 제각각이었음.) */}
+              <div className="inline-flex w-full rounded-full border bg-muted/40 p-0.5">
                 {([
                   { value: "system" as Theme, icon: Monitor, label: "시스템" },
                   { value: "light" as Theme, icon: Sun, label: "라이트" },
                   { value: "dark" as Theme, icon: Moon, label: "다크" },
-                ]).map(({ value, icon: Icon, label }) => (
-                  <Button
-                    key={value}
-                    variant={theme === value ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => applyTheme(value)}
-                  >
-                    <Icon className="h-4 w-4 mr-1.5" />
-                    {label}
-                  </Button>
-                ))}
+                ]).map(({ value, icon: Icon, label }) => {
+                  const active = theme === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => applyTheme(value)}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition-colors tap-feedback ${
+                        active
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* 액센트 컬러 — 사이드바 활성, 토스트, 강조 등에 적용. 6개 색상. */}

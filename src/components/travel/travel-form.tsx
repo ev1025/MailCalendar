@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { parseYmd } from "@/lib/date-utils";
 import FormPage from "@/components/ui/form-page";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,16 @@ import {
 } from "@/components/ui/select";
 import TagInput from "@/components/ui/tag-input";
 import ColorPickerRow from "@/components/ui/color-picker-popover";
-import NaverMap from "@/components/travel/naver-map";
 import { X, MapPin, Search as SearchIcon } from "lucide-react";
+
+// NaverMap 은 외부 지도 SDK 를 끌어옴 — 장소 카드를 펼쳐 지도를 볼 때만 필요하므로
+// next/dynamic 으로 lazy load. 폼 첫 진입 번들에서 제외.
+const NaverMap = dynamic(() => import("@/components/travel/naver-map"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[200px] w-full animate-pulse rounded-md bg-muted/60" />
+  ),
+});
 import { toast } from "sonner";
 import { translateError } from "@/lib/api-errors";
 import { useTravelCategories, BUILTIN_TRAVEL_CATEGORIES } from "@/hooks/use-travel-categories";
