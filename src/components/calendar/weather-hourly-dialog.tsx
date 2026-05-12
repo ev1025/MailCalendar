@@ -131,19 +131,22 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 스크롤 양 끝에서는 fade 끄기 — 끝까지 보이는 카드가 없는데 페이드되면 어색함.
-  // scroll 위치 감지해 atStart/atEnd 상태 갱신, mask gradient 동적 구성.
+  // 좌우 edge fade — "양쪽 끝(스크롤 시작/끝)에 닿으면 그쪽 페이드 제거, 중간에선 양쪽 페이드".
+  // scrollLeft 가 0~FADE_PX 사이일 때는 페이드 폭을 비례로 줄여서 끝에 다가갈수록
+  // 부드럽게 사라짐(binary on/off 가 아니라 점진). 오른쪽도 동일.
+  const FADE_PX = 32;
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
+  const [leftFade, setLeftFade] = useState(0); // 0 ~ FADE_PX
+  const [rightFade, setRightFade] = useState(0);
   useEffect(() => {
     if (!open) return;
     const el = scrollRef.current;
     if (!el) return;
     const update = () => {
-      setAtStart(el.scrollLeft <= 0);
-      // 1px 여유 — 부동소수점/줌 단계에서 정확히 같지 않아도 끝으로 인식.
-      setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 1);
+      const left = el.scrollLeft;
+      const right = el.scrollWidth - el.clientWidth - el.scrollLeft;
+      setLeftFade(Math.max(0, Math.min(FADE_PX, left)));
+      setRightFade(Math.max(0, Math.min(FADE_PX, right)));
     };
     update();
     el.addEventListener("scroll", update, { passive: true });
@@ -155,15 +158,11 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
     };
   }, [open, entries]);
 
-  // mask gradient 동적 구성 — 끝에서는 해당 쪽 fade 제거.
+  // mask gradient — 왼쪽: 0px(transparent) → leftFade px(black). 오른쪽: (100%-rightFade)px(black) → 100%(transparent).
+  // leftFade/rightFade 가 0 이면 그쪽은 사실상 black 0 / black 100% 라 페이드 없음.
   const stripMask = useMemo(() => {
-    const stops: string[] = [];
-    if (atStart) stops.push("black 0");
-    else stops.push("transparent 0", "black 19px");
-    if (atEnd) stops.push("black 100%");
-    else stops.push("black calc(100% - 19px)", "transparent 100%");
-    return `linear-gradient(to right, ${stops.join(", ")})`;
-  }, [atStart, atEnd]);
+    return `linear-gradient(to right, transparent 0, black ${leftFade}px, black calc(100% - ${rightFade}px), transparent 100%)`;
+  }, [leftFade, rightFade]);
 
   useEffect(() => {
     if (!open || !date) return;
