@@ -199,9 +199,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* 라이트 ↔ 다크 모드 전환 시 모든 색상 부드럽게 transition.
-       JS 가 .dark 클래스를 토글할 때 모든 oklch 변수 값이 250ms 에 걸쳐 보간됨.
-       prefers-reduced-motion 시 자동 무력화. */
+    /* 라이트 ↔ 다크 모드 전환 시 배경/글자 부드럽게. body 하나라 항상 켜둬도 무해. */
     transition: background-color 250ms ease, color 250ms ease;
   }
   html {
@@ -210,11 +208,15 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  /* 카드·border·muted 같은 색상도 같이 부드럽게 — 일부 요소만 따로 변하면 어색.
-     transform/opacity 등 movement 속성은 제외 (성능 + 의도하지 않은 효과 회피). */
-  *, *::before, *::after {
+  /* 테마/액센트 전환 순간에만 모든 요소의 색상을 부드럽게 보간.
+     이전엔 * 에 상시 transition 이 걸려 모든 hover·data-state 토글·필터 칩이 200ms
+     씩 늘어져 인터랙션이 뭉개졌음 → settings 의 applyTheme/applyAccent 가 .theme-transition
+     클래스를 잠깐 붙였다 떼는 동안만 적용. transform/opacity 는 제외(성능·의도치 않은 효과). */
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
     transition-property: background-color, border-color, color, fill, stroke;
-    transition-duration: 200ms;
+    transition-duration: 250ms;
     transition-timing-function: ease;
   }
 

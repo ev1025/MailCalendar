@@ -186,8 +186,10 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
+      // text-base · font-semibold 로 통일 — 호출처마다 text-[17px]/font-medium 등으로
+      // 제각각이던 것을 한 곳에서 표준화. leading-snug 로 한국어 줄바꿈 시 답답하지 않게.
       className={cn(
-        "font-heading text-base leading-none font-medium",
+        "font-heading text-base leading-snug font-semibold",
         className
       )}
       {...props}

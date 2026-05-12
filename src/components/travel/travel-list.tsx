@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo, useState, useEffect } from "react";
 import { Trash2, CalendarPlus, Check, ArrowUp, ArrowDown, Filter, X, Route } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import RowActionPopover from "@/components/ui/row-action-popover";
 import FilterPanel from "@/components/ui/filter-panel";
 import ListToolbar from "@/components/ui/list-toolbar";
@@ -591,7 +592,18 @@ export default function TravelList({ onNavigateToMonth, onAddEvent, onAddEventTa
       />
 
       {loading ? (
-        <div className="py-20" aria-hidden />
+        <div className="rounded-lg border overflow-hidden" aria-hidden>
+          <div className="flex flex-col divide-y">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-2 py-2.5">
+                <Skeleton className="h-3 w-4 shrink-0" />
+                <Skeleton className="h-3 flex-[2]" />
+                <Skeleton className="h-3 w-12 shrink-0" />
+                <Skeleton className="h-3 flex-1" />
+              </div>
+            ))}
+          </div>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <p className="text-sm text-muted-foreground">

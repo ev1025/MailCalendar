@@ -174,21 +174,22 @@ export default function FormPage({
           {!hideFooter && (
             <div className="mt-6 md:mt-8 flex items-center justify-between gap-2">
               <div>{footerStart}</div>
+              {/* 전체화면 폼의 주요 액션 — 모바일 h-10 으로 충분한 터치 영역 확보, md+ 는 h-9. */}
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
                   onClick={handleCancel}
                   disabled={saving}
+                  className="h-10 md:h-9"
                 >
                   {cancelLabel}
                 </Button>
                 <Button
                   type="button"
-                  size="sm"
                   onClick={() => { if (onSubmit) void onSubmit(); }}
                   disabled={saving || submitDisabled || !onSubmit}
+                  className="h-10 md:h-9"
                 >
                   {saving ? "저장 중…" : submitLabel}
                 </Button>

@@ -265,9 +265,18 @@ function SettingsPageInner() {
     if (savedAccent) setAccent(savedAccent);
   }, []);
 
+  // 테마/액센트 전환 순간에만 .theme-transition 을 잠깐 붙였다 떼어 색 변화를 부드럽게.
+  // (상시 * transition 은 hover·토글이 뭉개져서 제거됨 — globals.css 참고.)
+  const flashThemeTransition = () => {
+    const root = document.documentElement;
+    root.classList.add("theme-transition");
+    window.setTimeout(() => root.classList.remove("theme-transition"), 320);
+  };
+
   const applyTheme = (t: Theme) => {
     setTheme(t);
     localStorage.setItem("theme", t);
+    flashThemeTransition();
     const root = document.documentElement;
     if (t === "dark") root.classList.add("dark");
     else if (t === "light") root.classList.remove("dark");
@@ -280,6 +289,7 @@ function SettingsPageInner() {
   const applyAccent = (a: Accent) => {
     setAccent(a);
     localStorage.setItem("accent", a);
+    flashThemeTransition();
     const root = document.documentElement;
     if (a === "default") root.removeAttribute("data-accent");
     else root.setAttribute("data-accent", a);

@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { parseYmd } from "@/lib/date-utils";
 import { ArrowUp, Filter, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import FilterPanel from "@/components/ui/filter-panel";
 import SearchInput from "@/components/ui/search-input";
 import WeatherIcon from "./weather-icon";
@@ -266,7 +267,18 @@ export default function DatabaseView({
       </div>
 
       {loading ? (
-        <div className="py-20" aria-hidden />
+        <div className="flex-1 min-h-0 rounded-lg border overflow-hidden" aria-hidden>
+          <div className="flex flex-col divide-y">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-2 py-2.5">
+                <Skeleton className="h-3 w-16 shrink-0" />
+                <Skeleton className="h-3 w-6 shrink-0" />
+                <Skeleton className="h-3 flex-1" />
+                <Skeleton className="h-3 w-10 shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <p className="text-sm text-muted-foreground">
