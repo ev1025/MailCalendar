@@ -8,6 +8,8 @@ import {
   Check,
   Settings as SettingsIcon,
   Share2,
+  ImageIcon,
+  Smile,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +25,21 @@ import ColorPickerRow from "@/components/ui/color-picker-popover";
 
 const DEFAULT_COLOR = "#3B82F6";
 const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
+
+// 페이지 진입 stagger — Hero(그라데이션→아바타→이름) → 섹션들이 순차 등장.
+const reveal = (delay: number) => ({
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const, delay },
+});
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+      {children}
+    </p>
+  );
+}
 
 export default function ProfilePage() {
   return (
@@ -122,11 +139,8 @@ function ProfilePageInner() {
     );
   }
 
-  // 미리보기 색상 + emoji/avatar 변화가 즉시 hero 에 반영되도록 반응형 값.
   const previewBg =
-    avatarMode === "image" && avatarUrl
-      ? "transparent"
-      : `${color}30`;
+    avatarMode === "image" && avatarUrl ? "transparent" : `${color}28`;
 
   return (
     <div className="flex flex-col min-h-full">
@@ -134,90 +148,91 @@ function ProfilePageInner() {
         title="내 프로필"
         showBell
         actions={
-          <>
-            <button
+          <div className="flex items-center gap-1">
+            <motion.button
               type="button"
               onClick={() => setShareOpen(true)}
               aria-label="캘린더 공유"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+              whileTap={{ scale: 0.92 }}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <Share2 className="h-5 w-5" strokeWidth={1.6} />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={() => router.push("/settings")}
               aria-label="설정"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+              whileTap={{ scale: 0.92 }}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <SettingsIcon className="h-5 w-5" strokeWidth={1.6} />
-            </button>
-          </>
+            </motion.button>
+          </div>
         }
       />
 
-      {/* ── Hero ───────────────────────────────────────
-          사용자 색 기반 radial wash + 큰 아바타 + 이름 + 이메일.
-          색을 바꾸면 즉시 배경에 반영 — "이건 내 공간" 인지 강화.
-          페이지 진입 시 Hero → 편집 카드 stagger fade-in. */}
-      <motion.section
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.23, ease: "easeOut" }}
-        className="relative px-6 pt-8 pb-7 overflow-hidden"
-      >
-        <div
+      {/* ── Hero ──────────────────────────────────────────────────────
+          사용자 색을 화면 끝까지 채우는 그라데이션 메시로 — "이건 내 공간".
+          아바타가 그 위에 떠 있고, 이름은 Montserrat 디스플레이로 크게. */}
+      <section className="relative overflow-hidden">
+        <motion.div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 transition-colors duration-500"
-          style={{
-            background: `radial-gradient(60% 60% at 50% 0%, ${color}25 0%, transparent 70%)`,
-          }}
-        />
-        <div className="flex flex-col items-center gap-3">
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="pointer-events-none absolute inset-0 -z-10"
+        >
+          <div
+            className="absolute inset-0 transition-[background] duration-500"
+            style={{
+              background: `radial-gradient(78% 110% at 28% -10%, ${color}40, transparent 58%), radial-gradient(64% 88% at 92% 6%, ${color}22, transparent 54%)`,
+            }}
+          />
+          {/* 하단을 배경색으로 페이드 — 섹션과 자연스럽게 이어짐 */}
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-background" />
+        </motion.div>
+
+        <div className="flex flex-col items-center gap-4 px-6 pt-9 pb-7 md:pt-12 md:pb-8">
           <motion.button
+            {...reveal(0.05)}
             type="button"
             onClick={() => {
               if (avatarMode === "image") fileRef.current?.click();
             }}
             whileTap={{ scale: 0.96 }}
-            transition={{ type: "spring", stiffness: 400, damping: 22 }}
-            className="relative flex h-28 w-28 shrink-0 items-center justify-center rounded-full text-[48px] overflow-hidden ring-4 ring-background shadow-lg"
+            className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[2rem] text-[44px] shadow-xl ring-[5px] ring-background md:h-28 md:w-28 md:text-[52px]"
             style={{ backgroundColor: previewBg, color }}
-            aria-label="아바타 변경"
+            aria-label={avatarMode === "image" ? "아바타 이미지 변경" : "이모지는 아래에서 선택"}
           >
             {avatarMode === "image" && avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt="avatar"
-                className="h-full w-full object-cover"
-              />
+              <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
             ) : (
               emoji || (name ? name[0] : "?")
             )}
           </motion.button>
-          <div className="text-center">
-            <p className="text-xl font-bold tracking-tight text-foreground">
-              {name || "이름 없음"}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {authUser?.email}
-            </p>
-          </div>
-        </div>
-      </motion.section>
 
-      {/* ── 편집 카드 — 단일 통합. divide-y 로 row 구분 ── */}
+          <motion.div {...reveal(0.12)} className="text-center">
+            <h1 className="font-[family-name:var(--font-montserrat)] text-[28px] font-black leading-none tracking-tight text-foreground md:text-3xl">
+              {name || "이름 없음"}
+            </h1>
+            <p className="mt-1.5 text-xs text-muted-foreground">{authUser?.email}</p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── 편집 ──────────────────────────────────────────────────────
+          섹션 라벨 + row 리스트(iOS 설정 결). 이름/표시/모드별 옵션. */}
       <motion.section
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.23, ease: "easeOut", delay: 0.06 }}
-        className="px-4 md:px-6"
+        {...reveal(0.18)}
+        className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 pb-12 md:px-6"
       >
-        <div className="mx-auto w-full max-w-md">
-          <div className="rounded-2xl border bg-card divide-y">
+        <div>
+          <SectionLabel>아이덴티티</SectionLabel>
+          <div className="overflow-hidden rounded-2xl border bg-card divide-y divide-border/60">
             {/* 이름 */}
-            <div className="flex items-center gap-3 px-4 py-3">
-              <span className="text-xs font-medium text-muted-foreground w-14 shrink-0">
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <span className="w-12 shrink-0 text-xs font-medium text-muted-foreground">
                 이름
               </span>
               <Input
@@ -225,129 +240,136 @@ function ProfilePageInner() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="이름"
                 maxLength={20}
-                className="h-9 flex-1 border-0 bg-transparent px-2 shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
+                className="h-9 flex-1 border-0 bg-transparent px-2 text-base font-medium shadow-none focus-visible:ring-1 focus-visible:ring-primary/40 md:h-9"
               />
             </div>
 
-            {/* 표시 모드 */}
-            <div className="flex items-center gap-3 px-4 py-3">
-              <span className="text-xs font-medium text-muted-foreground w-14 shrink-0">
+            {/* 표시 모드 — 아이콘 세그먼트 */}
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <span className="w-12 shrink-0 text-xs font-medium text-muted-foreground">
                 표시
               </span>
               <div className="inline-flex rounded-full border bg-muted/40 p-0.5 text-xs">
+                {([
+                  { mode: "image" as const, icon: ImageIcon, label: "이미지" },
+                  { mode: "emoji" as const, icon: Smile, label: "이모지" },
+                ]).map(({ mode, icon: Icon, label }) => {
+                  const active = avatarMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setAvatarMode(mode)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors ${
+                        active
+                          ? "bg-background text-foreground shadow-sm font-medium"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {avatarMode === "image" ? (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <SectionLabel>아바타 이미지</SectionLabel>
+            <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+                className="h-10 w-full"
+              >
+                <Upload className="mr-1.5 h-4 w-4" /> 이미지 업로드 (10MB 이하)
+              </Button>
+              {avatarUrl && (
                 <button
                   type="button"
-                  onClick={() => setAvatarMode("image")}
-                  className={`px-3 py-1 rounded-full transition-colors ${
-                    avatarMode === "image"
-                      ? "bg-background text-foreground shadow-sm font-medium"
-                      : "text-muted-foreground"
-                  }`}
+                  onClick={() => setAvatarUrl("")}
+                  className="self-end text-[11px] text-muted-foreground hover:text-foreground"
                 >
-                  이미지
+                  아바타 초기화
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setAvatarMode("emoji")}
-                  className={`px-3 py-1 rounded-full transition-colors ${
-                    avatarMode === "emoji"
-                      ? "bg-background text-foreground shadow-sm font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  이모지
-                </button>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="flex flex-col gap-6"
+          >
+            <div>
+              <SectionLabel>강조 색</SectionLabel>
+              <div className="rounded-2xl border bg-card px-4 py-3.5">
+                <ColorPickerRow color={color} onChange={setColor} />
               </div>
             </div>
 
-            {/* 모드 별 컨텐츠 */}
-            {avatarMode === "image" ? (
-              <div className="px-4 py-3 flex flex-col gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileRef.current?.click()}
-                  className="h-9 w-full"
-                >
-                  <Upload className="mr-1.5 h-3.5 w-3.5" /> 이미지 업로드
-                </Button>
-                {avatarUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setAvatarUrl("")}
-                    className="text-[11px] text-muted-foreground hover:text-foreground self-end"
-                  >
-                    아바타 초기화
-                  </button>
-                )}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-            ) : (
-              <>
-                {/* 색상 row */}
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <span className="text-xs font-medium text-muted-foreground w-14 shrink-0">
-                    색상
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <ColorPickerRow color={color} onChange={setColor} />
-                  </div>
-                </div>
-
-                {/* 이모지 그리드 */}
-                <div className="px-4 py-3">
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">
-                    이모지
-                  </p>
-                  <div className="grid grid-cols-8 gap-1">
-                    {PRESET_EMOJIS.map((e) => (
+            <div>
+              <SectionLabel>이모지</SectionLabel>
+              <div className="rounded-2xl border bg-card p-3">
+                <div className="grid grid-cols-6 gap-1.5">
+                  {PRESET_EMOJIS.map((e) => {
+                    const active = emoji === e;
+                    return (
                       <motion.button
                         key={e}
                         type="button"
                         onClick={() => setEmoji(e)}
-                        whileTap={{ scale: 0.88 }}
-                        whileHover={{ scale: 1.08 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 400,
-                          damping: 20,
-                        }}
-                        className={`flex h-8 w-full items-center justify-center rounded-md text-base transition-colors ${
-                          emoji === e
-                            ? "ring-2 ring-primary bg-primary/10"
+                        whileTap={{ scale: 0.85 }}
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ type: "spring", stiffness: 420, damping: 20 }}
+                        className={`flex h-10 w-full items-center justify-center rounded-xl text-lg transition-colors ${
+                          active
+                            ? "bg-primary/10 ring-2 ring-primary"
                             : "hover:bg-accent"
                         }`}
                       >
                         {e}
                       </motion.button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
-          {/* 저장 CTA — 카드 외부 강조. dirty 일 때만 활성. */}
+        {/* 저장 — dirty 일 때만 활성. */}
+        <motion.div
+          animate={dirty ? { y: [-2, 0] } : { y: 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 18 }}
+        >
           <Button
             type="button"
             onClick={handleUpdate}
             disabled={!name.trim() || !dirty || saving}
-            className="mt-4 h-11 w-full text-sm font-semibold"
+            className="h-12 w-full text-sm font-semibold"
           >
             <Check className="mr-1.5 h-4 w-4" />
             {saving ? "저장 중..." : dirty ? "변경사항 저장" : "저장됨"}
           </Button>
-        </div>
+        </motion.div>
       </motion.section>
-
-      <div className="mb-10" />
 
       <AvatarCropDialog
         src={cropping?.src ?? null}
@@ -357,11 +379,7 @@ function ProfilePageInner() {
         }}
         onConfirm={async (dataUrl) => {
           const prevUrl = avatarUrl;
-          const { url, error } = await uploadToStorage(
-            "avatars",
-            dataUrl,
-            "jpg",
-          );
+          const { url, error } = await uploadToStorage("avatars", dataUrl, "jpg");
           if (error || !url) {
             toast.error(error || "이미지 업로드 실패");
             return;

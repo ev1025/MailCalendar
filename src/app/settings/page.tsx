@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { motion } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -304,13 +305,44 @@ function SettingsPageInner() {
   const kmaWarning = daysLeft <= 60 && daysLeft > 0;
   const holidayWarning = holidayDaysLeft <= 60 && holidayDaysLeft > 0;
 
+  const accentWash = currentUser?.color || "#3B82F6";
+
   return (
     <>
       <PageHeader title="설정" showBack />
-    <div className="px-4 py-4 md:px-6 md:py-6 max-w-2xl mx-auto md:mx-0">
+    <div className="relative">
+      {/* 상단 사용자 색 워시 — 프로필 페이지와 톤 통일. "이건 내 앱" 인지. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-56 transition-[background] duration-500"
+        style={{
+          background: `radial-gradient(72% 100% at 28% -20%, ${accentWash}24, transparent 60%)`,
+        }}
+      />
+      <div className="mx-auto max-w-2xl px-4 py-5 md:mx-0 md:px-6 md:py-6">
 
-      {/* 탭 — segmented (Apple 스타일 pill). 좌우 동일 폭. */}
-      <div className="mb-5 inline-flex w-full rounded-full border bg-muted/40 p-0.5">
+      {/* 페이지 인트로 — 큰 디스플레이 타이포 + 한 줄 안내. */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="mb-5"
+      >
+        <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black tracking-tight text-foreground">
+          설정
+        </h1>
+        <p className="mt-1 text-xs text-muted-foreground">
+          테마·일기예보·D-day·계정·연동을 관리해요.
+        </p>
+      </motion.div>
+
+      {/* 탭 — segmented. 좌우 동일 폭. */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
+        className="mb-6 inline-flex w-full rounded-2xl border bg-muted/40 p-1"
+      >
         {(["general", "account", "api"] as const).map((t) => {
           const label =
             t === "general" ? "일반" : t === "account" ? "계정" : "API";
@@ -320,7 +352,7 @@ function SettingsPageInner() {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-all tap-feedback ${
+              className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-all tap-feedback ${
                 active
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -330,14 +362,14 @@ function SettingsPageInner() {
             </button>
           );
         })}
-      </div>
+      </motion.div>
 
       {tab === "general" ? (
         <div key="general" className="flex flex-col gap-4 stagger-list">
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
                   <Palette className="h-3.5 w-3.5" />
                 </span>
                 테마
@@ -397,7 +429,7 @@ function SettingsPageInner() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
                   <CloudSun className="h-3.5 w-3.5" />
                 </span>
                 일기예보
@@ -477,7 +509,7 @@ function SettingsPageInner() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
                     <CalendarDays className="h-3.5 w-3.5" />
                   </span>
                   D-day
@@ -550,7 +582,7 @@ function SettingsPageInner() {
           <Card>
             <CardHeader>
               <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
                   <UserCircle className="h-3.5 w-3.5" />
                 </span>
                 계정
@@ -869,6 +901,7 @@ function SettingsPageInner() {
 
         </div>
       )}
+      </div>
     </div>
 
     <PasswordChangeDialog open={pwDialogOpen} onOpenChange={setPwDialogOpen} />
