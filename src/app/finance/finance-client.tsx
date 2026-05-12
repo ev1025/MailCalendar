@@ -120,55 +120,84 @@ function FinancePageInner() {
     return { expenseFixedExpenses: exp, incomeFixedExpenses: inc, totalFixed: total };
   }, [fixedExpenses]);
 
-  // FixedExpenseManager 두 인스턴스(income/expense) 가 공유하는 핸들러 묶음.
-  // 이전엔 두 인스턴스가 각각 ~50줄 동일 핸들러를 인라인 정의 → -100줄 리팩토링.
+  // refetchTransactions 는 useTransactions 가 매 렌더 새 함수로 반환 → ref 로 잡아
+  // 핸들러 useCallback deps 에서 제외 (그러면 핸들러·sharedManagerProps 가 안정).
+  const refetchTxRef = useRef(refetchTransactions);
+  refetchTxRef.current = refetchTransactions;
+
+  // FixedExpenseManager 두 인스턴스(income/expense) 공유 핸들러 — 각각 useCallback.
+  const mUpdate = useCallback(
+    async (id: string, updates: Parameters<typeof updateFixed>[1]) => {
+      const r = await updateFixed(id, updates);
+      if (!r.error) await refetchTxRef.current();
+      return r;
+    },
+    [updateFixed],
+  );
+  const mDelete = useCallback(
+    async (id: string) => {
+      const r = await deleteFixed(id);
+      if (!r.error) await refetchTxRef.current();
+      return r;
+    },
+    [deleteFixed],
+  );
+  const mDeleteScope = useCallback(
+    async (id: string, y: number, m: number) => {
+      const r = await deleteFixedWithScope(id, y, m);
+      if (!r.error) await refetchTxRef.current();
+      return r;
+    },
+    [deleteFixedWithScope],
+  );
+  const mUpdateScope = useCallback(
+    async (
+      id: string,
+      updates: Parameters<typeof updateFixedWithScope>[1],
+      y: number,
+      m: number,
+    ) => {
+      const r = await updateFixedWithScope(id, updates, y, m);
+      if (!r.error) await refetchTxRef.current();
+      return r;
+    },
+    [updateFixedWithScope],
+  );
+  const mEnsure = useCallback(
+    async (id: string, repeat: number, fromY?: number, fromM?: number) => {
+      const r = await ensureFixedMonths(id, repeat, fromY, fromM);
+      if (!r.error) await refetchTxRef.current();
+      return r;
+    },
+    [ensureFixedMonths],
+  );
   const sharedManagerProps = useMemo(
     () => ({
       categories,
       defaultYear: year,
       defaultMonth: month,
-      onUpdate: async (id: string, updates: Parameters<typeof updateFixed>[1]) => {
-        const r = await updateFixed(id, updates);
-        if (!r.error) await refetchTransactions();
-        return r;
-      },
-      onDelete: async (id: string) => {
-        const r = await deleteFixed(id);
-        if (!r.error) await refetchTransactions();
-        return r;
-      },
-      onDeleteWithScope: async (id: string, y: number, m: number) => {
-        const r = await deleteFixedWithScope(id, y, m);
-        if (!r.error) await refetchTransactions();
-        return r;
-      },
-      onUpdateWithScope: async (
-        id: string,
-        updates: Parameters<typeof updateFixedWithScope>[1],
-        y: number,
-        m: number,
-      ) => {
-        const r = await updateFixedWithScope(id, updates, y, m);
-        if (!r.error) await refetchTransactions();
-        return r;
-      },
-      onEnsureFixedMonths: async (
-        id: string,
-        repeat: number,
-        fromY?: number,
-        fromM?: number,
-      ) => {
-        const r = await ensureFixedMonths(id, repeat, fromY, fromM);
-        if (!r.error) await refetchTransactions();
-        return r;
-      },
+      onUpdate: mUpdate,
+      onDelete: mDelete,
+      onDeleteWithScope: mDeleteScope,
+      onUpdateWithScope: mUpdateScope,
+      onEnsureFixedMonths: mEnsure,
       onAddCategory: addCategory,
       onDeleteCategory: deleteCategory,
       onUpdateCategoryColor: updateCategoryColor,
     }),
-    // 핸들러 함수 ref 들이 안정적이라 변경 빈도 낮음. category·month 변경시만 갱신.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [categories, year, month],
+    [
+      categories,
+      year,
+      month,
+      mUpdate,
+      mDelete,
+      mDeleteScope,
+      mUpdateScope,
+      mEnsure,
+      addCategory,
+      deleteCategory,
+      updateCategoryColor,
+    ],
   );
 
   // 수입 add — bulk insert 까지 await + 실패 시 toast. 폼이 즉시 닫혀도 거래 반영 보장.

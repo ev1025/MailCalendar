@@ -14,12 +14,16 @@ import type { KnowledgeItem } from "@/types";
 const STALE_TIME = 5 * 60 * 1000;
 const GC_TIME = 24 * 60 * 60 * 1000;
 
-export function knowledgeItemsQueryKey(folderId: string | null) {
-  return ["knowledge-items", folderId ?? "all"] as const;
+export function knowledgeItemsQueryKey(
+  folderId: string | null,
+  userId?: string | null,
+) {
+  return ["knowledge-items", userId ?? "", folderId ?? "all"] as const;
 }
 
 async function fetchItems(
   folderId: string | null,
+  userId: string | null | undefined,
 ): Promise<KnowledgeItem[]> {
   let query = supabase
     .from("knowledge_items")
@@ -27,6 +31,8 @@ async function fetchItems(
     .order("pinned", { ascending: false })
     .order("updated_at", { ascending: false });
   if (folderId) query = query.eq("folder_id", folderId);
+  // RLS 가 1차 방어이지만 클라이언트 anon key 직접 쿼리라 명시적 user_id 필터도 둠.
+  if (userId) query = query.eq("user_id", userId);
   const { data, error } = await query;
   if (error) return [];
   return ((data as KnowledgeItem[]) ?? []);
@@ -40,13 +46,13 @@ export function useKnowledgeItems(folderId: string | null) {
   const userId = useCurrentUserId();
   const queryClient = useQueryClient();
   const queryKey = useMemo(
-    () => knowledgeItemsQueryKey(folderId),
-    [folderId],
+    () => knowledgeItemsQueryKey(folderId, userId),
+    [folderId, userId],
   );
 
   const itemsQuery = useQuery<KnowledgeItem[]>({
     queryKey,
-    queryFn: () => fetchItems(folderId),
+    queryFn: () => fetchItems(folderId, userId),
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
   });

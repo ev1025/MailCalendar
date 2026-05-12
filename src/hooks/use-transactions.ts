@@ -117,9 +117,12 @@ export function useTransactions(startDate: string, endDate?: string) {
     const prefetch = (delta: number) => {
       const t = new Date(baseY, baseM - 1 + delta, 1);
       const ny = t.getFullYear();
-      const nm = t.getMonth() + 1;
+      const nm = t.getMonth() + 1; // 1-indexed
       const sd = monthBounds(ny, nm).start;
-      const edStr = monthBounds(ny, nm + 1).start;
+      // 다음 달 1일을 Date 로 직접 계산 — monthBounds(ny, nm+1) 는 12월일 때
+      // "YYYY-13-01" 같은 잘못된 문자열을 만들어 queryKey/쿼리가 깨졌음.
+      const next = new Date(ny, nm, 1); // nm 은 1-indexed 라 JS 의 nm = "다음 달"
+      const edStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-01`;
       const k = transactionsQueryKey(userId, sd, edStr);
       queryClient.prefetchQuery({
         queryKey: k,

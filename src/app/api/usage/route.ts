@@ -9,17 +9,20 @@ export const dynamic = "force-dynamic";
 // SUPABASE_SERVICE_ROLE_KEY 미설정 시 503 반환 (클라이언트는 안내 메시지 표시).
 
 // 모듈 레벨 싱글톤 — 매 요청마다 createClient 재호출 회피 (초기화 비용).
-// env 변수 누락 시엔 null. lazy 초기화로 placeholder URL 가지고 createClient 콜
-// 안 하게 막음.
+// 단 warm serverless 인스턴스에서 service role key 가 교체돼도 이전 클라이언트를
+// 계속 쓰던 문제 → 키 앞 8자를 캐시 식별자로 두고 다르면 재생성.
 let cachedClient: SupabaseClient | null = null;
+let cachedKeyTag: string | null = null;
 function getServiceClient(): SupabaseClient | null {
-  if (cachedClient) return cachedClient;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
+  const tag = key.slice(0, 8);
+  if (cachedClient && cachedKeyTag === tag) return cachedClient;
   cachedClient = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  cachedKeyTag = tag;
   return cachedClient;
 }
 

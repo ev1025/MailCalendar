@@ -217,7 +217,13 @@ function SettingsPageInner() {
 
   const handleDeleteProfile = async () => {
     if (!currentUser) return;
-    await deleteUser(currentUser.id);
+    const { error } = await deleteUser(currentUser.id);
+    if (error) {
+      // 삭제 실패한 채로 로그아웃하면 DB 엔 데이터가 남아 "삭제된 줄 알았는데
+      // 재로그인하니 그대로" 상태가 됨 → 실패 시 중단.
+      toast.error("프로필 삭제 실패");
+      return;
+    }
     await supabaseSignOut();
     router.replace("/");
   };

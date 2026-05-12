@@ -58,8 +58,10 @@ export async function deleteFromStorage(bucket: UploadBucket, publicUrl: string)
     const idx = publicUrl.indexOf(marker);
     if (idx === -1) return;
     const path = publicUrl.slice(idx + marker.length);
-    await supabase.storage.from(bucket).remove([path]);
-  } catch {
-    /* 무시 */
+    const { error } = await supabase.storage.from(bucket).remove([path]);
+    // 실패해도 호출자 흐름은 안 막지만, 고아 파일 누적 추적용으로 흔적은 남김.
+    if (error) console.warn(`[deleteFromStorage] ${bucket}/${path}:`, error.message);
+  } catch (e) {
+    console.warn(`[deleteFromStorage] ${bucket}:`, e);
   }
 }

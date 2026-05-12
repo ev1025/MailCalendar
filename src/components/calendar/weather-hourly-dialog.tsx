@@ -130,6 +130,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
   const [entries, setEntries] = useState<HourlyEntry[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // SVG gradient ID — 전역 DOM ID 라 같은 페이지에 이 SVG 가 둘 이상(다이얼로그 enter/exit
+  // 겹침 등) 마운트되면 충돌해 후자가 전자의 그라디언트를 참조. 인스턴스별 유니크 접미사.
+  const gradId = useMemo(() => `hw-${Math.random().toString(36).slice(2, 8)}`, []);
 
   // 좌우 edge fade — "양쪽 끝(스크롤 시작/끝)에 닿으면 그쪽 페이드 제거, 중간에선 양쪽 페이드".
   // scrollLeft 가 0~FADE_PX 사이일 때는 페이드 폭을 비례로 줄여서 끝에 다가갈수록
@@ -166,9 +169,9 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
 
   useEffect(() => {
     if (!open || !date) return;
-    // 캐시 hit (24h 안쪽) → 즉시 표시, 추가 fetch 없음. 갱신은 calendar/page 의
-    // "하루 한 번 일괄 prefetch" 에서 담당 (앱 켤 때 마지막 sync 날짜와 다르면
-    // 보이는 월 전체 force-refresh). miss 면 즉시 네트워크.
+    // SWR: stale 캐시(24h 안쪽) 즉시 표시 + fresh(30m) 아니면 백그라운드 갱신.
+    // miss 면 즉시 네트워크. (이전엔 stale hit 시 갱신을 calendar/page 일괄 prefetch
+    // 에만 맡겨서, 앱을 새로 안 열면 30분~24h 묵은 데이터가 계속 보였음.)
     const key = cacheKey(date, location.lat, location.lon);
     const cached = readCacheStale(key);
     let cancelled = false;
@@ -176,6 +179,11 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
       setEntries(cached);
       setLoading(false);
       setError(null);
+      if (!isCacheFresh(key)) {
+        fetchHourlyNetwork(date, location.lat, location.lon).then((rows) => {
+          if (!cancelled && rows) setEntries(rows);
+        });
+      }
     } else {
       setEntries(null);
       setError(null);
@@ -413,19 +421,19 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
                     aria-hidden
                   >
                     <defs>
-                      <linearGradient id="hourly-stroke" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id={`${gradId}-stroke`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="oklch(0.7 0.18 30)" />
                         <stop offset="100%" stopColor="oklch(0.78 0.13 250)" />
                       </linearGradient>
-                      <linearGradient id="hourly-fill" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id={`${gradId}-fill`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="oklch(0.78 0.13 30)" stopOpacity="0.28" />
                         <stop offset="100%" stopColor="oklch(0.78 0.13 30)" stopOpacity="0" />
                       </linearGradient>
                     </defs>
-                    <path d={areaPath} fill="url(#hourly-fill)" />
+                    <path d={areaPath} fill={`url(#${gradId}-fill)`} />
                     <path
                       d={linePath}
-                      stroke="url(#hourly-stroke)"
+                      stroke={`url(#${gradId}-stroke)`}
                       strokeWidth={2}
                       fill="none"
                       strokeLinecap="round"

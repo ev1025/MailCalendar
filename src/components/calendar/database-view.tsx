@@ -101,6 +101,10 @@ export default function DatabaseView({
   const resizingCol = useRef<number | null>(null);
   const resizeStartX = useRef(0);
   const resizeStartW = useRef(0);
+  // 리사이즈 중 document 에 건 mousemove/mouseup 리스너 정리용 — mouseup 이 안 와도
+  // (브라우저 포커스 손실 등) unmount 시 확실히 해제.
+  const resizeAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => resizeAbortRef.current?.abort(), []);
 
 
   // 이벤트 수 200+ 시 매 렌더마다 O(n) 처리 — events 변경 시에만 재계산.
@@ -156,6 +160,9 @@ export default function DatabaseView({
     resizeStartW.current = currentWidths[colIdx];
     setIsResizing(true);
 
+    resizeAbortRef.current?.abort();
+    const ac = new AbortController();
+    resizeAbortRef.current = ac;
     const onMove = (ev: MouseEvent) => {
       if (resizingCol.current === null) return;
       const diff = ev.clientX - resizeStartX.current;
@@ -168,11 +175,10 @@ export default function DatabaseView({
     const onUp = () => {
       resizingCol.current = null;
       setIsResizing(false);
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+      ac.abort();
     };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    document.addEventListener("mousemove", onMove, { signal: ac.signal });
+    document.addEventListener("mouseup", onUp, { signal: ac.signal });
   }, [colWidths]);
 
 
