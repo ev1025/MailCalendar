@@ -313,6 +313,27 @@ export function useFixedExpenses() {
 
       const startDate = monthBounds(year, month).start;
 
+      // 1순위: 원자적 RPC(supabase-fixed-rpc.sql). 함수 미설치(SQL 미실행) 시에만
+      // 아래 다단계 폴백으로 — PGRST202(PostgREST: 함수 못 찾음) / 42883(PG: 함수 없음).
+      {
+        const rpc = await supabase.rpc("delete_fixed_with_scope", {
+          p_fixed_id: id,
+          p_start_date: startDate,
+        });
+        if (!rpc.error) {
+          invalidate();
+          invalidateTx();
+          return { error: null };
+        }
+        const code = (rpc.error as { code?: string }).code;
+        const missing =
+          code === "PGRST202" ||
+          code === "42883" ||
+          /function .* does not exist|could not find the function/i.test(rpc.error.message ?? "");
+        if (!missing) return { error: rpc.error };
+        // → 함수 없음: 다단계 폴백 계속
+      }
+
       let qFk = supabase
         .from("expenses")
         .delete()
