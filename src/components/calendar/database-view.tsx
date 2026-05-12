@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { parseYmd } from "@/lib/date-utils";
 import { ArrowUp, Filter, X, CalendarSearch, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +99,7 @@ export default function DatabaseView({
   const [colWidths, setColWidths] = useState<number[]>([]);
   const [isResizing, setIsResizing] = useState(false);
   const tableRef = useRef<HTMLTableElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const resizingCol = useRef<number | null>(null);
   const resizeStartX = useRef(0);
   const resizeStartW = useRef(0);
@@ -219,6 +220,23 @@ export default function DatabaseView({
     { label: "태그", field: "tag" as SortField },
   ];
 
+  // 행 가상화 — 일정이 수백 개여도 보이는 영역 + overscan 만 DOM 에 둠.
+  // 행 높이는 거의 고정(텍스트 nowrap/truncate)이라 estimate 33px + measureElement 보정.
+  const rowVirtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 33,
+    overscan: 12,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const totalHeight = rowVirtualizer.getTotalSize();
+  const padTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const padBottom =
+    virtualRows.length > 0
+      ? totalHeight - virtualRows[virtualRows.length - 1].end
+      : 0;
+  const colCount = columns.length;
+
   return (
     // 모바일·데스크톱 모두 부모(calendar-md-height) 가 height 정의 — 자체 내부 스크롤.
     // 이전엔 모바일 자연 스크롤 의도였으나 부모 컨테이너의 overflow-hidden 으로
@@ -308,7 +326,7 @@ export default function DatabaseView({
           />
         )
       ) : (
-        <div className={`flex-1 min-h-0 rounded-lg border overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
+        <div ref={scrollRef} className={`flex-1 min-h-0 rounded-lg border overflow-auto ${isResizing ? "select-none cursor-col-resize" : ""}`}>
           <table
             ref={tableRef}
             className="w-full border-collapse"
@@ -352,17 +370,20 @@ export default function DatabaseView({
               </tr>
             </thead>
             <tbody>
-              {/* <tr> 에 transform(layout / x) 을 주면 브라우저가 셀 정렬을 깨뜨림
-                  (특히 검색으로 행이 자주 추가·제거될 때 transform 잔류). opacity 만으로
-                  enter/exit — 시각적으로도 표에선 fade 가 더 자연스러움. */}
-              <AnimatePresence initial={false}>
-              {filtered.map((ev) => (
-                <motion.tr
+              {/* 가상화 — 보이는 행만 렌더. 위/아래 빈 <tr> 로 스크롤 높이 확보.
+                  (이전엔 motion.tr fade 였으나 가상화와 AnimatePresence 가 안 맞아 plain <tr>.) */}
+              {padTop > 0 && (
+                <tr aria-hidden>
+                  <td colSpan={colCount} className="p-0 border-0" style={{ height: padTop }} />
+                </tr>
+              )}
+              {virtualRows.map((vr) => {
+                const ev = filtered[vr.index];
+                return (
+                <tr
                   key={ev.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.14 }}
+                  data-index={vr.index}
+                  ref={rowVirtualizer.measureElement}
                   className="cursor-pointer hover:bg-accent/50 transition-colors border-b last:border-b-0"
                   onClick={() => onEdit(ev)}
                 >
@@ -416,9 +437,14 @@ export default function DatabaseView({
                       )) : <span className="text-[11px] text-muted-foreground/40">-</span>}
                     </div>
                   </td>
-                </motion.tr>
-              ))}
-              </AnimatePresence>
+                </tr>
+                );
+              })}
+              {padBottom > 0 && (
+                <tr aria-hidden>
+                  <td colSpan={colCount} className="p-0 border-0" style={{ height: padBottom }} />
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
