@@ -70,11 +70,6 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
     zIndex: isDragging ? 50 : undefined,
   };
 
-  // 드래그 바 없이 카드 전체가 드래그 타겟.
-  // PointerSensor 의 distance=5 제약으로 단순 클릭은 onSelect, 5px 이상 이동 시
-  // 드래그 시작 — click/drag 충돌 없음.
-  const dragBindings = dragEnabled ? { ...attributes, ...listeners } : {};
-
   // 여행 상태로 시각 단서를 줌(색·배지에 "의미" 부여): 다가옴=액센트+D-N / 진행중=초록+여행중 / 다녀옴=회색·흐리게.
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -103,64 +98,66 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
     <div
       ref={setNodeRef}
       style={style}
-      {...dragBindings}
       onClick={onSelect}
-      // touch-action: pan-y 로 모바일 vertical 스크롤 허용. TouchSensor 는 delay 200ms 후
-      // 활성화되므로 빠른 스크롤·탭은 자연스럽게 처리되고 길게 누를 때만 드래그.
-      className={`group relative overflow-hidden rounded-lg border bg-card py-3 pl-3.5 pr-3 transition-colors hover:bg-accent/50 ${
-        dragEnabled ? "touch-pan-y cursor-grab active:cursor-grabbing" : "cursor-pointer"
-      } ${status === "past" ? "opacity-70" : ""}`}
+      className={`group relative cursor-pointer overflow-hidden rounded-lg border bg-card transition-colors hover:bg-accent/50 ${
+        status === "past" ? "opacity-70" : ""
+      }`}
     >
       {/* 왼쪽 상태 색 띠 */}
       <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${stripCls}`} />
-      <div className="flex items-start gap-2">
-        <h3 className="min-w-0 flex-1 truncate text-base font-semibold leading-snug">{plan.title}</h3>
-        {status === "upcoming" && dDay !== null && (
-          <span className="mt-0.5 shrink-0 rounded-full bg-accent-color-soft px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-accent-color">
-            {dDay === 0 ? "D-DAY" : `D-${dDay}`}
-          </span>
-        )}
-        {status === "ongoing" && (
-          <span className="mt-0.5 shrink-0 rounded-full bg-finance-gain/15 px-1.5 py-0.5 text-[10px] font-bold text-finance-gain">
-            여행 중
-          </span>
-        )}
-      </div>
-      <p className="mt-1 truncate pr-7 text-xs text-muted-foreground">
-        {formatPlanPeriod(plan.start_date, plan.end_date)}
-      </p>
-      <div className="absolute bottom-1 right-1.5 md:opacity-0 md:transition md:group-hover:opacity-100">
-        <RowActionPopover
-          trigger="more-h"
-          triggerLabel="계획 메뉴"
-          side="bottom"
-          align="end"
-          items={[
-            // 달력에 이미 추가된 상태면 "삭제"만, 아니면 "추가"만 노출 (둘 중 하나).
-            hasCalendarEvents
-              ? {
-                  icon: <CalendarMinus className="h-3.5 w-3.5 text-rose-600" />,
-                  label: "달력에서 삭제",
-                  onClick: onRemoveFromCalendar,
-                }
-              : {
-                  icon: <CalendarPlus className="h-3.5 w-3.5 text-blue-600" />,
-                  label: "달력에 추가",
-                  onClick: onAddToCalendar,
-                },
-            {
-              icon: <Copy className="h-3.5 w-3.5" />,
-              label: "복제",
-              onClick: onDuplicate,
-            },
-            {
-              icon: <Trash2 className="h-3.5 w-3.5" />,
-              label: "삭제",
-              destructive: true,
-              onClick: onDelete,
-            },
-          ]}
-        />
+      <div className="flex items-stretch">
+        {/* 드래그바 — 탭=메뉴, 드래그=정렬. plan-task-row·products 행과 동일 패턴. */}
+        <div onClick={(e) => e.stopPropagation()} className="flex items-center pl-1">
+          <RowActionPopover
+            triggerLabel="계획 메뉴"
+            dragAttributes={dragEnabled ? attributes : undefined}
+            dragListeners={dragEnabled ? listeners : undefined}
+            items={[
+              // 달력에 이미 추가된 상태면 "삭제"만, 아니면 "추가"만 노출 (둘 중 하나).
+              hasCalendarEvents
+                ? {
+                    icon: <CalendarMinus className="h-3.5 w-3.5 text-rose-600" />,
+                    label: "달력에서 삭제",
+                    onClick: onRemoveFromCalendar,
+                  }
+                : {
+                    icon: <CalendarPlus className="h-3.5 w-3.5 text-blue-600" />,
+                    label: "달력에 추가",
+                    onClick: onAddToCalendar,
+                  },
+              {
+                icon: <Copy className="h-3.5 w-3.5" />,
+                label: "복제",
+                onClick: onDuplicate,
+              },
+              {
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                label: "삭제",
+                destructive: true,
+                onClick: onDelete,
+              },
+            ]}
+          />
+        </div>
+        {/* 본문 */}
+        <div className="min-w-0 flex-1 py-3 pl-0.5 pr-3">
+          <div className="flex items-start gap-2">
+            <h3 className="min-w-0 flex-1 truncate text-base font-semibold leading-snug">{plan.title}</h3>
+            {status === "upcoming" && dDay !== null && (
+              <span className="mt-0.5 shrink-0 rounded-full bg-accent-color-soft px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-accent-color">
+                {dDay === 0 ? "D-DAY" : `D-${dDay}`}
+              </span>
+            )}
+            {status === "ongoing" && (
+              <span className="mt-0.5 shrink-0 rounded-full bg-finance-gain/15 px-1.5 py-0.5 text-[10px] font-bold text-finance-gain">
+                여행 중
+              </span>
+            )}
+          </div>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {formatPlanPeriod(plan.start_date, plan.end_date)}
+          </p>
+        </div>
       </div>
     </div>
   );
