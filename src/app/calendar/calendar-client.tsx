@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   CalendarDays,
   TableProperties,
+  Loader2,
 } from "lucide-react";
 import MonthPicker from "@/components/layout/month-picker";
 import PageHeader from "@/components/layout/page-header";
@@ -361,6 +362,16 @@ function CalendarPageInner() {
 
       {/* 달력 ↔ DB뷰 토글 시 cross-fade — 하드 컷 → 짧은(140ms) opacity 전환.
           mode="wait" 로 이전 뷰가 완전히 사라진 후 새 뷰가 들어와 레이아웃 점프 방지. */}
+      {eventsLoading && events.length === 0 ? (
+        /* 첫 fetch 동안(~200ms 인증·캐시 hydration) 빈 그리드를 가리는 로딩 화면.
+           events 가 한 개라도 도착하면 AnimatePresence 분기로 자연 전환. */
+        <div className="calendar-md-height flex items-center justify-center">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <p className="text-xs">불러오는 중…</p>
+          </div>
+        </div>
+      ) : (
       <AnimatePresence mode="wait" initial={false}>
       {view === "calendar" ? (
         // 데스크톱은 document 스크롤이라 부모가 h-auto → flex-1 이 0 이 되어 달력이 쪼그라듦.
@@ -438,7 +449,6 @@ function CalendarPageInner() {
             onDateClick={handleDateClick}
             onEventMove={handleEventMove}
             onReorder={batchUpdateSortOrder}
-            loading={eventsLoading}
           />
         </motion.div>
         </motion.div>
@@ -464,6 +474,7 @@ function CalendarPageInner() {
         </motion.div>
       )}
       </AnimatePresence>
+      )}
 
       {/* 날짜 상세 모달 (달력 날짜 클릭 시) */}
       <DayDetail
