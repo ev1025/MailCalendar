@@ -150,22 +150,25 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
           />
         </div>
 
-        {/* 날짜 스탬프 — 티켓 stub 느낌. 시작 월·일을 크게, 아래 라벨(D-N / 여행 중 / 다녀옴). */}
-        <div className={`my-2 ml-1 flex h-14 w-12 shrink-0 flex-col items-center justify-center rounded-md ring-1 ${tileCls}`}>
-          {startDay ? (
-            <>
-              <span className="text-[10px] font-medium leading-none">{startDay.getMonth() + 1}월</span>
-              <span className="mt-0.5 font-display text-xl font-black leading-none tabular-nums">
-                {startDay.getDate()}
-              </span>
-              {tileBadge && (
-                <span className="mt-0.5 text-[9px] font-bold leading-none">{tileBadge}</span>
-              )}
-            </>
-          ) : (
-            <span className="text-[10px] font-medium">미정</span>
-          )}
-        </div>
+        {/* 날짜 스탬프 — 티켓 stub. 다가옴/진행중/미정 만 노출. 다녀온 계획은 카드 자체가 opacity-70 으로
+            이미 약화돼 있어 타일 빼고 본문만 — 시각 노이즈 줄임. */}
+        {status !== "past" && (
+          <div className={`my-2 ml-1 flex h-14 w-12 shrink-0 flex-col items-center justify-center rounded-md ring-1 ${tileCls}`}>
+            {startDay ? (
+              <>
+                <span className="text-[10px] font-medium leading-none">{startDay.getMonth() + 1}월</span>
+                <span className="mt-0.5 font-display text-xl font-black leading-none tabular-nums">
+                  {startDay.getDate()}
+                </span>
+                {tileBadge && (
+                  <span className="mt-0.5 text-[9px] font-bold leading-none">{tileBadge}</span>
+                )}
+              </>
+            ) : (
+              <span className="text-[10px] font-medium">미정</span>
+            )}
+          </div>
+        )}
 
         {/* 본문 */}
         <div className="min-w-0 flex-1 py-3 pl-2.5 pr-3">

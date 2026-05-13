@@ -49,7 +49,26 @@ interface CalendarViewProps {
   onDateClick: (date: string) => void;
   onEventMove?: (eventId: string, newStart: string, newEnd: string | null) => void;
   onReorder?: (ids: string[]) => void;
+  /** 첫 fetch 중일 때 true — 빈 그리드 대신 스켈레톤 바를 표시해 "어차피 채워질 자리" 인지 줌. */
+  loading?: boolean;
 }
+
+// 로딩 중 표시할 스켈레톤 바 패턴 — 주(week)별 [시작칸, 칸수, slot]. 결정적이라
+// 매 렌더 같은 모양 → 깜빡이지 않음. 인증·캐시 hydration 사이 ~200ms 동안만 보임.
+const SKELETON_PATTERN: { startCol: number; spanDays: number; slot: number }[][] = [
+  [
+    { startCol: 1, spanDays: 3, slot: 0 },
+    { startCol: 4, spanDays: 2, slot: 1 },
+  ],
+  [
+    { startCol: 0, spanDays: 2, slot: 0 },
+    { startCol: 3, spanDays: 4, slot: 0 },
+  ],
+  [{ startCol: 2, spanDays: 3, slot: 0 }],
+  [{ startCol: 5, spanDays: 2, slot: 0 }],
+  [],
+  [],
+];
 
 /* ── 주 내 세그먼트 ── */
 interface Seg {
@@ -153,6 +172,7 @@ export default function CalendarView({
   onDateClick,
   onEventMove,
   onReorder,
+  loading = false,
 }: CalendarViewProps) {
   const holidayMap = useHolidayMap(year);
 
@@ -457,11 +477,26 @@ export default function CalendarView({
                   className="pointer-events-none absolute inset-x-0 bottom-0 grid grid-cols-7 top-[25px] md:top-[29px]"
                   style={{ gridAutoRows: 0 }}
                 >
-                  {segs
-                    .filter((s) => s.slot < dynamicMax)
-                    .map((seg) => (
-                      <DraggableBar key={seg.event.id + "-" + wi} seg={seg} onClickDate={onDateClick} />
-                    ))}
+                  {loading && events.length === 0
+                    ? (SKELETON_PATTERN[wi] ?? []).map((sk, i) => (
+                        <div
+                          key={`sk-${wi}-${i}`}
+                          aria-hidden
+                          className="animate-pulse rounded bg-muted/60"
+                          style={{
+                            gridColumn: `${sk.startCol + 1} / span ${sk.spanDays}`,
+                            gridRow: 1,
+                            alignSelf: "start",
+                            marginTop: sk.slot * BAR_STEP,
+                            height: BAR_H,
+                          }}
+                        />
+                      ))
+                    : segs
+                        .filter((s) => s.slot < dynamicMax)
+                        .map((seg) => (
+                          <DraggableBar key={seg.event.id + "-" + wi} seg={seg} onClickDate={onDateClick} />
+                        ))}
                 </div>
               </motion.div>
             );

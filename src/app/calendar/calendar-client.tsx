@@ -438,6 +438,7 @@ function CalendarPageInner() {
             onDateClick={handleDateClick}
             onEventMove={handleEventMove}
             onReorder={batchUpdateSortOrder}
+            loading={eventsLoading}
           />
         </motion.div>
         </motion.div>
