@@ -85,14 +85,26 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
     dDay = Math.round((startDay.getTime() - today.getTime()) / 86400000);
   } else if (!endDay || today.getTime() <= endDay.getTime()) status = "ongoing";
   else status = "past";
-  const stripCls =
-    status === "ongoing"
-      ? "bg-finance-gain"
-      : status === "upcoming"
-        ? "bg-accent-color"
-        : status === "unscheduled"
-          ? "bg-muted-foreground/15"
-          : "bg-muted-foreground/25";
+
+  // 날짜 스탬프 톤 — 상태별 색·테두리. 회색 띠 대신 "티켓 stub" 타일로 표현.
+  const tileCls =
+    status === "upcoming"
+      ? "bg-accent-color-soft text-accent-color ring-accent-color/20"
+      : status === "ongoing"
+        ? "bg-finance-gain/15 text-finance-gain ring-finance-gain/25"
+        : status === "past"
+          ? "bg-muted text-muted-foreground ring-border"
+          : "bg-muted/40 text-muted-foreground/70 ring-border/60";
+  const tileBadge =
+    status === "upcoming" && dDay !== null
+      ? dDay === 0
+        ? "D-DAY"
+        : `D-${dDay}`
+      : status === "ongoing"
+        ? "여행 중"
+        : status === "past"
+          ? "다녀옴"
+          : "";
 
   return (
     <div
@@ -103,8 +115,6 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
         status === "past" ? "opacity-70" : ""
       }`}
     >
-      {/* 왼쪽 상태 색 띠 */}
-      <span aria-hidden className={`absolute inset-y-0 left-0 w-1 ${stripCls}`} />
       <div className="flex items-stretch">
         {/* 드래그바 — 탭=메뉴, 드래그=정렬. plan-task-row·products 행과 동일 패턴. */}
         <div onClick={(e) => e.stopPropagation()} className="flex items-center pl-1">
@@ -139,21 +149,27 @@ function PlanCard({ plan, dragEnabled, hasCalendarEvents, onSelect, onDelete, on
             ]}
           />
         </div>
+
+        {/* 날짜 스탬프 — 티켓 stub 느낌. 시작 월·일을 크게, 아래 라벨(D-N / 여행 중 / 다녀옴). */}
+        <div className={`my-2 ml-1 flex h-14 w-12 shrink-0 flex-col items-center justify-center rounded-md ring-1 ${tileCls}`}>
+          {startDay ? (
+            <>
+              <span className="text-[10px] font-medium leading-none">{startDay.getMonth() + 1}월</span>
+              <span className="mt-0.5 font-display text-xl font-black leading-none tabular-nums">
+                {startDay.getDate()}
+              </span>
+              {tileBadge && (
+                <span className="mt-0.5 text-[9px] font-bold leading-none">{tileBadge}</span>
+              )}
+            </>
+          ) : (
+            <span className="text-[10px] font-medium">미정</span>
+          )}
+        </div>
+
         {/* 본문 */}
-        <div className="min-w-0 flex-1 py-3 pl-0.5 pr-3">
-          <div className="flex items-start gap-2">
-            <h3 className="min-w-0 flex-1 truncate text-base font-semibold leading-snug">{plan.title}</h3>
-            {status === "upcoming" && dDay !== null && (
-              <span className="mt-0.5 shrink-0 rounded-full bg-accent-color-soft px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-accent-color">
-                {dDay === 0 ? "D-DAY" : `D-${dDay}`}
-              </span>
-            )}
-            {status === "ongoing" && (
-              <span className="mt-0.5 shrink-0 rounded-full bg-finance-gain/15 px-1.5 py-0.5 text-[10px] font-bold text-finance-gain">
-                여행 중
-              </span>
-            )}
-          </div>
+        <div className="min-w-0 flex-1 py-3 pl-2.5 pr-3">
+          <h3 className="truncate text-base font-semibold leading-snug">{plan.title}</h3>
           <p className="mt-1 truncate text-xs text-muted-foreground">
             {formatPlanPeriod(plan.start_date, plan.end_date)}
           </p>
