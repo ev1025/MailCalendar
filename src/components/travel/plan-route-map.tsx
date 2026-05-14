@@ -16,6 +16,21 @@ interface MapPin {
   dayIndex?: number;
   /** 양방향 하이라이트(맵 ↔ 일정 행) 연결용. */
   taskId?: string;
+  /** task.start_time ("HH:MM:SS"/"HH:MM"/null) — InfoWindow 표시용. */
+  time?: string | null;
+  /** 다음 task 까지 이동시간(초) — InfoWindow 의 "다음까지 N분" 표시용. */
+  nextDurationSec?: number | null;
+}
+
+// InfoWindow 의 HTML 컨텐츠 — XSS 방지용 단순 escape.
+function escHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+// "HH:MM:SS"/"HH:MM" → "HH:MM"
+function pinTime(t: string | null | undefined): string {
+  if (!t) return "";
+  return t.length >= 5 ? t.slice(0, 5) : t;
 }
 
 // 구간(leg) 한 개 — 실제 path 있으면 실선, 없으면 인접 핀 사이 점선.
@@ -98,6 +113,9 @@ export default function PlanRouteMap({
   const cleanupRef = useRef<(() => void) | null>(null);
   // 첫 fitBounds 는 snap, 이후 segment 변경 시엔 부드럽게 panTo — 동선이 어디로 가는지 인지에 도움.
   const firstFitRef = useRef(true);
+  // 마커 클릭 시 띄우는 InfoWindow — 인스턴스는 1개 공유(다른 핀 클릭 시 setContent + reopen).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const infoWindowRef = useRef<any>(null);
 
   // 지도 인터렉션은 기본 활성 — 드래그 pan / pinch zoom / ctrl+wheel zoom 가능.
   // scrollWheel=false 로 일반 스크롤 캡처만 막음 → 페이지 스크롤 자연스러움.
@@ -230,6 +248,36 @@ export default function PlanRouteMap({
           anchor: new naver.maps.Point(12, 12),
         },
       });
+      // 클릭 → InfoWindow (장소·일차·시간·다음까지 N분). 인스턴스는 lazy 생성, 1개 공유.
+      naver.maps.Event.addListener(marker, "click", () => {
+        if (!infoWindowRef.current) {
+          infoWindowRef.current = new naver.maps.InfoWindow({
+            content: "",
+            maxWidth: 240,
+            backgroundColor: "transparent",
+            borderWidth: 0,
+            borderColor: "transparent",
+            disableAnchor: true,
+            pixelOffset: new naver.maps.Point(0, -8),
+          });
+        }
+        const t = pinTime(p.time);
+        const next = typeof p.nextDurationSec === "number" && p.nextDurationSec > 0
+          ? `다음까지 ${escHtml(formatMinutes(Math.round(p.nextDurationSec / 60)))}`
+          : "";
+        const meta = [
+          p.dayIndex != null ? `${p.dayIndex + 1}일차` : "",
+          t ? escHtml(t) : "",
+        ].filter(Boolean).join(" · ");
+        infoWindowRef.current.setContent(
+          `<div style="background:var(--card,#fff);color:var(--card-foreground,#0f172a);border:1px solid var(--border,#e5e7eb);border-radius:8px;padding:8px 10px;font-size:11px;line-height:1.4;min-width:140px;max-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.12);font-family:inherit;">` +
+            `<div style="font-weight:600;font-size:12px;">${escHtml(p.label || "")}</div>` +
+            (meta ? `<div style="color:var(--muted-foreground,#64748b);margin-top:2px;">${meta}</div>` : "") +
+            (next ? `<div style="color:var(--muted-foreground,#94a3b8);margin-top:2px;">${next}</div>` : "") +
+            `</div>`,
+        );
+        infoWindowRef.current.open(map, marker);
+      });
       overlays.push(marker);
     }
 
@@ -262,9 +310,13 @@ export default function PlanRouteMap({
     }
 
     // cleanup — 이 렌더에서 만든 overlay 만 제거. 다음 렌더에서 새 overlay 셋 생성.
+    // InfoWindow 도 닫음(stale 마커 anchor 잔존 방지).
     return () => {
       for (const o of overlays) {
         try { o.setMap(null); } catch { /* ignore */ }
+      }
+      if (infoWindowRef.current) {
+        try { infoWindowRef.current.close(); } catch { /* ignore */ }
       }
     };
   }, [mapReady, pins, legs]);

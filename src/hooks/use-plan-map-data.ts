@@ -25,6 +25,10 @@ interface MapPin {
   dayIndex?: number;
   /** 추후 양방향 하이라이트(맵 ↔ 일정 행)에 사용. */
   taskId?: string;
+  /** task.start_time (stored "HH:MM:SS" or null) — InfoWindow 표시용. */
+  time?: string | null;
+  /** 다음 task 까지 이동시간(초) — 다음 task 의 transport_duration_sec. 마지막은 null. */
+  nextDurationSec?: number | null;
 }
 
 interface MapLegSpec {
@@ -44,7 +48,9 @@ export function usePlanMapData(
   legPaths: LegPathsMap,
 ): { pins: MapPin[]; legs: MapLegSpec[] } {
   return useMemo(() => {
-    const taskToPin = (t: TravelPlanTask) =>
+    // 다음 task 의 transport_duration_sec = "이 task → 다음 task" 의 이동시간.
+    // shownTasks 인덱싱 후 인덱스로 lookup.
+    const taskToPin = (t: TravelPlanTask, idx: number, list: TravelPlanTask[]) =>
       t.place_lat != null && t.place_lng != null
         ? {
             lat: t.place_lat,
@@ -52,6 +58,8 @@ export function usePlanMapData(
             label: t.place_name,
             taskId: t.id,
             dayIndex: t.day_index,
+            time: t.start_time,
+            nextDurationSec: list[idx + 1]?.transport_duration_sec ?? null,
           }
         : null;
 
@@ -63,12 +71,16 @@ export function usePlanMapData(
       const leg = legsWithCoords[segment.legIndex];
       shownTasks = leg ? [leg.fromTask, leg.toTask] : [];
     }
-    const shownPinsAll = shownTasks.map(taskToPin).filter(Boolean) as {
+    const shownPinsAll = shownTasks
+      .map((t, i) => taskToPin(t, i, shownTasks))
+      .filter(Boolean) as {
       lat: number;
       lng: number;
       label: string;
       taskId: string;
       dayIndex: number;
+      time: string | null;
+      nextDurationSec: number | null;
     }[];
 
     const taskIdToIdx = new Map(shownPinsAll.map((p, i) => [p.taskId, i]));
@@ -101,13 +113,17 @@ export function usePlanMapData(
       });
     }
 
-    const pins: MapPin[] = shownPinsAll.map(({ lat, lng, label, dayIndex, taskId }) => ({
-      lat,
-      lng,
-      label,
-      dayIndex,
-      taskId,
-    }));
+    const pins: MapPin[] = shownPinsAll.map(
+      ({ lat, lng, label, dayIndex, taskId, time, nextDurationSec }) => ({
+        lat,
+        lng,
+        label,
+        dayIndex,
+        taskId,
+        time,
+        nextDurationSec,
+      }),
+    );
     return { pins, legs: legsForMap };
   }, [segment, sorted, legsWithCoords, visibleLegs, legPaths]);
 }
