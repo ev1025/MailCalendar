@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
+import { MapPin as MapPinIcon } from "lucide-react";
 
 // 여러 마커 + 선택적 폴리라인(자가용 경로 path 있을 때)을 표시하는 지도.
 // Phase A의 naver-map.tsx는 단일 좌표 전용이라, 경로맵 전용 컴포넌트 분리.
@@ -56,6 +57,8 @@ export default function PlanRouteMap({
   const [mapReady, setMapReady] = useState(false);
   // Alt+휠 리스너 해제용
   const cleanupRef = useRef<(() => void) | null>(null);
+  // 첫 fitBounds 는 snap, 이후 segment 변경 시엔 부드럽게 panTo — 동선이 어디로 가는지 인지에 도움.
+  const firstFitRef = useRef(true);
 
   // 지도 인터렉션은 기본 활성 — 드래그 pan / pinch zoom / ctrl+wheel zoom 가능.
   // scrollWheel=false 로 일반 스크롤 캡처만 막음 → 페이지 스크롤 자연스러움.
@@ -133,31 +136,58 @@ export default function PlanRouteMap({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const overlays: any[] = [];
 
-    // bounds 로 화면 맞춤
+    // bounds 로 화면 맞춤. 첫 fit 은 snap(initial mount 자연스럽게), 이후 segment 변경 등은
+    // panToBounds 로 부드럽게(존재하면) — Naver Maps v3 미지원 시 fitBounds 폴백.
+    const padding = { top: 40, right: 40, bottom: 40, left: 40 };
     if (pins.length > 1) {
       const bounds = new naver.maps.LatLngBounds(
         new naver.maps.LatLng(pins[0].lat, pins[0].lng),
         new naver.maps.LatLng(pins[0].lat, pins[0].lng)
       );
       for (const p of pins) bounds.extend(new naver.maps.LatLng(p.lat, p.lng));
-      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+      if (firstFitRef.current) {
+        map.fitBounds(bounds, padding);
+        firstFitRef.current = false;
+      } else if (typeof map.panToBounds === "function") {
+        map.panToBounds(bounds, padding);
+      } else {
+        map.fitBounds(bounds, padding);
+      }
     } else if (pins.length === 1) {
-      map.setCenter(new naver.maps.LatLng(pins[0].lat, pins[0].lng));
-      map.setZoom(13);
+      // 단일 핀: 부드럽게 panTo (firstFitRef 도 소비).
+      const c = new naver.maps.LatLng(pins[0].lat, pins[0].lng);
+      if (firstFitRef.current) {
+        map.setCenter(c);
+        map.setZoom(13);
+        firstFitRef.current = false;
+      } else if (typeof map.panTo === "function") {
+        map.panTo(c);
+      } else {
+        map.setCenter(c);
+      }
     }
 
-    // 번호 마커
+    // 마커 — 출발(첫 핀, 초록 ▶) / 도착(마지막 핀, 빨강 ■) / 중간(파랑 번호).
     for (let i = 0; i < pins.length; i++) {
       const p = pins[i];
+      const isStart = i === 0;
+      // 핀이 1개뿐이면 출발만 (도착 없음).
+      const isEnd = pins.length > 1 && i === pins.length - 1;
+      const bg = isStart ? "#22c55e" : isEnd ? "#ef4444" : "#3b82f6";
+      const glyph = isStart
+        ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>'
+        : isEnd
+          ? '<svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="4" width="16" height="16" rx="1"/></svg>'
+          : String(i + 1);
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(p.lat, p.lng),
         map,
         title: p.label,
         icon: {
           content:
-            `<div style="background:#3b82f6;color:#fff;border-radius:50%;width:24px;height:24px;` +
+            `<div style="background:${bg};color:#fff;border-radius:50%;width:24px;height:24px;` +
             `display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;` +
-            `box-shadow:0 1px 3px rgba(0,0,0,0.3);">${i + 1}</div>`,
+            `box-shadow:0 1px 3px rgba(0,0,0,0.3);">${glyph}</div>`,
           anchor: new naver.maps.Point(12, 12),
         },
       });
@@ -224,6 +254,14 @@ export default function PlanRouteMap({
           className={`rounded-md overflow-hidden ${heightClass ?? ""}`}
           style={heightClass ? undefined : { height }}
         />
+        {/* 빈 상태 — 지도 위에 오버레이로 깔아 map 인스턴스 라이프사이클은 유지. */}
+        {pins.length === 0 && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 rounded-md bg-muted/70 text-center text-muted-foreground backdrop-blur-sm">
+            <MapPinIcon className="h-6 w-6 opacity-60" strokeWidth={1.6} />
+            <p className="text-xs font-medium">아직 장소가 없어요</p>
+            <p className="text-[11px] text-muted-foreground/70">아래 &quot;일정 추가&quot;로 장소를 골라주세요</p>
+          </div>
+        )}
       </div>
     </>
   );
