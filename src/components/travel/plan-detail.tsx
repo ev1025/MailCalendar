@@ -331,7 +331,19 @@ export default function PlanDetail({ planId, backHref }: Props) {
                 days={days}
                 legs={legsWithCoords}
               />
-              <PlanRouteMap pins={pins} legs={mapLegs} heightClass="h-60 lg:h-[calc(100dvh-12rem)]" />
+              <PlanRouteMap
+                pins={pins}
+                legs={mapLegs}
+                heightClass="h-60 lg:h-[calc(100dvh-12rem)]"
+                legInfo={
+                  segment.mode === "leg" && legsWithCoords[segment.legIndex]
+                    ? {
+                        mode: legsWithCoords[segment.legIndex].toTask.transport_mode,
+                        durationSec: legsWithCoords[segment.legIndex].toTask.transport_duration_sec,
+                      }
+                    : undefined
+                }
+              />
             </div>
           </div>
 

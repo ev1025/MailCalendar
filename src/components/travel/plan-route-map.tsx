@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
-import { MapPin as MapPinIcon } from "lucide-react";
+import { MapPin as MapPinIcon, Plus, Minus, Maximize } from "lucide-react";
+import { formatMinutes } from "@/lib/travel/providers";
 
 // 여러 마커 + 선택적 폴리라인(자가용 경로 path 있을 때)을 표시하는 지도.
 // Phase A의 naver-map.tsx는 단일 좌표 전용이라, 경로맵 전용 컴포넌트 분리.
@@ -53,6 +54,21 @@ interface Props {
   // 지정되면 height prop 보다 우선.
   heightClass?: string;
   className?: string;
+  /** 경로별 모드 선택 시 상단에 띄울 정보 — 이동수단·소요시간. */
+  legInfo?: { mode: string | null; durationSec: number | null };
+}
+
+// 모드 한글 라벨 + 이모지 — leg info chip 표시용.
+function modeLabel(mode: string | null | undefined): string {
+  switch (mode) {
+    case "car": return "🚗 자가용";
+    case "walk": return "🚶 도보";
+    case "bus": return "🚌 버스";
+    case "subway": return "🚇 지하철";
+    case "train": return "🚆 기차";
+    case "taxi": return "🚕 택시";
+    default: return "이동수단 미정";
+  }
 }
 
 declare global {
@@ -70,6 +86,7 @@ export default function PlanRouteMap({
   height = 240,
   heightClass,
   className,
+  legInfo,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   // 지도 인스턴스 레퍼런스 — 1회만 생성해 증분 업데이트.
@@ -263,6 +280,37 @@ export default function PlanRouteMap({
     );
   }
 
+  // 컨트롤 버튼 핸들러 — map 인스턴스에 직접 위임. 부드러운 setZoom(true)·panTo 사용.
+  const handleZoomIn = () => {
+    const m = mapRef.current;
+    if (m) m.setZoom(Math.min(21, m.getZoom() + 1), true);
+  };
+  const handleZoomOut = () => {
+    const m = mapRef.current;
+    if (m) m.setZoom(Math.max(6, m.getZoom() - 1), true);
+  };
+  const handleResetView = () => {
+    const m = mapRef.current;
+    const naver = window.naver;
+    if (!m || !naver?.maps || pins.length === 0) return;
+    if (pins.length > 1) {
+      const bounds = new naver.maps.LatLngBounds(
+        new naver.maps.LatLng(pins[0].lat, pins[0].lng),
+        new naver.maps.LatLng(pins[0].lat, pins[0].lng),
+      );
+      for (const p of pins) bounds.extend(new naver.maps.LatLng(p.lat, p.lng));
+      const padding = { top: 40, right: 40, bottom: 40, left: 40 };
+      if (typeof m.panToBounds === "function") m.panToBounds(bounds, padding);
+      else m.fitBounds(bounds, padding);
+    } else {
+      const c = new naver.maps.LatLng(pins[0].lat, pins[0].lng);
+      if (typeof m.panTo === "function") m.panTo(c);
+      else m.setCenter(c);
+    }
+  };
+  const ctrlBtnCls =
+    "flex h-7 w-7 items-center justify-center rounded-md bg-background/90 text-foreground shadow-sm ring-1 ring-foreground/10 backdrop-blur transition-colors hover:bg-background";
+
   return (
     <>
       <Script
@@ -275,6 +323,29 @@ export default function PlanRouteMap({
           className={`rounded-md overflow-hidden ${heightClass ?? ""}`}
           style={heightClass ? undefined : { height }}
         />
+        {/* leg info chip — 경로별 모드에서 상단 중앙에 모드·소요시간 노출 */}
+        {legInfo && pins.length > 0 && (
+          <div className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-full bg-background/95 px-3 py-1 text-[11px] font-medium shadow-md ring-1 ring-foreground/10 backdrop-blur">
+            {modeLabel(legInfo.mode)}
+            {typeof legInfo.durationSec === "number" && legInfo.durationSec > 0 && (
+              <span className="text-muted-foreground"> · {formatMinutes(Math.round(legInfo.durationSec / 60))}</span>
+            )}
+          </div>
+        )}
+        {/* 줌·전체보기 컨트롤 — 우상단 (pins 가 있을 때만) */}
+        {pins.length > 0 && (
+          <div className="absolute right-2 top-2 z-10 flex flex-col gap-1">
+            <button type="button" onClick={handleZoomIn} aria-label="확대" title="확대" className={ctrlBtnCls}>
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.2} />
+            </button>
+            <button type="button" onClick={handleZoomOut} aria-label="축소" title="축소" className={ctrlBtnCls}>
+              <Minus className="h-3.5 w-3.5" strokeWidth={2.2} />
+            </button>
+            <button type="button" onClick={handleResetView} aria-label="전체 보기" title="전체 보기" className={ctrlBtnCls}>
+              <Maximize className="h-3.5 w-3.5" strokeWidth={2.2} />
+            </button>
+          </div>
+        )}
         {/* 빈 상태 — 지도 위에 오버레이로 깔아 map 인스턴스 라이프사이클은 유지. */}
         {pins.length === 0 && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 rounded-md bg-muted/70 text-center text-muted-foreground backdrop-blur-sm">
