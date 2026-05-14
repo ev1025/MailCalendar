@@ -11,6 +11,10 @@ interface MapPin {
   lat: number;
   lng: number;
   label?: string;
+  /** 일자별 색 구분에 사용 — 중간 마커 색이 day palette 인덱스로 결정. */
+  dayIndex?: number;
+  /** 양방향 하이라이트(맵 ↔ 일정 행) 연결용. */
+  taskId?: string;
 }
 
 // 구간(leg) 한 개 — 실제 path 있으면 실선, 없으면 인접 핀 사이 점선.
@@ -20,6 +24,24 @@ interface MapLeg {
   toIdx: number;    // pins 배열 내 도착 핀 인덱스
   path?: [number, number][]; // 있으면 실선, 없으면 점선 fallback
   strokeColor?: string;      // 모드·지하철 호선별 색상 (없으면 기본 파랑)
+  /** car / walk / bus / subway / train / taxi / null — 선 dash 스타일·굵기 결정. */
+  mode?: string | null;
+}
+
+// 일자별 마커 색 — start/end(초록/빨강) 와 충돌 안 하는 7색 팔레트. 8일 이상이면 cycle.
+const DAY_COLORS = ["#3b82f6", "#a855f7", "#f97316", "#06b6d4", "#eab308", "#6366f1", "#ec4899"];
+
+function pinColorForDay(dayIndex: number | undefined): string {
+  if (dayIndex == null) return "#3b82f6";
+  return DAY_COLORS[dayIndex % DAY_COLORS.length];
+}
+
+// 이동수단별 선 스타일 — 도보·대중교통은 점선, 자가용·택시는 실선.
+function legStrokeStyle(mode: string | null | undefined): { dash: string | null; weight: number } {
+  if (mode === "walk") return { dash: "shortdash", weight: 3 };
+  if (mode === "bus" || mode === "subway") return { dash: "shortdash", weight: 4 };
+  if (mode === "train") return { dash: "longdash", weight: 4 };
+  return { dash: null, weight: 4 };
 }
 
 interface Props {
@@ -167,13 +189,13 @@ export default function PlanRouteMap({
       }
     }
 
-    // 마커 — 출발(첫 핀, 초록 ▶) / 도착(마지막 핀, 빨강 ■) / 중간(파랑 번호).
+    // 마커 — 출발(첫 핀, 초록 ▶) / 도착(마지막 핀, 빨강 ■) / 중간(일자별 색 + 번호).
     for (let i = 0; i < pins.length; i++) {
       const p = pins[i];
       const isStart = i === 0;
       // 핀이 1개뿐이면 출발만 (도착 없음).
       const isEnd = pins.length > 1 && i === pins.length - 1;
-      const bg = isStart ? "#22c55e" : isEnd ? "#ef4444" : "#3b82f6";
+      const bg = isStart ? "#22c55e" : isEnd ? "#ef4444" : pinColorForDay(p.dayIndex);
       const glyph = isStart
         ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>'
         : isEnd
@@ -194,32 +216,31 @@ export default function PlanRouteMap({
       overlays.push(marker);
     }
 
-    // 구간 선
+    // 구간 선 — 이동수단별 색·dash 스타일. path 있으면 그대로, 없으면 두 핀 직선.
     for (const leg of legs ?? []) {
       const from = pins[leg.fromIdx];
       const to = pins[leg.toIdx];
       if (!from || !to) continue;
-      const hasPath = leg.path && leg.path.length > 1;
-      const solidColor = leg.strokeColor ?? "#3b82f6";
-      const line = hasPath
-        ? new naver.maps.Polyline({
-            path: leg.path!.map((pt) => new naver.maps.LatLng(pt[1], pt[0])),
-            strokeColor: solidColor,
-            strokeOpacity: 0.9,
-            strokeWeight: 4,
-            map,
-          })
-        : new naver.maps.Polyline({
-            path: [
-              new naver.maps.LatLng(from.lat, from.lng),
-              new naver.maps.LatLng(to.lat, to.lng),
-            ],
-            strokeColor: "#94a3b8",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            strokeStyle: "shortdash",
-            map,
-          });
+      const hasPath = !!leg.path && leg.path.length > 1;
+      const { dash, weight } = legStrokeStyle(leg.mode);
+      // 모드 색 우선 → 모드 없으면 회색(미정 fallback).
+      const color = leg.strokeColor ?? (leg.mode ? "#3b82f6" : "#94a3b8");
+      const lineWeight = hasPath ? weight : leg.mode ? weight : 2;
+      const lineStyle = dash ?? (hasPath ? "solid" : "shortdash");
+      const path = hasPath
+        ? leg.path!.map((pt) => new naver.maps.LatLng(pt[1], pt[0]))
+        : [
+            new naver.maps.LatLng(from.lat, from.lng),
+            new naver.maps.LatLng(to.lat, to.lng),
+          ];
+      const line = new naver.maps.Polyline({
+        path,
+        strokeColor: color,
+        strokeOpacity: hasPath ? 0.9 : 0.8,
+        strokeWeight: lineWeight,
+        strokeStyle: lineStyle,
+        map,
+      });
       overlays.push(line);
     }
 

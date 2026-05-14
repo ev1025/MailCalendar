@@ -21,6 +21,10 @@ interface MapPin {
   lat: number;
   lng: number;
   label: string;
+  /** 일자별 색 구분에 사용. */
+  dayIndex?: number;
+  /** 추후 양방향 하이라이트(맵 ↔ 일정 행)에 사용. */
+  taskId?: string;
 }
 
 interface MapLegSpec {
@@ -28,6 +32,8 @@ interface MapLegSpec {
   toIdx: number;
   path?: [number, number][];
   strokeColor?: string;
+  /** car / walk / bus / subway / train / taxi / null — 선 색·점선 스타일 결정. */
+  mode?: string | null;
 }
 
 export function usePlanMapData(
@@ -40,7 +46,13 @@ export function usePlanMapData(
   return useMemo(() => {
     const taskToPin = (t: TravelPlanTask) =>
       t.place_lat != null && t.place_lng != null
-        ? { lat: t.place_lat, lng: t.place_lng, label: t.place_name, taskId: t.id }
+        ? {
+            lat: t.place_lat,
+            lng: t.place_lng,
+            label: t.place_name,
+            taskId: t.id,
+            dayIndex: t.day_index,
+          }
         : null;
 
     let shownTasks: TravelPlanTask[];
@@ -56,6 +68,7 @@ export function usePlanMapData(
       lng: number;
       label: string;
       taskId: string;
+      dayIndex: number;
     }[];
 
     const taskIdToIdx = new Map(shownPinsAll.map((p, i) => [p.taskId, i]));
@@ -67,6 +80,7 @@ export function usePlanMapData(
       legsForMap.push({
         fromIdx,
         toIdx,
+        mode: l.toTask.transport_mode,
         strokeColor: colorForLeg(l.toTask.transport_mode, l.toTask.transport_route),
         path:
           l.toTask.transport_mode &&
@@ -87,7 +101,13 @@ export function usePlanMapData(
       });
     }
 
-    const pins: MapPin[] = shownPinsAll.map(({ lat, lng, label }) => ({ lat, lng, label }));
+    const pins: MapPin[] = shownPinsAll.map(({ lat, lng, label, dayIndex, taskId }) => ({
+      lat,
+      lng,
+      label,
+      dayIndex,
+      taskId,
+    }));
     return { pins, legs: legsForMap };
   }, [segment, sorted, legsWithCoords, visibleLegs, legPaths]);
 }
