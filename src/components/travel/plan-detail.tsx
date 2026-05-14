@@ -72,9 +72,6 @@ export default function PlanDetail({ planId, backHref }: Props) {
   // task 의 start_time 이 비어있고 체인 계산된 시간이 있으면 sheet 에 fallback 으로 전달.
   // ⚠️ 훅 규칙: early return (`if (!plan)` 블록) 보다 위에 선언해야 함.
   const [sheetDefaultStartTime, setSheetDefaultStartTime] = useState<string | null>(null);
-  // 지도 ↔ 일정 행 양방향 하이라이트. 핀 클릭(plan-detail handlePinClick) 또는 행 호버(setter
-  // 직접 호출)로 set. PlanRouteMap 은 이 taskId 의 핀 둘레에 halo, PlanTaskRow 는 outline.
-  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
 
   const sorted = useMemo(() => sortTasks(tasks), [tasks]);
   const expectedTimes = useMemo(() => computeExpectedTimes(sorted), [sorted]);
@@ -305,16 +302,6 @@ export default function PlanDetail({ planId, backHref }: Props) {
     }
   };
 
-  // 지도 핀 클릭 → 해당 일정 행을 강조 + 화면 가운데로 스크롤. 1.5초 뒤 자동 해제.
-  const handlePinClick = (taskId: string) => {
-    setHighlightedTaskId(taskId);
-    const el = document.querySelector(`[data-plan-task-id="${taskId}"]`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-    window.setTimeout(() => {
-      setHighlightedTaskId((curr) => (curr === taskId ? null : curr));
-    }, 1500);
-  };
-
   return (
     <div className="flex flex-col">
       <PlanDetailHeader
@@ -344,21 +331,7 @@ export default function PlanDetail({ planId, backHref }: Props) {
                 days={days}
                 legs={legsWithCoords}
               />
-              <PlanRouteMap
-                pins={pins}
-                legs={mapLegs}
-                heightClass="h-60 lg:h-[calc(100dvh-12rem)]"
-                legInfo={
-                  segment.mode === "leg" && legsWithCoords[segment.legIndex]
-                    ? {
-                        mode: legsWithCoords[segment.legIndex].toTask.transport_mode,
-                        durationSec: legsWithCoords[segment.legIndex].toTask.transport_duration_sec,
-                      }
-                    : undefined
-                }
-                highlightedTaskId={highlightedTaskId}
-                onPinClick={handlePinClick}
-              />
+              <PlanRouteMap pins={pins} legs={mapLegs} heightClass="h-60 lg:h-[calc(100dvh-12rem)]" />
             </div>
           </div>
 
@@ -399,8 +372,6 @@ export default function PlanDetail({ planId, backHref }: Props) {
                         formatDayLabel={formatDayLabel}
                         legsWithCoords={legsWithCoords}
                         expectedTimes={expectedTimes}
-                        highlightedTaskId={highlightedTaskId}
-                        onHoverTask={setHighlightedTaskId}
                         onOpenEdit={openEditSheet}
                         onDeleteTask={(id) => { deleteTask(id); }}
                         onToggleComplete={(t) =>
