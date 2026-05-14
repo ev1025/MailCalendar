@@ -29,6 +29,11 @@ interface Props {
   dragListeners?: React.HTMLAttributes<HTMLButtonElement>;
   dragAttributes?: React.HTMLAttributes<HTMLButtonElement>;
   expectedTime?: string | null;
+  /** 양방향 하이라이트 — 지도 핀 클릭 시 또는 자신을 hover 알리고 싶을 때 외곽 ring. */
+  highlighted?: boolean;
+  /** 마우스 enter/leave — 호버 시 지도 핀을 펄스 표시. */
+  onHoverEnter?: () => void;
+  onHoverLeave?: () => void;
 }
 
 function PlanTaskRowImpl({
@@ -40,6 +45,9 @@ function PlanTaskRowImpl({
   dragListeners,
   dragAttributes,
   expectedTime,
+  highlighted = false,
+  onHoverEnter,
+  onHoverLeave,
 }: Props) {
   const isCompleted = !!task.completed_at;
   const { colors: categoryColors } = useTravelCategories();
@@ -66,11 +74,13 @@ function PlanTaskRowImpl({
         }
       }}
       // data-plan-task-id — 페이지 마운트 시 첫 미완료 task 로 자동 스크롤할 때
-      // querySelector 로 찾기 위한 마커.
+      // querySelector 로 찾기 위한 마커. (지도 핀 클릭 시 scrollIntoView 에도 사용.)
       data-plan-task-id={task.id}
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
       className={`group flex items-stretch gap-0 rounded-md border bg-card hover:bg-accent/50 transition-colors cursor-pointer select-none ${
         isCompleted ? "opacity-55" : ""
-      }`}
+      } ${highlighted ? "outline outline-2 outline-primary outline-offset-2" : ""}`}
     >
       {/* 드래그바 — 탭하면 메뉴, 드래그하면 이동. RowActionPopover 통일 패턴.
           다녀왔음 토글은 메뉴 항목으로 — 행에 별도 체크박스 두지 않음. */}

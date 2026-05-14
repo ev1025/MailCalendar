@@ -71,6 +71,10 @@ interface Props {
   className?: string;
   /** 경로별 모드 선택 시 상단에 띄울 정보 — 이동수단·소요시간. */
   legInfo?: { mode: string | null; durationSec: number | null };
+  /** 양방향 하이라이트 — 이 taskId 의 핀 둘레에 halo 표시. */
+  highlightedTaskId?: string | null;
+  /** 핀 클릭 시 호출 — 부모가 일정 행 scrollIntoView + highlight 처리. */
+  onPinClick?: (taskId: string) => void;
 }
 
 // 모드 한글 라벨 + 이모지 — leg info chip 표시용.
@@ -102,6 +106,8 @@ export default function PlanRouteMap({
   heightClass,
   className,
   legInfo,
+  highlightedTaskId,
+  onPinClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   // 지도 인스턴스 레퍼런스 — 1회만 생성해 증분 업데이트.
@@ -248,8 +254,9 @@ export default function PlanRouteMap({
           anchor: new naver.maps.Point(12, 12),
         },
       });
-      // 클릭 → InfoWindow (장소·일차·시간·다음까지 N분). 인스턴스는 lazy 생성, 1개 공유.
+      // 클릭 → InfoWindow + onPinClick(부모로 일정 행 scroll/highlight 위임).
       naver.maps.Event.addListener(marker, "click", () => {
+        if (p.taskId && onPinClick) onPinClick(p.taskId);
         if (!infoWindowRef.current) {
           infoWindowRef.current = new naver.maps.InfoWindow({
             content: "",
@@ -319,7 +326,30 @@ export default function PlanRouteMap({
         try { infoWindowRef.current.close(); } catch { /* ignore */ }
       }
     };
-  }, [mapReady, pins, legs]);
+  }, [mapReady, pins, legs, onPinClick]);
+
+  // 하이라이트 halo — highlightedTaskId 가 set 되면 그 핀 둘레에 펄스 ring 표시.
+  // 별도 effect 라 본 마커 churn 없음. CSS @keyframes planPinPulse 사용.
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !highlightedTaskId) return;
+    const naver = window.naver;
+    if (!naver?.maps) return;
+    const pin = pins.find((p) => p.taskId === highlightedTaskId);
+    if (!pin) return;
+    const halo = new naver.maps.Marker({
+      position: new naver.maps.LatLng(pin.lat, pin.lng),
+      map: mapRef.current,
+      icon: {
+        content: '<div class="plan-pin-pulse"></div>',
+        anchor: new naver.maps.Point(20, 20),
+      },
+      zIndex: 1000,
+      clickable: false,
+    });
+    return () => {
+      try { halo.setMap(null); } catch { /* ignore */ }
+    };
+  }, [mapReady, pins, highlightedTaskId]);
 
   if (!CLIENT_ID) {
     return (

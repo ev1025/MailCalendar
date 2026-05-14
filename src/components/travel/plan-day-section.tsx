@@ -33,6 +33,9 @@ interface SortableTaskRowProps {
   onToggleComplete?: () => void;
   onSwapAlt?: (altIndex: number) => void;
   expectedTime?: string | null;
+  highlighted?: boolean;
+  onHoverEnter?: () => void;
+  onHoverLeave?: () => void;
 }
 
 function SortableTaskRow({
@@ -42,6 +45,9 @@ function SortableTaskRow({
   onToggleComplete,
   onSwapAlt,
   expectedTime,
+  highlighted,
+  onHoverEnter,
+  onHoverLeave,
 }: SortableTaskRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id });
@@ -66,6 +72,9 @@ function SortableTaskRow({
         expectedTime={expectedTime}
         dragListeners={dragProps.listeners}
         dragAttributes={dragProps.attributes}
+        highlighted={highlighted}
+        onHoverEnter={onHoverEnter}
+        onHoverLeave={onHoverLeave}
       />
     </div>
   );
@@ -97,6 +106,10 @@ interface Props {
   onSwapAlt: (task: TravelPlanTask, altIndex: number) => void;
   onUpdateTask: (id: string, updates: Partial<TravelPlanTask>) => Promise<{ error: unknown }>;
   onOpenNew: (day: number) => void;
+  /** 양방향 하이라이트 — 이 task 의 행에 outline. 지도 핀 클릭 / row 호버로 set. */
+  highlightedTaskId?: string | null;
+  /** 행 hover 시 호출 — null 은 leave. 지도 쪽 핀 펄스 표시에 사용. */
+  onHoverTask?: (taskId: string | null) => void;
 }
 
 export default function PlanDaySection({
@@ -111,6 +124,8 @@ export default function PlanDaySection({
   onSwapAlt,
   onUpdateTask,
   onOpenNew,
+  highlightedTaskId,
+  onHoverTask,
 }: Props) {
   return (
     <section className="flex flex-col gap-2">
@@ -156,6 +171,9 @@ export default function PlanDaySection({
                           ? expectedTimes[t.id]?.time ?? null
                           : null
                       }
+                      highlighted={t.id === highlightedTaskId}
+                      onHoverEnter={() => onHoverTask?.(t.id)}
+                      onHoverLeave={() => onHoverTask?.(null)}
                     />
                     {leg && (
                       <PlanLegCard
