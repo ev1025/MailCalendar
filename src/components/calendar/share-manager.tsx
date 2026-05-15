@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "motion/react";
 import PanelDialog from "@/components/ui/panel-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,11 +13,13 @@ import {
   Inbox,
   Send,
   Mail,
+  Sparkles,
 } from "lucide-react";
 import { useCalendarShares } from "@/hooks/use-calendar-shares";
-import { useAppUsers, useCurrentUserId } from "@/lib/current-user";
+import { useAppUsers, useCurrentUserId, useCurrentUser } from "@/lib/current-user";
 import { toast } from "sonner";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 
 interface Props {
   open: boolean;
@@ -97,6 +100,8 @@ interface UserRow {
 export default function ShareManager({ open, onOpenChange }: Props) {
   const { users, refetch: refetchUsers } = useAppUsers();
   const currentUserId = useCurrentUserId();
+  const currentUser = useCurrentUser();
+  const motionOn = useMotionEnabled();
   const {
     outgoing,
     incoming,
@@ -192,15 +197,21 @@ export default function ShareManager({ open, onOpenChange }: Props) {
   if (rows.length === 0) {
     return (
       <PanelDialog open={open} onOpenChange={onOpenChange} title="캘린더 공유">
-        <div className="px-4 py-12 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <Users className="h-7 w-7 text-muted-foreground" />
+        <div className="px-4 py-14 flex flex-col items-center gap-4 text-center">
+          {/* 부드러운 일러스트 — gradient orb + 아이콘 + sparkle */}
+          <div className="relative">
+            <div className="absolute inset-0 -m-3 rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent blur-2xl" />
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.8rem] bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
+              <Users className="h-9 w-9 text-primary" />
+              <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-primary" />
+            </div>
           </div>
-          <p className="text-sm font-medium">아직 공유할 사람이 없어요</p>
-          <p className="text-xs text-muted-foreground max-w-[260px] leading-relaxed">
-            함께 사용하는 사람이 매직링크로 가입하면 여기에서 캘린더를 초대할 수
-            있어요.
-          </p>
+          <div className="flex flex-col gap-1.5">
+            <p className="text-base font-semibold">아직 공유할 사람이 없어요</p>
+            <p className="text-[12px] text-muted-foreground max-w-[260px] leading-relaxed">
+              함께 사용하는 사람이 매직링크로 가입하면<br />여기에서 캘린더를 초대할 수 있어요.
+            </p>
+          </div>
         </div>
       </PanelDialog>
     );
@@ -208,36 +219,51 @@ export default function ShareManager({ open, onOpenChange }: Props) {
 
   return (
     <PanelDialog open={open} onOpenChange={onOpenChange} title="캘린더 공유">
+      {/* Hero — 패널 본문 최상단 안내. primary 톤 그라디언트 워시. */}
+      <div className="border-b bg-gradient-to-b from-primary/[0.06] to-transparent px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+            <ArrowLeftRight className="h-4 w-4" />
+          </div>
+          <p className="text-[12px] text-foreground/75 leading-relaxed break-keep">
+            초대를 수락하면 서로의 일정이 한 화면에 함께 표시돼요.
+          </p>
+        </div>
+      </div>
+
       <div className="px-4 py-4 flex flex-col gap-5">
-        {/* 받은 요청 — 액션 우선순위 1순위, primary tint */}
+        {/* 받은 요청 — 액션 우선순위 1순위, primary tint + soft ring */}
         {incomingRows.length > 0 && (
           <Section
             title="받은 요청"
             count={incomingRows.length}
             icon={<Inbox className="h-3.5 w-3.5" />}
             tone="primary"
-            hint="수락하면 상대 캘린더가 보여요"
+            hint="액션 필요"
           >
-            {incomingRows.map(({ user, state }) => {
+            {incomingRows.map(({ user, state }, idx) => {
               if (state.kind !== "incoming") return null;
               return (
-                <li
+                <motion.li
                   key={user.id}
-                  className="flex items-center gap-3 rounded-xl border-2 border-primary/30 bg-primary/5 p-3"
+                  initial={motionOn ? { opacity: 0, y: 6 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: motionOn ? 0.22 : 0, delay: motionOn ? idx * 0.04 : 0 }}
+                  className="flex items-center gap-3 rounded-2xl ring-1 ring-primary/25 bg-gradient-to-br from-primary/[0.06] to-primary/[0.02] p-3.5"
                 >
-                  <Avatar user={user} />
+                  <Avatar user={user} size={44} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">
                       {user.name}
                     </p>
-                    <p className="text-[11px] text-primary mt-0.5">
-                      {user.name}님이 캘린더를 공유했어요
+                    <p className="text-[11px] text-primary/90 mt-0.5 truncate">
+                      캘린더를 공유했어요
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Button
                       size="sm"
-                      className="h-9 px-3 text-xs"
+                      className="h-9 px-3.5 text-xs rounded-full"
                       onClick={() => accept(state.shareId)}
                     >
                       <Check className="mr-1 h-3.5 w-3.5" />
@@ -245,8 +271,8 @@ export default function ShareManager({ open, onOpenChange }: Props) {
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="h-9 px-3 text-xs"
+                      variant="ghost"
+                      className="h-9 px-3 text-xs rounded-full text-muted-foreground"
                       onClick={() =>
                         setCancelTarget({
                           ids: [state.shareId],
@@ -258,34 +284,44 @@ export default function ShareManager({ open, onOpenChange }: Props) {
                       거절
                     </Button>
                   </div>
-                </li>
+                </motion.li>
               );
             })}
           </Section>
         )}
 
-        {/* 공유 중 — emerald accent + 양방향 ↔ 아이콘 */}
+        {/* 공유 중 — 양방향 mini avatar pair (나 + 상대) 시각화 */}
         {sharingRows.length > 0 && (
           <Section
             title="공유 중"
             count={sharingRows.length}
             icon={<ArrowLeftRight className="h-3.5 w-3.5" />}
             tone="success"
-            hint="서로 일정을 볼 수 있어요"
           >
-            {sharingRows.map(({ user, state }) => {
+            {sharingRows.map(({ user, state }, idx) => {
               if (state.kind !== "sharing") return null;
               return (
-                <li
+                <motion.li
                   key={user.id}
-                  className="flex items-center gap-3 rounded-xl border bg-card p-3"
+                  initial={motionOn ? { opacity: 0, y: 6 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: motionOn ? 0.22 : 0, delay: motionOn ? idx * 0.04 : 0 }}
+                  className="flex items-center gap-3 rounded-2xl border bg-card p-3.5"
                 >
-                  <Avatar user={user} />
+                  {/* 양방향 mini avatar — 상대 위에 나 살짝 겹침. 두 사용자가 함께임을 시각화. */}
+                  <div className="relative shrink-0">
+                    <Avatar user={user} size={40} />
+                    {currentUser && (
+                      <span className="absolute -bottom-1 -right-1 ring-2 ring-card rounded-full">
+                        <Avatar user={currentUser} size={20} />
+                      </span>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">
                       {user.name}
                     </p>
-                    <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                    <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                       <ArrowLeftRight className="h-3 w-3" />
                       양방향 공유 중
                     </p>
@@ -293,7 +329,7 @@ export default function ShareManager({ open, onOpenChange }: Props) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-9 px-3 text-xs text-muted-foreground hover:text-destructive"
+                    className="h-9 px-3 text-xs rounded-full text-muted-foreground hover:text-destructive"
                     onClick={() =>
                       setCancelTarget({
                         ids: state.shareIds,
@@ -304,35 +340,41 @@ export default function ShareManager({ open, onOpenChange }: Props) {
                   >
                     해제
                   </Button>
-                </li>
+                </motion.li>
               );
             })}
           </Section>
         )}
 
-        {/* 보낸 요청 — muted */}
+        {/* 보낸 요청 — muted, 우측 작은 X */}
         {outgoingRows.length > 0 && (
           <Section
             title="응답 대기"
             count={outgoingRows.length}
             icon={<Send className="h-3.5 w-3.5" />}
             tone="muted"
-            hint="상대 답을 기다리는 중"
           >
-            {outgoingRows.map(({ user, state }) => {
+            {outgoingRows.map(({ user, state }, idx) => {
               if (state.kind !== "outgoing") return null;
               return (
-                <li
+                <motion.li
                   key={user.id}
-                  className="flex items-center gap-3 rounded-xl border bg-muted/30 p-3"
+                  initial={motionOn ? { opacity: 0, y: 6 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: motionOn ? 0.22 : 0, delay: motionOn ? idx * 0.04 : 0 }}
+                  className="flex items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-3.5"
                 >
-                  <Avatar user={user} />
+                  <Avatar user={user} size={40} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate text-muted-foreground">
+                    <p className="text-sm font-medium truncate text-foreground/80">
                       {user.name}
                     </p>
-                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                      답장을 기다리고 있어요
+                    <p className="text-[11px] text-muted-foreground mt-0.5 inline-flex items-center gap-1">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inset-0 animate-ping rounded-full bg-muted-foreground/40" />
+                        <span className="relative inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                      </span>
+                      응답 대기 중
                     </p>
                   </div>
                   <button
@@ -349,13 +391,13 @@ export default function ShareManager({ open, onOpenChange }: Props) {
                   >
                     <X className="h-4 w-4" />
                   </button>
-                </li>
+                </motion.li>
               );
             })}
           </Section>
         )}
 
-        {/* 초대 가능 — 없을 수도 있음 */}
+        {/* 초대 가능 */}
         {inviteRows.length > 0 && (
           <Section
             title="초대 가능"
@@ -363,24 +405,27 @@ export default function ShareManager({ open, onOpenChange }: Props) {
             icon={<Mail className="h-3.5 w-3.5" />}
             tone="neutral"
           >
-            {inviteRows.map(({ user }) => (
-              <li
+            {inviteRows.map(({ user }, idx) => (
+              <motion.li
                 key={user.id}
-                className="flex items-center gap-3 rounded-xl border bg-card p-3 hover:bg-accent/30 transition-colors"
+                initial={motionOn ? { opacity: 0, y: 6 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: motionOn ? 0.22 : 0, delay: motionOn ? idx * 0.04 : 0 }}
+                className="flex items-center gap-3 rounded-2xl border bg-card p-3.5 hover:bg-accent/30 transition-colors"
               >
-                <Avatar user={user} />
+                <Avatar user={user} size={40} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{user.name}</p>
                 </div>
                 <Button
                   size="sm"
-                  className="h-9 px-3 text-xs"
+                  className="h-9 px-3.5 text-xs rounded-full"
                   onClick={() => handleInvite(user.id)}
                 >
                   <UserPlus className="mr-1 h-3.5 w-3.5" />
                   초대
                 </Button>
-              </li>
+              </motion.li>
             ))}
           </Section>
         )}
