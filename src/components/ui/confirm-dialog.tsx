@@ -64,7 +64,7 @@ export default function ConfirmDialog({
       <DialogContent
         showBackButton={false}
         className={cn(
-          "max-w-[calc(100%-3rem)] sm:max-w-xs p-0 gap-0 overflow-hidden",
+          "sm:max-w-xs p-0 gap-0 overflow-hidden",
           contentClassName,
         )}
       >

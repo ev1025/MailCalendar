@@ -577,7 +577,7 @@ function FinancePageInner() {
       >
         <DialogContent
           showBackButton={false}
-          className="max-w-[calc(100%-3rem)] sm:max-w-sm p-0 gap-0 overflow-hidden"
+          className="sm:max-w-sm p-0 gap-0 overflow-hidden"
         >
           <div className="px-5 pt-5 pb-3 flex flex-col items-center text-center gap-1.5">
             <DialogHeader className="contents">

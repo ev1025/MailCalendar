@@ -152,7 +152,7 @@ export default function TransactionList({
       >
         <DialogContent
           showBackButton={false}
-          className="max-w-[calc(100%-3rem)] sm:max-w-sm p-0 gap-0 overflow-hidden"
+          className="sm:max-w-sm p-0 gap-0 overflow-hidden"
         >
           <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
             <DialogHeader>

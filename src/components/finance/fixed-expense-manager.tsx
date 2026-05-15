@@ -523,7 +523,7 @@ function MonthChoiceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        className="max-w-[calc(100%-3rem)] sm:max-w-md p-0 gap-0 overflow-hidden z-[80]"
+        className="sm:max-w-md p-0 gap-0 overflow-hidden z-[80]"
       >
         {/* Header: 제목 + 정보 + 질문 */}
         <div className="px-5 pt-5 pb-3 flex flex-col items-center text-center gap-1.5">

@@ -147,7 +147,7 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
         // 을 직접 탭할 때만 포커스 + 키보드 노출.
         initialFocus={false}
         // 다이얼로그 카드 자체는 default(투명) — 내부 그라디언트가 그대로 보이도록.
-        className="max-w-[calc(100%-1.5rem)] sm:max-w-[420px] p-0 gap-0 overflow-hidden border-none"
+        className="sm:max-w-[420px] p-0 gap-0 overflow-hidden border-none"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>D-day</DialogTitle>

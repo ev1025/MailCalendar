@@ -60,7 +60,7 @@ export default function PromptDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        className="max-w-[calc(100%-3rem)] gap-0 overflow-hidden p-0 sm:max-w-sm"
+        className="gap-0 overflow-hidden p-0 sm:max-w-sm"
       >
         <div className="flex flex-col gap-3 px-5 pb-4 pt-5">
           <DialogHeader className="contents">

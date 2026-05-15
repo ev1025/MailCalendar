@@ -38,7 +38,7 @@ export default function PanelDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        className={`max-w-[calc(100%-3rem)] sm:max-w-md p-0 gap-0 max-h-[80dvh] overflow-hidden grid-rows-[auto_1fr] ${className ?? ""}`}
+        className={`sm:max-w-md p-0 gap-0 max-h-[80dvh] overflow-hidden grid-rows-[auto_1fr] ${className ?? ""}`}
       >
         {/* 헤더 — 좌측 ← 닫기, 제목, 우측 액션 */}
         <div className="flex items-center gap-2 border-b px-3 py-2.5">

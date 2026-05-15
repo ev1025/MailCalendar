@@ -342,6 +342,29 @@
 
 /* === 전역 애니메이션 키프레임 === */
 
+/* iOS 스타일 바닥시트 진입/퇴장 — 모바일에서 Dialog 가 sheet 형태로 표시될 때.
+   spring-like cubic-bezier(0.32, 0.72, 0, 1) — iOS UISheetPresentationController 톤. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes sheet-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes sheet-up { from { transform: none; } to { transform: none; } }
+  @keyframes sheet-down { from { transform: none; } to { transform: none; } }
+}
+
 /* Skeleton shimmer — 좌→우로 빛이 흐르며 "로딩 중" 의미 강조.
    .skeleton-shimmer 적용 요소 위에 ::after 의사 요소를 띄워 그라디언트 슬라이드. */
 @keyframes shimmer {

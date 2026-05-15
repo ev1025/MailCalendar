@@ -95,7 +95,7 @@ export default function CommandPalette({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        className="max-w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-lg"
+        className="gap-0 overflow-hidden p-0 sm:max-w-lg"
       >
         <DialogTitle className="sr-only">빠른 이동</DialogTitle>
         <Command loop className="flex flex-col">

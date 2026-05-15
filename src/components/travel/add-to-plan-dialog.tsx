@@ -193,7 +193,7 @@ export default function AddToPlanDialog({ open, onOpenChange, travelItem, onDone
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showBackButton={false}
-        className="max-w-[calc(100%-3rem)] sm:max-w-md p-0 gap-0 overflow-hidden"
+        className="sm:max-w-md p-0 gap-0 overflow-hidden"
       >
         <div className="px-5 pt-5 pb-4 flex flex-col gap-3.5">
         <DialogHeader>

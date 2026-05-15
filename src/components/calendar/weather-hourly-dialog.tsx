@@ -256,7 +256,7 @@ export default function WeatherHourlyDialog({ open, onOpenChange, date, weather 
         // FormPage(z-[70]) / 부모 DayDetail Dialog(z-50) 위에 모두 떠야 함.
         // 모바일은 calc(100%-1rem) — 거의 풀너비. sm:max-w-xl.
         // 그라디언트는 style 로 — bg-popover 를 background shorthand 가 덮어씀.
-        className="max-w-[calc(100%-1rem)] sm:max-w-xl p-0 gap-0 overflow-hidden z-[80]"
+        className="sm:max-w-xl p-0 gap-0 overflow-hidden z-[80]"
         overlayClassName="z-[80]"
         onOverlayClick={(e) => {
           e.stopPropagation();

@@ -835,7 +835,7 @@ function ProductsPageInner() {
       >
         <DialogContent
           showBackButton={false}
-          className="max-w-[calc(100%-3rem)] sm:max-w-sm p-0 gap-0 overflow-hidden"
+          className="sm:max-w-sm p-0 gap-0 overflow-hidden"
         >
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="text-base font-semibold">
