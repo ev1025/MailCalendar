@@ -400,8 +400,15 @@ function CalendarPageInner() {
           transition={{ duration: motionOn ? 0.14 : 0 }}
           className="calendar-md-height"
           onTouchStartCapture={(e) => {
-            // DnD 중이면 swipe 시작점 자체를 저장하지 않음 — 드래그 끝나며 발생하는
-            // capture touchend 가 swipe 로 오인되어 월이 넘어가던 버그 가드.
+            // 일정 칩(=DraggableBar) 안에서 시작된 touch 는 swipe 대상 아님 —
+            // DnD-kit TouchSensor 가 200ms 임계값 안 채워도(=짧게 가로로 끌 때) swipe
+            // 로 오인되어 월이 넘어가는 문제 가드. data-cal-event 마커로 검사.
+            const target = e.target as HTMLElement | null;
+            if (target?.closest?.('[data-cal-event]')) {
+              swipeRef.current = null;
+              return;
+            }
+            // DnD 가 이미 활성 중이면 (긴 누름 후 드래그 중) 새 touch 도 swipe 가 아님.
             if (dndActiveRef.current) {
               swipeRef.current = null;
               return;

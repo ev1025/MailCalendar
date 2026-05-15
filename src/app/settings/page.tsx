@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SearchInput from "@/components/ui/search-input";
-import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info, X, CloudSun, Car, Footprints, Bus, TrainFront, Check } from "lucide-react";
+import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info, X, CloudSun, Check } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PasswordChangeDialog from "@/components/layout/password-change-dialog";
@@ -329,14 +329,14 @@ function SettingsPageInner() {
           background: `radial-gradient(72% 100% at 28% -20%, ${accentWash}24, transparent 60%)`,
         }}
       />
-      <div className="mx-auto max-w-2xl px-4 py-4 md:mx-0 md:px-6 md:py-5">
+      <div className="mx-auto max-w-2xl px-4 py-2 md:mx-0 md:px-6 md:py-5">
 
       {/* 탭 — segmented. 좌우 동일 폭. (안내 문구는 PageHeader 가 이미 "설정"이라 생략 — 세로 압축) */}
       <motion.div
         initial={motionOn ? { opacity: 0, y: 8 } : false}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: motionOn ? 0.3 : 0, ease: [0.22, 1, 0.36, 1] }}
-        className="mb-4 inline-flex w-full rounded-2xl border bg-muted/40 p-1"
+        className="mb-2 inline-flex w-full rounded-2xl border bg-muted/40 p-1"
       >
         {(["general", "account", "api"] as const).map((t) => {
           const label =
@@ -347,7 +347,7 @@ function SettingsPageInner() {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`flex-1 rounded-xl px-3 py-2.5 md:py-2 text-sm font-medium transition-all tap-feedback ${
+              className={`flex-1 rounded-xl px-3 py-1.5 md:py-2 text-sm font-medium transition-all tap-feedback ${
                 active
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -360,8 +360,8 @@ function SettingsPageInner() {
       </motion.div>
 
       {tab === "general" ? (
-        <div key="general" className="flex flex-col gap-3 stagger-list">
-          <Card>
+        <div key="general" className="flex flex-col gap-2 stagger-list">
+          <Card size="sm" className="!py-2.5 !gap-2">
             <CardHeader>
               <CardTitleIcon icon={Palette}>테마</CardTitleIcon>
             </CardHeader>
@@ -380,7 +380,7 @@ function SettingsPageInner() {
                       key={value}
                       type="button"
                       onClick={() => applyTheme(value)}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2.5 md:py-2 text-xs font-medium transition-colors tap-feedback ${
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 md:py-2 text-xs font-medium transition-colors tap-feedback ${
                         active
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
@@ -394,11 +394,10 @@ function SettingsPageInner() {
               </div>
 
               {/* 액센트 컬러 — 사이드바 활성, 토스트, 강조 등에 적용. 6개 색상.
-                  모바일 터치 영역 확보: 외곽 h-11 w-11 (44px) hit area + 내부 시각 dot h-7 w-7.
-                  데스크탑은 컴팩트(h-9 w-9). 시각/터치 분리는 D-day 토글과 동일 패턴. */}
-              <div className="mt-3 pt-3 border-t flex items-center gap-2.5">
+                  세로 압축: hit area 외곽 h-9 (탭 영역 보장), 내부 dot h-6. mt-2 pt-2 로 카드 짧게. */}
+              <div className="mt-2 pt-2 border-t flex items-center gap-2.5">
                 <span className="shrink-0 text-[11px] text-muted-foreground">강조 색</span>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-0.5">
                   {ACCENT_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -406,12 +405,12 @@ function SettingsPageInner() {
                       onClick={() => applyAccent(opt.value)}
                       aria-label={opt.label}
                       title={opt.label}
-                      className="flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full transition-all tap-feedback"
+                      className="flex h-9 w-9 items-center justify-center rounded-full transition-all tap-feedback"
                     >
                       <span
-                        className={`relative flex h-7 w-7 md:h-6 md:w-6 items-center justify-center rounded-full transition-all ${
+                        className={`relative flex h-6 w-6 items-center justify-center rounded-full transition-all ${
                           accent === opt.value
-                            ? "ring-2 ring-offset-2 ring-offset-background"
+                            ? "ring-2 ring-offset-1 ring-offset-background"
                             : ""
                         }`}
                         style={{
@@ -420,7 +419,7 @@ function SettingsPageInner() {
                         }}
                       >
                         {accent === opt.value && (
-                          <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                          <Check className="h-3 w-3 text-white" strokeWidth={3} />
                         )}
                       </span>
                     </button>
@@ -430,28 +429,28 @@ function SettingsPageInner() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card size="sm" className="!py-2.5 !gap-2">
             <CardHeader>
               <CardTitleIcon icon={CloudSun}>일기예보</CardTitleIcon>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
+            <CardContent className="flex flex-col gap-2">
               {!locEditing ? (
                 /* 평소: 현재 위치 카드 — 클릭하면 검색 모드로 전환. */
                 <button
                   type="button"
                   onClick={() => setLocEditing(true)}
-                  className="flex w-full items-start gap-2 rounded-md border p-2.5 text-left hover:bg-accent/40 transition-colors"
+                  className="flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left hover:bg-accent/40 transition-colors"
                   aria-label="지역 변경"
                 >
-                  <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{currentLocation.name}</div>
                   </div>
-                  <span className="text-[11px] text-muted-foreground/60 shrink-0 mt-0.5">변경</span>
+                  <span className="text-[11px] text-muted-foreground/60 shrink-0">변경</span>
                 </button>
               ) : (
                 /* 편집 모드: 검색 input + 취소 버튼 + 결과 드롭다운. */
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <SearchInput
                       value={locQuery}
@@ -464,7 +463,7 @@ function SettingsPageInner() {
                       type="button"
                       onClick={() => { setLocEditing(false); setLocQuery(""); setLocResults([]); }}
                       aria-label="취소"
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent transition-colors"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent transition-colors"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -495,16 +494,12 @@ function SettingsPageInner() {
                   )}
                 </div>
               )}
-              <p className="flex items-start gap-1.5 pl-3 text-[11px] text-muted-foreground/60 leading-relaxed">
-                <Info className="h-3 w-3 mt-[2px] shrink-0" />
-                <span>일기예보 지역을 선택할 수 있어요.</span>
-              </p>
             </CardContent>
           </Card>
 
           {/* D-day — 토글은 헤더 우측. ON 시에만 date/time 입력 노출.
               입력은 캘린더 일정에 쓰는 DatePicker / TimePicker 재사용. */}
-          <Card>
+          <Card size="sm" className="!py-2.5 !gap-2">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitleIcon icon={CalendarDays}>D-day</CardTitleIcon>
@@ -514,9 +509,8 @@ function SettingsPageInner() {
                   aria-checked={dday.enabled}
                   aria-label="D-day 표시 켜기"
                   onClick={() => updateDday({ enabled: !dday.enabled })}
-                  /* 외곽 hit area 11x11 (44px) — WCAG 권장 터치 타깃.
-                     안의 트랙은 작아 보이게 inset 으로 그림 (시각/터치 분리). */
-                  className="relative inline-flex h-11 w-11 items-center justify-center"
+                  /* 외곽 hit area 9x9 — 헤더 안이라 카드 세로 길이 절약. 트랙은 inset. */
+                  className="relative inline-flex h-9 w-11 items-center justify-end"
                 >
                   <span
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
@@ -533,34 +527,28 @@ function SettingsPageInner() {
               </div>
             </CardHeader>
             {dday.enabled && (
-              <CardContent className="flex flex-col gap-3">
+              <CardContent className="flex flex-col gap-2">
                 {dday.source === "partner" && (
-                  <div className="rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-[11px] text-primary leading-relaxed">
-                    공유 파트너가 설정한 D-day 가 표시되고 있어요. 직접 입력해 적용하면 본인 값이 우선합니다.
+                  <div className="rounded-md bg-primary/5 border border-primary/20 px-2.5 py-1.5 text-[11px] text-primary leading-relaxed">
+                    공유 파트너 D-day 적용 중. 직접 입력하면 본인 값 우선.
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2">
                   <DatePicker
                     value={draftDate}
                     onChange={setDraftDate}
-                    className="h-11 md:h-9 text-xs"
+                    className="h-9 text-xs flex-1"
                   />
                   <TimePicker
                     value={draftTime}
                     onChange={setDraftTime}
-                    className="h-11 md:h-9 text-xs"
+                    className="h-9 text-xs flex-1"
                   />
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="flex items-start gap-1.5 pl-3 text-[11px] text-muted-foreground/60 leading-relaxed">
-                    <Info className="h-3 w-3 mt-[2px] shrink-0" />
-                    <span>달력 우상단에 D-day 버튼이 표시됩니다.</span>
-                  </p>
                   <Button
                     size="sm"
                     onClick={applyDday}
                     disabled={!ddayApplyEnabled}
-                    className="h-11 md:h-8 px-4 shrink-0"
+                    className="h-9 px-3 shrink-0"
                   >
                     적용
                   </Button>
@@ -798,13 +786,13 @@ function SettingsPageInner() {
               구간 소요시간은 수단별로 다른 API 를 호출합니다.
             </p>
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-[11px]">
-              <span className="inline-flex items-center gap-1.5 font-medium"><Car className="h-3.5 w-3.5" /> 승용차</span>
+              <span className="font-medium">🚗 승용차</span>
               <span className="text-muted-foreground">NCP Directions 5</span>
-              <span className="inline-flex items-center gap-1.5 font-medium"><Footprints className="h-3.5 w-3.5" /> 도보</span>
+              <span className="font-medium">🚶 도보</span>
               <span className="text-muted-foreground">Google Directions (walking)</span>
-              <span className="inline-flex items-center gap-1.5 font-medium"><Bus className="h-3.5 w-3.5" /> 버스</span>
+              <span className="font-medium">🚌 버스</span>
               <span className="text-muted-foreground">Google Directions (transit)</span>
-              <span className="inline-flex items-center gap-1.5 font-medium"><TrainFront className="h-3.5 w-3.5" /> 기차</span>
+              <span className="font-medium">🚆 기차</span>
               <span className="text-muted-foreground">KORAIL → 실패 시 Google rail 폴백</span>
             </div>
           </ApiSection>

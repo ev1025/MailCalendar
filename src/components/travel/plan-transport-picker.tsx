@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Bus, Car, Check, Footprints, Pencil, TramFront, Zap, type LucideIcon } from "lucide-react";
+import { Bus, Check, TramFront, Zap } from "lucide-react";
 import FormPage from "@/components/ui/form-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -561,10 +561,9 @@ function BusBadgeFull({ name }: { name: string }) {
 }
 
 // ── 자동차 · 도보 · 수동 탭 ─────────────────────────────────
-// lucide 아이콘 — OS·테마 일관성. text-2xl 이모지 자리를 size-6 SVG 가 대체.
-const DIRECT_MODES: { value: TransportMode; label: string; Icon: LucideIcon }[] = [
-  { value: "car", label: "자동차", Icon: Car },
-  { value: "walk", label: "도보", Icon: Footprints },
+const DIRECT_MODES: { value: TransportMode; label: string; emoji: string }[] = [
+  { value: "car", label: "자동차", emoji: "🚗" },
+  { value: "walk", label: "도보", emoji: "🚶" },
 ];
 
 function DirectTab({
@@ -598,10 +597,10 @@ function DirectTab({
       {/* 수동 입력 */}
       <div className="grid grid-cols-[2.5rem_1fr_auto] gap-x-3 items-center rounded-md px-3 py-3">
         <span
-          className="flex h-6 w-6 mx-auto items-center justify-center text-muted-foreground"
+          className="text-2xl text-center shrink-0"
           aria-hidden="true"
         >
-          <Pencil className="h-5 w-5" strokeWidth={1.8} />
+          ✏️
         </span>
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-medium text-sm shrink-0">수동 입력</span>
@@ -664,12 +663,12 @@ function DirectTab({
               selected ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-accent"
             }`}
           >
-            {/* Row 1: 아이콘 | 소요시간·도착 | check (아이콘은 두 행 가운데) */}
+            {/* Row 1: 이모지 | 소요시간·도착 | check (이모지는 두 행 가운데) */}
             <span
-              className="flex h-6 w-6 mx-auto items-center justify-center row-start-1 row-span-2 self-center text-foreground"
+              className="text-2xl text-center row-start-1 row-span-2 self-center"
               aria-hidden="true"
             >
-              <m.Icon className="h-5 w-5" strokeWidth={1.8} />
+              {m.emoji}
             </span>
             <div className="row-start-1 col-start-2 flex items-center gap-2 text-sm text-muted-foreground tabular-nums min-w-0">
               <span

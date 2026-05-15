@@ -78,6 +78,10 @@ function DraggableBar({ seg, onClickDate }: { seg: Seg; onClickDate: (d: string)
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      // data-cal-event — calendar-client 의 좌우 swipe 가드가 이 마커로 일정 영역에서
+      // 시작된 touch 를 swipe 대상에서 제외. TouchSensor 가 활성화되기 전(200ms 미만)에
+      // 사용자가 손가락을 가로로 움직여도 일정 영역에서 시작했으면 swipe 발화 안 함.
+      data-cal-event="true"
       onClick={(e) => {
         e.stopPropagation();
         if (!isDragging) onClickDate(event.start_date);
