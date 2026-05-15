@@ -204,7 +204,9 @@ export default function DdayDialog({ open, onOpenChange, date, time }: Props) {
                   }}
                   placeholder="100"
                   aria-label="며칠째 되는 날을 계산할 일 수"
-                  className="w-12 bg-transparent text-right text-sm font-semibold tabular-nums text-foreground placeholder:font-normal placeholder:text-muted-foreground/40 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  // text-right + 좁은 너비에서 caret 가 placeholder/숫자에 바짝 붙어 겹쳐 보이던 문제 →
+                  // text-center + 너비 확보로 caret 공간 분리. caret-foreground 로 색 명시.
+                  className="w-14 bg-transparent text-center text-sm font-semibold tabular-nums text-foreground caret-foreground placeholder:font-normal placeholder:text-muted-foreground/40 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <span className="shrink-0 text-xs">일째 되는 날</span>
               </label>
