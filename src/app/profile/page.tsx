@@ -184,15 +184,16 @@ function ProfilePageInner() {
       />
 
       {/* ── Hero ──────────────────────────────────────────────────────
-          배경 색 워시 없음(아바타가 주인공). 컴팩트하게 — 1뷰포트 안에 편집부까지. */}
+          배경 색 워시 없음(아바타가 주인공). 컴팩트하게 — 이모지 그리드 + 저장 버튼까지
+          모바일 1뷰포트에 들어오도록 padding/size 압축. */}
       <section className="relative">
-        <div className="flex flex-col items-center gap-2.5 px-6 pt-5 pb-4 md:pt-7 md:pb-5">
+        <div className="flex flex-col items-center gap-2 px-6 pt-3 pb-2 md:pt-7 md:pb-5">
           <motion.button
             {...reveal(0.04, motionOn)}
             type="button"
             onClick={handleAvatarClick}
             whileTap={{ scale: 0.96 }}
-            className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.6rem] text-[36px] shadow-lg ring-4 ring-background md:h-24 md:w-24 md:text-[44px]"
+            className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[1.4rem] text-[28px] shadow-lg ring-4 ring-background md:h-24 md:w-24 md:text-[44px] md:rounded-[1.6rem]"
             style={{
               backgroundColor: isImageAvatar ? "var(--card)" : `${color}28`,
               color,
@@ -208,10 +209,10 @@ function ProfilePageInner() {
           </motion.button>
 
           <motion.div {...reveal(0.1, motionOn)} className="text-center">
-            <h1 className="font-display text-2xl font-black leading-none tracking-tight text-foreground md:text-[28px]">
+            <h1 className="font-display text-xl font-black leading-none tracking-tight text-foreground md:text-[28px]">
               {name || "이름 없음"}
             </h1>
-            <p className="mt-1 text-xs text-muted-foreground">{authUser?.email}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground md:text-xs">{authUser?.email}</p>
           </motion.div>
         </div>
       </section>
@@ -220,18 +221,18 @@ function ProfilePageInner() {
           이름 / 프로필 사진(표시 모드 + 모드별) / (이모지 모드면) 강조 색·이모지. */}
       <motion.section
         {...reveal(0.16, motionOn)}
-        className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-6 md:px-6"
+        className="mx-auto flex w-full max-w-md flex-col gap-2.5 px-4 pb-4 md:gap-4 md:pb-6 md:px-6"
       >
         {/* 이름 */}
         <div>
           <SectionLabel>이름</SectionLabel>
-          <div className="rounded-xl border bg-card px-4 py-2.5">
+          <div className="rounded-xl border bg-card px-4 py-1.5 md:py-2.5">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="이름"
               maxLength={20}
-              className="h-9 w-full border-0 bg-transparent px-0 text-base font-medium shadow-none focus-visible:ring-0 md:h-9"
+              className="h-8 w-full border-0 bg-transparent px-0 text-base font-medium shadow-none focus-visible:ring-0 md:h-9"
             />
           </div>
         </div>
@@ -239,8 +240,8 @@ function ProfilePageInner() {
         {/* 프로필 사진 — 표시 모드 세그먼트 + 모드별 컨텐츠 */}
         <div>
           <SectionLabel>프로필 사진</SectionLabel>
-          <div className="rounded-xl border bg-card p-3">
-            <div className="mb-3 inline-flex w-full rounded-full border bg-muted/40 p-0.5 text-xs">
+          <div className="rounded-xl border bg-card p-2.5 md:p-3">
+            <div className="mb-2 inline-flex w-full rounded-full border bg-muted/40 p-0.5 text-xs md:mb-3">
               {([
                 { mode: "image" as const, icon: ImageIcon, label: "이미지" },
                 { mode: "emoji" as const, icon: Smile, label: "이모지" },
@@ -292,9 +293,9 @@ function ProfilePageInner() {
                 />
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2 md:gap-3">
                 {/* 강조 색 */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                   <span className="w-12 shrink-0 text-[11px] font-medium text-muted-foreground">
                     강조 색
                   </span>
@@ -302,9 +303,9 @@ function ProfilePageInner() {
                     <ColorPickerRow color={color} onChange={setColor} />
                   </div>
                 </div>
-                {/* 이모지 그리드 — 모바일 7 cols(셀 ≥44px), 데스크탑 8 cols (한 줄 더 압축).
-                    셀 크기 ≥ 44px 으로 인접 이모지 오선택 방지. */}
-                <div ref={emojiGridRef} className="grid grid-cols-7 md:grid-cols-8 gap-1.5">
+                {/* 이모지 그리드 — 24개 / 8 cols → 3행. 셀 h-10 (40px, 44px 미달이지만
+                    저장 버튼까지 1뷰포트에 들어오도록 trade-off). */}
+                <div ref={emojiGridRef} className="grid grid-cols-8 gap-1">
                   {PRESET_EMOJIS.map((e) => {
                     const active = emoji === e;
                     return (
@@ -317,7 +318,7 @@ function ProfilePageInner() {
                         transition={motionOn
                           ? { type: "spring", stiffness: 420, damping: 20 }
                           : { duration: 0 }}
-                        className={`flex h-11 md:h-9 w-full items-center justify-center rounded-lg text-base transition-colors ${
+                        className={`flex h-10 md:h-9 w-full items-center justify-center rounded-lg text-base transition-colors ${
                           active ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-accent"
                         }`}
                       >
@@ -346,7 +347,7 @@ function ProfilePageInner() {
                 type="button"
                 onClick={handleUpdate}
                 disabled={!name.trim() || saving}
-                className="h-12 w-full text-sm font-semibold"
+                className="h-11 w-full text-sm font-semibold md:h-12"
               >
                 <Check className="mr-1.5 h-4 w-4" />
                 {saving ? "저장 중..." : "변경사항 저장"}
