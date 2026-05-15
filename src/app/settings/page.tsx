@@ -315,20 +315,12 @@ function SettingsPageInner() {
   const kmaWarning = daysLeft <= 60 && daysLeft > 0;
   const holidayWarning = holidayDaysLeft <= 60 && holidayDaysLeft > 0;
 
-  const accentWash = currentUser?.color || "#3B82F6";
-
   return (
     <>
       <PageHeader title="설정" showBack />
     <div className="relative">
-      {/* 상단 사용자 색 워시 — 프로필 페이지와 톤 통일. "이건 내 앱" 인지. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-56 transition-[background] duration-500"
-        style={{
-          background: `radial-gradient(72% 100% at 28% -20%, ${accentWash}24, transparent 60%)`,
-        }}
-      />
+      {/* (이전엔 사용자 색 radial-gradient 상단 워시가 있었으나, 헤더 backdrop 뒤로
+          색이 비쳐 탭 영역 뒤에 옅게 보이는 문제로 제거. accentWash 변수도 함께.) */}
       <div className="mx-auto max-w-2xl px-4 py-2 md:mx-0 md:px-6 md:py-5">
 
       {/* 탭 — segmented. 좌우 동일 폭. (안내 문구는 PageHeader 가 이미 "설정"이라 생략 — 세로 압축) */}

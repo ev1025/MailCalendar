@@ -43,7 +43,9 @@ export default function PageHeader({
 
   const handleBack = onBack ?? (() => router.back());
   const stickyCls = sticky
-    ? "sticky top-0 z-30 bg-background/95 backdrop-blur-sm"
+    ? // alpha 98% — 페이지 hero 색 워시·아바타 등이 backdrop-blur 뒤로 비쳐 보이던
+      // 잔상 가드. blur 자체는 유지(스크롤 시 헤더 아래 콘텐츠 흐릿).
+      "sticky top-0 z-30 bg-background/98 backdrop-blur-sm"
     : "";
 
   return (
