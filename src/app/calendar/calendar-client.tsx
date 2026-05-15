@@ -26,7 +26,7 @@ import DayDetail from "@/components/calendar/day-detail";
 import WeatherHourlyDialog, { prefetchHourlyWeather } from "@/components/calendar/weather-hourly-dialog";
 import { useWeatherLocation } from "@/hooks/use-weather-location";
 import RepeatScopeDialog, { type RepeatScope } from "@/components/calendar/repeat-scope-dialog";
-import { useAppUsers } from "@/lib/current-user";
+import { useAppUsers, useCurrentUserId } from "@/lib/current-user";
 import { getHolidayMap } from "@/lib/holidays";
 import { buildRepeatEvents } from "@/lib/calendar/build-repeat-events";
 import type { CalendarEvent } from "@/types";
@@ -81,6 +81,7 @@ function CalendarPageInner() {
   }, [yParam, mParam]);
 
   const { users } = useAppUsers();
+  const currentUserId = useCurrentUserId();
   const { viewableUserIds } = useCalendarShares();
   // 첫 진입(localStorage 비어있음) 시 본인 + 수락된 공유 owner 모두 기본 ON →
   // 공유받은 사용자의 일정·아이콘이 즉시 노출됨.
@@ -362,9 +363,12 @@ function CalendarPageInner() {
 
       {/* 달력 ↔ DB뷰 토글 시 cross-fade — 하드 컷 → 짧은(140ms) opacity 전환.
           mode="wait" 로 이전 뷰가 완전히 사라진 후 새 뷰가 들어와 레이아웃 점프 방지. */}
-      {eventsLoading && events.length === 0 ? (
-        /* 첫 fetch 동안(~200ms 인증·캐시 hydration) 빈 그리드를 가리는 로딩 화면.
-           events 가 한 개라도 도착하면 AnimatePresence 분기로 자연 전환. */
+      {(!currentUserId || (eventsLoading && events.length === 0)) ? (
+        /* 첫 fetch 동안 빈 그리드를 가리는 로딩 화면.
+           - currentUserId 미정 (Supabase auth 핸드셰이크 + app_users 조회 ~100~300ms):
+             useCalendarEvents.enabled=false → loading=false 라서 단순 eventsLoading 만으론
+             놓침. !currentUserId 까지 함께 체크해야 그 구간 마스크 적용.
+           - events 가 한 개라도 도착하면 AnimatePresence 분기로 자연 전환. */
         <div className="calendar-md-height flex items-center justify-center">
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin" />
