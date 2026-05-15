@@ -74,34 +74,19 @@ function DialogContent({
       <DialogOverlay className={overlayClassName} onClick={onOverlayClick} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
-        // 모바일=바닥시트 + 데스크탑=중앙 floating modal.
-        //  - 모바일: fixed bottom-0, full-width, rounded-t-3xl, slide-up.
-        //    centering transform 무효화 (translate-y-0). grabber 자체 표시.
-        //  - 데스크탑(sm+): center floating, rounded-3xl, fade+zoom-95, ring-1.
-        // shadow-xl + ring-1 ring-foreground/10 — soft 부유감.
-        // 호출처에서 max-w/padding override 가능하지만 모바일에선 max-w 무시
-        // (inset-x-0 이 width 강제).
+        // 중앙 floating modal — 모바일/데스크탑 동일. 짧은 confirm/prompt 가 풀너비
+        // 바닥시트로 뜨면 공간이 너무 비어 보여 어색했음. 큰 콘텐츠가 필요한 곳
+        // (cropper, weather-hourly, manager 등) 은 호출처에서 sm:max-w-X 로 확장.
+        // 모바일 좌우 1.5rem 인셋(calc(100%-3rem)).
+        //
+        // 시각: rounded-3xl + ring-1 + shadow-xl + backdrop /40 — 이전(rounded-2xl
+        // + shadow-lg) 보다 둥글고 부드러운 부유감.
         className={cn(
-          // 공통: layout grid + 배경/색/링/그림자
-          "fixed z-50 grid gap-3.5 bg-popover text-sm text-popover-foreground ring-1 ring-foreground/10 shadow-xl outline-none duration-200",
-          // 모바일 sheet
-          "inset-x-0 bottom-0 left-0 right-0 top-auto translate-x-0 translate-y-0 w-full rounded-t-3xl rounded-b-none pt-3 px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]",
-          // 데스크탑 modal
-          "sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-sm sm:rounded-3xl sm:rounded-b-3xl sm:p-6",
-          // 모션 — 데스크탑은 fade+zoom-95, 모바일은 globals.css 의 sheet-up/down keyframe.
-          "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-          "sm:data-open:zoom-in-95 sm:data-closed:zoom-out-95",
-          "[animation:sheet-up_280ms_cubic-bezier(0.32,0.72,0,1)] data-closed:[animation:sheet-down_240ms_cubic-bezier(0.32,0.72,0,1)] sm:[animation:unset] sm:data-closed:[animation:unset]",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-3rem)] -translate-x-1/2 -translate-y-1/2 gap-3.5 rounded-3xl bg-popover p-5 sm:p-6 text-sm text-popover-foreground ring-1 ring-foreground/10 shadow-xl duration-150 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
       >
-        {/* iOS sheet grabber — 모바일에서만 시각 표시. absolute 로 grid flow 밖에 배치 →
-            호출처가 p-0 으로 padding override 해도 grabber 위치 보존. */}
-        <span
-          aria-hidden
-          className="sm:hidden absolute left-1/2 top-2 -translate-x-1/2 h-1 w-9 rounded-full bg-foreground/15 pointer-events-none"
-        />
         <BackButtonContext.Provider value={{ onBack, show: showBackButton }}>
           {children}
         </BackButtonContext.Provider>
