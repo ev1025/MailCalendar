@@ -442,17 +442,17 @@ export default function CalendarView({
                           // className 이 mismatch 날 수 있어 경고 억제.
                           // 최초 렌더 후엔 클라이언트 값으로 재조정되므로 UX 영향 없음.
                           suppressHydrationWarning
-                          // 행 전체 정렬을 위해 outer 박스 크기는 통일 (18×18 / md 20×20).
-                          // 오늘 강조 동그라미는 inner span 으로 분리해 더 작게 (14×14 / md 16×16).
-                          className="relative inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center md:h-5 md:w-5"
+                          // 행 전체 정렬을 위해 outer 박스 크기 통일 (16×16 / md 18×18).
+                          // 오늘 강조 동그라미는 inner span 으로 분리.
+                          className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center md:h-[18px] md:w-[18px]"
                         >
                           {tod ? (
-                            <span className="today-pulse inline-flex h-[14px] w-[14px] items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold md:h-4 md:w-4 md:text-[11px]">
+                            <span className="today-pulse inline-flex h-[13px] w-[13px] items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-semibold md:h-[15px] md:w-[15px] md:text-[10px]">
                               {format(day, "d")}
                             </span>
                           ) : (
                             <span
-                              className={`text-xs font-semibold md:text-xs ${
+                              className={`text-[11px] font-semibold leading-none ${
                                 hol
                                   ? "text-red-500 dark:text-red-400"
                                   : dow === 6
