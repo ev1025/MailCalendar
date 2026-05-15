@@ -49,6 +49,9 @@ interface CalendarViewProps {
   onDateClick: (date: string) => void;
   onEventMove?: (eventId: string, newStart: string, newEnd: string | null) => void;
   onReorder?: (ids: string[]) => void;
+  /** DnD 활성/비활성 변화를 부모(calendar-client) 에 알림 — 부모의 좌우 swipe(=월 전환)
+   *  핸들러가 DnD 중인 touch end 를 가로 swipe 로 오인하지 않도록 가드. */
+  onDraggingChange?: (dragging: boolean) => void;
 }
 
 /* ── 주 내 세그먼트 ── */
@@ -153,6 +156,7 @@ export default function CalendarView({
   onDateClick,
   onEventMove,
   onReorder,
+  onDraggingChange,
 }: CalendarViewProps) {
   const holidayMap = useHolidayMap(year);
 
@@ -323,12 +327,19 @@ export default function CalendarView({
     });
   }, [weekSegs, dynamicMax]);
 
-  const handleDragStart = (e: DragStartEvent) => setActiveEvent(e.active.data.current?.event || null);
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveEvent(e.active.data.current?.event || null);
+    onDraggingChange?.(true);
+  };
   const handleDragOver = (e: { over: { id: string | number } | null }) => setOverDate(e.over ? String(e.over.id) : null);
   const handleDragEnd = (e: DragEndEvent) => {
     const ev = activeEvent;
     setActiveEvent(null);
     setOverDate(null);
+    // capture 단계 touchend 보다 늦게 false 로 — capture 핸들러가 같은 tick 에 발화하면
+    // 이 시점엔 아직 true 라 swipe 가드가 작동. dnd-kit 가 stopPropagation 해도 capture 는
+    // 어차피 잡히므로 ref 기반 가드가 더 확실.
+    onDraggingChange?.(false);
     if (!e.over || !ev) return;
     const t = String(e.over.id);
     if (t !== ev.start_date && onEventMove) {
@@ -342,9 +353,15 @@ export default function CalendarView({
       onEventMove(ev.id, t, ne);
     }
   };
+  // 드래그가 취소되는 경우(esc, 드롭존 밖에서 release) 도 dragging false 보장.
+  const handleDragCancel = () => {
+    setActiveEvent(null);
+    setOverDate(null);
+    onDraggingChange?.(false);
+  };
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
         {/* 요일 헤더 */}
         <div className="grid shrink-0 grid-cols-7 border-b">

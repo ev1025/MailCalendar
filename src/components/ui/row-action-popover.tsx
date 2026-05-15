@@ -91,7 +91,13 @@ export default function RowActionPopover({
         // 데스크탑은 드래그 시작에 mouse 가 충분, 모바일은 터치. cursor-grab 으로 시각 신호.
         // touch-none — 시트의 스와이프 닫힘과 충돌 방지.
         className={cn(
-          "rounded p-1.5 text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent transition-colors",
+          // 모바일 터치 ≥44px hit area 확보 — flex 박스 자체 44px,
+          // 내부 아이콘은 그대로 16px. 시각 패딩이 커지지 않도록 hover 배경은
+          // rounded 한 작은 인셋 박스 형태로만 — group/popover 안에 직접 박지 않고
+          // before:inset-1 트릭으로 시각/터치 분리.
+          "relative flex h-11 w-11 md:h-7 md:w-7 items-center justify-center text-muted-foreground/60 transition-colors",
+          "hover:text-muted-foreground",
+          "before:content-[''] before:absolute before:inset-1 before:rounded before:transition-colors hover:before:bg-accent",
           isDraggable && "cursor-grab active:cursor-grabbing touch-none",
           triggerClassName
         )}
@@ -103,7 +109,7 @@ export default function RowActionPopover({
         // 덮여 드래그 시작 자체가 안 됨. 그래서 onPointerDown 핸들러는 두지 않는다.
         onClick={(e) => e.stopPropagation()}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="relative h-4 w-4" />
       </PopoverTrigger>
       <PopoverContent
         align={align}
@@ -121,7 +127,8 @@ export default function RowActionPopover({
               item.onClick();
             }}
             className={cn(
-              "flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent transition-colors",
+              // 모바일 ≥44px row height, 데스크탑은 컴팩트(text-xs py-1.5).
+              "flex w-full items-center gap-2 rounded px-2 py-2.5 text-sm md:py-1.5 md:text-xs hover:bg-accent transition-colors",
               item.destructive && "text-destructive hover:bg-destructive/10",
               item.textClassName
             )}

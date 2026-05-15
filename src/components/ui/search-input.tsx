@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,8 @@ interface Props {
   /** 기본 h-8 text-xs. "md" 는 h-9 text-sm. */
   size?: "sm" | "md";
   autoFocus?: boolean;
+  /** 디바운스/네트워크 진행 중 표시 — 우측에 spinner. 모바일 inflight 가시화. */
+  loading?: boolean;
 }
 
 export default function SearchInput({
@@ -25,6 +27,7 @@ export default function SearchInput({
   className,
   size = "sm",
   autoFocus,
+  loading = false,
 }: Props) {
   // 폰트 크기 통일 — TagInput 의 검색 입력과 동일하게 (text-sm/text-xs).
   // iOS 자동 줌 방지는 viewport meta 의 maximumScale 로 별도 처리됨.
@@ -32,7 +35,8 @@ export default function SearchInput({
   // 아이콘 크기·위치·input padding 을 size 에 맞춰 비례 — 이전에는 size=md 에서도
   // 아이콘이 h-3.5(14px) 였고 pl-8(32px) 이라 큰 input 내 좌측 공백이 과하게 비어 보였음.
   const iconCls = size === "md" ? "left-3 h-4 w-4" : "left-2.5 h-3.5 w-3.5";
-  const padCls = size === "md" ? "pl-9" : "pl-8";
+  const padCls = size === "md" ? "pl-9 pr-9" : "pl-8 pr-8";
+  const spinnerCls = size === "md" ? "right-3 h-4 w-4" : "right-2.5 h-3.5 w-3.5";
   return (
     // 래퍼를 inline-flex + items-center 로 실제 아이콘·Input 높이만큼만 차지하게 함.
     // 이전에는 flex-1 이라 flex-col 부모(예: 지식창고) 안에서 세로로 늘어나
@@ -53,6 +57,16 @@ export default function SearchInput({
         className={cn(heightCls, padCls)}
         autoFocus={autoFocus}
       />
+      {/* 인플라이트 스피너 — 디바운스 + 네트워크 동안 표시. value 비어있으면 숨김. */}
+      {loading && value.trim() !== "" && (
+        <Loader2
+          aria-hidden
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2 text-muted-foreground animate-spin pointer-events-none",
+            spinnerCls,
+          )}
+        />
+      )}
     </div>
   );
 }

@@ -272,6 +272,26 @@
     scrollbar-width: none;
   }
 
+  /* 가로 스크롤 영역 — 양쪽 끝에 fade mask 로 "더 있음" 단서.
+     scrollbar-none 으로 스크롤바 숨긴 영역(카테고리 칩 등) 에 추가 적용.
+     좌우 16px 페이드. content 시작/끝에선 mask 가 부드럽게 처리. */
+  .fade-x {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 16px,
+      black calc(100% - 16px),
+      transparent 100%
+    );
+            mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 16px,
+      black calc(100% - 16px),
+      transparent 100%
+    );
+  }
+
   /* Safe area 유틸 (iOS/Android notch · gesture bar 대응) */
   .pt-safe {
     padding-top: env(safe-area-inset-top);

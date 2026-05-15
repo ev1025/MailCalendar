@@ -36,6 +36,8 @@ interface Props {
   /** 선택 프롭 — 주면 폴더 breadcrumb 위에 검색박스 표시. */
   searchQuery?: string;
   onSearch?: (q: string) => void;
+  /** 검색 인플라이트(디바운스 + 네트워크) — SearchInput 우측 스피너 표시. */
+  searchLoading?: boolean;
   /** true 면 내부 Breadcrumb 렌더 생략 — 부모가 상위에서 별도 breadcrumb 을 이미 표시하는 경우. */
   hideBreadcrumb?: boolean;
 }
@@ -43,7 +45,7 @@ interface Props {
 export default function FolderNoteList({
   folder, folders, items, loading = false, onSelectItem, onSelectFolder, onNavigateToFolder,
   onDeleteItems, onDeleteFolders, onRenameFolder, onRenameItem, onMoveItems, onMoveFolders,
-  onSelectModeChange, onTogglePinItem, searchQuery, onSearch, hideBreadcrumb,
+  onSelectModeChange, onTogglePinItem, searchQuery, onSearch, hideBreadcrumb, searchLoading = false,
 }: Props) {
   const folderId = folder?.id ?? null;
   const subFolders = folders.filter((f) => f.parent_id === folderId);
@@ -148,6 +150,7 @@ export default function FolderNoteList({
               onChange={onSearch}
               placeholder="노트 검색..."
               size="md"
+              loading={searchLoading}
             />
           ) : null}
           {!hideBreadcrumb && (

@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import {
   Upload,
   Check,
@@ -28,11 +29,19 @@ const DEFAULT_COLOR = "#3B82F6";
 const AVATAR_MAX_BYTES = 10 * 1024 * 1024;
 
 // 페이지 진입 stagger — Hero → 섹션들이 순차 등장.
-const reveal = (delay: number) => ({
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const, delay },
-});
+// motionOn=false 면 즉시 표시(시스템 동작 줄이기 존중).
+const reveal = (delay: number, motionOn: boolean) =>
+  motionOn
+    ? {
+        initial: { opacity: 0, y: 10 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const, delay },
+      }
+    : {
+        initial: false as const,
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0 },
+      };
 
 export default function ProfilePage() {
   return (
@@ -44,6 +53,7 @@ export default function ProfilePage() {
 
 function ProfilePageInner() {
   const router = useRouter();
+  const motionOn = useMotionEnabled();
   const { user: authUser, loading: authLoading } = useSupabaseAuth();
   const { updateUser } = useAppUsers();
   const currentUser = useCurrentUser();
@@ -155,8 +165,8 @@ function ProfilePageInner() {
               type="button"
               onClick={() => setShareOpen(true)}
               aria-label="캘린더 공유"
-              whileTap={{ scale: 0.92 }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              whileTap={motionOn ? { scale: 0.92 } : undefined}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <Share2 className="h-5 w-5" strokeWidth={1.6} />
             </motion.button>
@@ -164,8 +174,8 @@ function ProfilePageInner() {
               type="button"
               onClick={() => router.push("/settings")}
               aria-label="설정"
-              whileTap={{ scale: 0.92 }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              whileTap={motionOn ? { scale: 0.92 } : undefined}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <SettingsIcon className="h-5 w-5" strokeWidth={1.6} />
             </motion.button>
@@ -178,7 +188,7 @@ function ProfilePageInner() {
       <section className="relative">
         <div className="flex flex-col items-center gap-2.5 px-6 pt-5 pb-4 md:pt-7 md:pb-5">
           <motion.button
-            {...reveal(0.04)}
+            {...reveal(0.04, motionOn)}
             type="button"
             onClick={handleAvatarClick}
             whileTap={{ scale: 0.96 }}
@@ -197,7 +207,7 @@ function ProfilePageInner() {
             )}
           </motion.button>
 
-          <motion.div {...reveal(0.1)} className="text-center">
+          <motion.div {...reveal(0.1, motionOn)} className="text-center">
             <h1 className="font-display text-2xl font-black leading-none tracking-tight text-foreground md:text-[28px]">
               {name || "이름 없음"}
             </h1>
@@ -209,7 +219,7 @@ function ProfilePageInner() {
       {/* ── 편집 ──────────────────────────────────────────────────────
           이름 / 프로필 사진(표시 모드 + 모드별) / (이모지 모드면) 강조 색·이모지. */}
       <motion.section
-        {...reveal(0.16)}
+        {...reveal(0.16, motionOn)}
         className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-6 md:px-6"
       >
         {/* 이름 */}
@@ -292,8 +302,9 @@ function ProfilePageInner() {
                     <ColorPickerRow color={color} onChange={setColor} />
                   </div>
                 </div>
-                {/* 이모지 그리드 — 8 cols(3행) 으로 세로 압축 */}
-                <div ref={emojiGridRef} className="grid grid-cols-8 gap-1.5">
+                {/* 이모지 그리드 — 모바일 7 cols(셀 ≥44px), 데스크탑 8 cols (한 줄 더 압축).
+                    셀 크기 ≥ 44px 으로 인접 이모지 오선택 방지. */}
+                <div ref={emojiGridRef} className="grid grid-cols-7 md:grid-cols-8 gap-1.5">
                   {PRESET_EMOJIS.map((e) => {
                     const active = emoji === e;
                     return (
@@ -301,10 +312,12 @@ function ProfilePageInner() {
                         key={e}
                         type="button"
                         onClick={() => setEmoji(e)}
-                        whileTap={{ scale: 0.85 }}
-                        whileHover={{ scale: 1.1 }}
-                        transition={{ type: "spring", stiffness: 420, damping: 20 }}
-                        className={`flex h-9 w-full items-center justify-center rounded-lg text-base transition-colors ${
+                        whileTap={motionOn ? { scale: 0.85 } : undefined}
+                        whileHover={motionOn ? { scale: 1.1 } : undefined}
+                        transition={motionOn
+                          ? { type: "spring", stiffness: 420, damping: 20 }
+                          : { duration: 0 }}
+                        className={`flex h-11 md:h-9 w-full items-center justify-center rounded-lg text-base transition-colors ${
                           active ? "bg-primary/10 ring-2 ring-primary" : "hover:bg-accent"
                         }`}
                       >
@@ -322,10 +335,12 @@ function ProfilePageInner() {
         <AnimatePresence>
           {dirty && (
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={motionOn ? { opacity: 0, y: 12 } : false}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12 }}
-              transition={{ type: "spring", stiffness: 420, damping: 28 }}
+              exit={motionOn ? { opacity: 0, y: 12 } : { opacity: 0 }}
+              transition={motionOn
+                ? { type: "spring", stiffness: 420, damping: 28 }
+                : { duration: 0 }}
             >
               <Button
                 type="button"

@@ -36,6 +36,8 @@ interface DashboardProps {
   onTogglePinItem?: (id: string, pinned: boolean) => Promise<void>;
   /** true 면 내부 SearchInput 렌더 생략 — 부모가 상위에서 별도 검색박스를 제공하는 경우. */
   hideSearch?: boolean;
+  /** 검색 인플라이트(디바운스 + 네트워크) — SearchInput 우측 스피너 표시. */
+  searchLoading?: boolean;
 }
 
 /* ── 노트 트리 행 ──
@@ -227,7 +229,7 @@ export function FolderTreeRow({
 
 /* ── 메인 대시보드 ── */
 export default function KnowledgeDashboard({
-  folders, items, loading = false, onSelectItem, onSelectFolder, onSearch, searchQuery, searchResults, onDeleteItems, onDeleteFolders, onRenameFolder, onRenameItem, onSelectModeChange, onMoveItems, onMoveFolders, onTogglePinItem, hideSearch,
+  folders, items, loading = false, onSelectItem, onSelectFolder, onSearch, searchQuery, searchResults, onDeleteItems, onDeleteFolders, onRenameFolder, onRenameItem, onSelectModeChange, onMoveItems, onMoveFolders, onTogglePinItem, hideSearch, searchLoading = false,
 }: DashboardProps) {
   const { toggleFolder: toggleFolderFav, isFolderFav } = useKnowledgeFavorites();
   // 즐겨찾기 = DB pinned (items) — 폴더는 글 전용 정책으로 즐겨찾기 대상 아님.
@@ -472,7 +474,7 @@ export default function KnowledgeDashboard({
             />
           );
         })() : !hideSearch ? (
-          <SearchInput value={searchQuery} onChange={onSearch} placeholder="노트 검색..." size="md" />
+          <SearchInput value={searchQuery} onChange={onSearch} placeholder="노트 검색..." size="md" loading={searchLoading} />
         ) : null}
 
         {searchQuery.trim() && !selectMode ? (

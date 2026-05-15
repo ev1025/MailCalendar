@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { Calendar, Plane, BookOpen, User } from "lucide-react";
 import { PiggyBank } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import { useCurrentUser } from "@/lib/current-user";
 
 // 모바일 하단 네비. 캘린더 | 여행 | 가계부 | 지식 | 프로필
@@ -33,7 +34,12 @@ const ACTIVE_COLOR = "var(--accent-color, #219143)";
 export default function BottomNav() {
   const pathname = usePathname();
   const currentUser = useCurrentUser();
+  const motionOn = useMotionEnabled();
   const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
+  // reduced-motion 사용자에겐 spring 대신 0ms tween — pill 이 즉시 이동.
+  const pillTransition = motionOn
+    ? { type: "spring" as const, stiffness: 380, damping: 32 }
+    : { duration: 0 };
 
   const isActive = (item: NavItem): boolean => {
     if (pathname === item.href || pathname.startsWith(item.href + "/")) return true;
@@ -52,7 +58,7 @@ export default function BottomNav() {
               href={item.href}
               style={active ? { color: ACTIVE_COLOR } : undefined}
               className={cn(
-                "relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] active:bg-accent/50 active:scale-95 transition-transform duration-200",
+                "relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] active:bg-accent/50 active:scale-95 transition-[transform,background-color] duration-200",
                 active ? "font-semibold" : "text-muted-foreground"
               )}
             >
@@ -61,7 +67,7 @@ export default function BottomNav() {
                 <motion.span
                   layoutId="bottom-nav-active-pill"
                   className="absolute inset-x-2 top-1.5 bottom-1.5 -z-10 rounded-xl bg-accent-color-soft"
-                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                  transition={pillTransition}
                 />
               )}
               <item.icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.3 : 1.7} />

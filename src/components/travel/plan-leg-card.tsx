@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Car, Footprints, Bus, TrainFront, Route as RouteIcon, type LucideIcon } from "lucide-react";
 import type { TaskLeg } from "@/lib/travel/legs";
 import type { TransportMode, TransportRouteStep } from "@/types";
 import {
@@ -24,13 +24,14 @@ const NAVER_MAP_ICON = "https://ssl.pstatic.net/static/maps/assets/icons/favicon
 //
 // picker 안에 수동 입력까지 포함되어 더 이상 별도 팝업 없음.
 
-const MODE_ICON: Record<TransportMode, { emoji: string; label: string }> = {
-  car: { emoji: "🚗", label: "승용차" },
-  walk: { emoji: "🚶", label: "도보" },
-  bus: { emoji: "🚌", label: "버스" },
-  train: { emoji: "🚈", label: "지하철" },
-  taxi: { emoji: "🚗", label: "승용차" }, // 하위호환
-  transit: { emoji: "🚆", label: "소요시간" }, // 조합 경로 (도보+버스+지하철)
+// lucide 아이콘으로 통일 — OS·테마별 이모지 폰트 차이 제거, stroke·color 일관 제어.
+const MODE_ICON: Record<TransportMode, { Icon: LucideIcon; label: string }> = {
+  car: { Icon: Car, label: "승용차" },
+  walk: { Icon: Footprints, label: "도보" },
+  bus: { Icon: Bus, label: "버스" },
+  train: { Icon: TrainFront, label: "지하철" },
+  taxi: { Icon: Car, label: "승용차" }, // 하위호환
+  transit: { Icon: RouteIcon, label: "소요시간" }, // 조합 경로 (도보+버스+지하철)
 };
 
 interface Props {
@@ -232,8 +233,8 @@ export default function PlanLegCard({ leg, legDeparture, onUpdateTask }: Props) 
             );
           })()
         ) : (
-          <div className="flex items-baseline gap-1.5 min-w-0">
-            {icon && <span className="text-xs">{icon.emoji}</span>}
+          <div className="flex items-center gap-1.5 min-w-0">
+            {icon && <icon.Icon className="h-3.5 w-3.5 text-primary shrink-0" strokeWidth={2} />}
             <span className="text-xs text-primary font-bold">{icon?.label}</span>
             <span className="text-[10px] text-muted-foreground">{formatDuration(durationSec)}</span>
             {isManual && <span className="text-[10px] text-muted-foreground">(수동)</span>}

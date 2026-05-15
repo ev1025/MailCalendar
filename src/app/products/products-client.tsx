@@ -3,6 +3,7 @@
 import { Suspense, memo, useCallback, useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import {
   Plus,
   ChevronDown,
@@ -12,6 +13,7 @@ import {
   Copy,
   X,
   ExternalLink,
+  AlertTriangle,
 } from "lucide-react";
 import { PiggyBank } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -211,6 +213,7 @@ export default function ProductsClient() {
 }
 
 function ProductsPageInner() {
+  const motionOn = useMotionEnabled();
   const {
     products,
     loading,
@@ -533,7 +536,7 @@ function ProductsPageInner() {
             추가
           </Button>
         </div>
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none fade-x pb-1">
           {/* 순서: 전체 → 빌트인 분류 → 사용자 추가 분류 → +추가 (표준 패턴: 추가 액션은 끝) */}
           {(["전체", ...midCategories.filter((c) => c !== "전체"), "__add__"] as string[]).map((c) => {
             if (c === "__add__") {
@@ -685,10 +688,10 @@ function ProductsPageInner() {
                         {expanded && (
                           <motion.div
                             key="content"
-                            initial={{ height: 0, opacity: 0 }}
+                            initial={motionOn ? { height: 0, opacity: 0 } : false}
                             animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                            exit={motionOn ? { height: 0, opacity: 0 } : { opacity: 0 }}
+                            transition={{ duration: motionOn ? 0.22 : 0, ease: [0.22, 1, 0.36, 1] }}
                             style={{ overflow: "hidden" }}
                             className="border-t"
                           >
@@ -845,7 +848,7 @@ function ProductsPageInner() {
                 {fixedProduct.monthly_cost ? (
                   <> · 월 <span className="tabular-nums">{new Intl.NumberFormat("ko-KR").format(fixedProduct.monthly_cost)}원</span></>
                 ) : (
-                  <span className="text-warning"> · ⚠ 가격 미설정</span>
+                  <span className="inline-flex items-center gap-1 text-warning"> · <AlertTriangle className="h-3 w-3" /> 가격 미설정</span>
                 )}
               </p>
             )}
@@ -854,7 +857,7 @@ function ProductsPageInner() {
             {/* 가격 미설정 사전 경고 — submit 후 toast 가 아닌 입력 시점에 표시. */}
             {fixedProduct && (!fixedProduct.monthly_cost || fixedProduct.monthly_cost <= 0) && (
               <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning-bg/60 px-2.5 py-2 text-[11px] text-warning leading-relaxed">
-                <span aria-hidden>⚠</span>
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden />
                 <span>이 제품에 가격이 설정되어 있지 않습니다. 제품 폼에서 월 가격을 먼저 입력해주세요.</span>
               </div>
             )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -112,6 +113,7 @@ export default function PlanDaySection({
   onUpdateTask,
   onOpenNew,
 }: Props) {
+  const motionOn = useMotionEnabled();
   return (
     <section className="flex flex-col gap-2">
       {/* 일자 헤더 — 부모 스크롤 컨테이너 안에서 sticky. 큰 타이포 + 반투명
@@ -139,10 +141,10 @@ export default function PlanDaySection({
                 return (
                   <motion.div
                     key={t.id}
-                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                    initial={motionOn ? { opacity: 0, y: -6, scale: 0.98 } : false}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 24, scale: 0.96 }}
-                    transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                    exit={motionOn ? { opacity: 0, x: 24, scale: 0.96 } : { opacity: 0 }}
+                    transition={{ duration: motionOn ? 0.18 : 0, ease: [0.22, 1, 0.36, 1] }}
                     className="flex flex-col gap-1.5"
                   >
                     <SortableTaskRow

@@ -33,7 +33,9 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        // backdrop dim — 모달과 배경 분리. 이전 /10 은 iOS 기준 너무 옅어
+        // 라이트 모드에서 카드와 배경이 거의 같아 보였음. /30 으로 상향(블러는 유지).
+        "fixed inset-0 isolate z-50 bg-black/30 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -123,7 +125,7 @@ function DialogHeader({ className, children, ...props }: React.ComponentProps<"d
       type="button"
       aria-label="뒤로"
       onClick={onBack}
-      className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 -ml-1.5"
+      className="flex h-9 w-9 md:h-8 md:w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 -ml-1.5"
     >
       <ArrowLeft className="h-4 w-4" />
     </button>
@@ -134,7 +136,7 @@ function DialogHeader({ className, children, ...props }: React.ComponentProps<"d
         <button
           type="button"
           aria-label="뒤로"
-          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 -ml-1.5"
+          className="flex h-9 w-9 md:h-8 md:w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 -ml-1.5"
         />
       }
     >

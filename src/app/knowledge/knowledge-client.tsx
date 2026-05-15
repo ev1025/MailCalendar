@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useState, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import { FolderPlus, FilePlus } from "lucide-react";
 import { useKnowledgeFolders } from "@/hooks/use-knowledge-folders";
 import {
@@ -34,6 +35,7 @@ export default function KnowledgeClient() {
 }
 
 function KnowledgePageInner() {
+  const motionOn = useMotionEnabled();
   const { folders, loading: foldersLoading, addFolder, updateFolder, deleteFolder } = useKnowledgeFolders();
   const { items, loading: itemsLoading, addItem, updateItem, deleteItem, refetch } =
     useKnowledgeItems(null);
@@ -75,14 +77,23 @@ function KnowledgePageInner() {
   // ── 검색 ────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<KnowledgeItem[]>([]);
+  // 디바운스 시작 ~ 결과 도착까지 inflight. 사용자가 "검색 동작 중" 인지 시각 확인.
+  const [searchInflight, setSearchInflight] = useState(false);
 
   useEffect(() => {
     if (!search.trim()) {
       setSearchResults([]);
+      setSearchInflight(false);
       return;
     }
+    setSearchInflight(true);
     const t = setTimeout(async () => {
-      setSearchResults(await searchKnowledge(search));
+      try {
+        const r = await searchKnowledge(search);
+        setSearchResults(r);
+      } finally {
+        setSearchInflight(false);
+      }
     }, 300);
     return () => clearTimeout(t);
   }, [search]);
@@ -296,7 +307,7 @@ function KnowledgePageInner() {
           onClick={() => handleAddFolder(viewFolderId)}
           aria-label="폴더 추가"
           title="폴더 추가"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
         >
           <FolderPlus className="h-[20px] w-[20px]" strokeWidth={1.6} />
         </button>
@@ -305,7 +316,7 @@ function KnowledgePageInner() {
           onClick={() => handleAddItem(viewFolderId)}
           aria-label="새 노트"
           title="새 노트"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
         >
           <FilePlus className="h-[20px] w-[20px]" strokeWidth={1.6} />
         </button>
@@ -341,7 +352,7 @@ function KnowledgePageInner() {
           {/* 선택 모드에선 툴바가 위로 오도록 검색창 숨김 (브레드크럼은 explorer 안쪽 slot 으로 이동). */}
           {!dashSelectMode && !folderSelectMode && (
             <div className="p-3 flex flex-col gap-2">
-              <SearchInput value={search} onChange={setSearch} placeholder="노트 검색..." size="md" />
+              <SearchInput value={search} onChange={setSearch} placeholder="노트 검색..." size="md" loading={searchInflight} />
             </div>
           )}
           <div className="flex-1 overflow-y-auto">
@@ -440,10 +451,10 @@ function KnowledgePageInner() {
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key="editor-pending"
-                initial={{ opacity: 0 }}
+                initial={motionOn ? { opacity: 0 } : false}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.14 }}
+                exit={motionOn ? { opacity: 0 } : undefined}
+                transition={{ duration: motionOn ? 0.14 : 0 }}
                 className="flex flex-1 flex-col overflow-hidden"
               >
                 <NoteEditorView
@@ -553,6 +564,7 @@ function KnowledgePageInner() {
                     folders={folders}
                     items={items}
                     loading={knowledgeLoading}
+                    searchLoading={searchInflight}
                     onSelectItem={(id) => setSelectedItemId(id)}
                     onSelectFolder={(fid) => setViewFolderId(fid)}
                     onNavigateToFolder={(fid) => setViewFolderId(fid)}
@@ -592,6 +604,7 @@ function KnowledgePageInner() {
                     onSearch={setSearch}
                     searchQuery={search}
                     searchResults={searchResults}
+                    searchLoading={searchInflight}
                     onDeleteItems={async (ids) => {
                       for (const id of ids) await handleDelete(id, { undo: false });
                     }}

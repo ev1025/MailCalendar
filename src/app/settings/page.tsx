@@ -3,13 +3,14 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CardTitleIcon from "@/components/ui/card-title-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SearchInput from "@/components/ui/search-input";
-import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info, X, CloudSun } from "lucide-react";
+import { Monitor, Sun, Moon, ChevronDown, ChevronRight, ExternalLink, MapPin, Lock, Trash2, LogOut, ChevronRight as ChevronRightIcon, Palette, CalendarDays, UserCircle, Info, X, CloudSun, Car, Footprints, Bus, TrainFront, Check } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import PasswordChangeDialog from "@/components/layout/password-change-dialog";
@@ -171,6 +172,7 @@ export default function SettingsPage() {
 function SettingsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const motionOn = useMotionEnabled();
   const [tab, setTab] = useState<"general" | "account" | "api">("general");
   // 기본은 system — OS 설정 자동 추종.
   const [theme, setTheme] = useState<Theme>("system");
@@ -331,9 +333,9 @@ function SettingsPageInner() {
 
       {/* 탭 — segmented. 좌우 동일 폭. (안내 문구는 PageHeader 가 이미 "설정"이라 생략 — 세로 압축) */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={motionOn ? { opacity: 0, y: 8 } : false}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: motionOn ? 0.3 : 0, ease: [0.22, 1, 0.36, 1] }}
         className="mb-4 inline-flex w-full rounded-2xl border bg-muted/40 p-1"
       >
         {(["general", "account", "api"] as const).map((t) => {
@@ -345,7 +347,7 @@ function SettingsPageInner() {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-all tap-feedback ${
+              className={`flex-1 rounded-xl px-3 py-2.5 md:py-2 text-sm font-medium transition-all tap-feedback ${
                 active
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -378,7 +380,7 @@ function SettingsPageInner() {
                       key={value}
                       type="button"
                       onClick={() => applyTheme(value)}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition-colors tap-feedback ${
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-2.5 md:py-2 text-xs font-medium transition-colors tap-feedback ${
                         active
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
@@ -391,10 +393,12 @@ function SettingsPageInner() {
                 })}
               </div>
 
-              {/* 액센트 컬러 — 사이드바 활성, 토스트, 강조 등에 적용. 6개 색상. 작은 스와치. */}
+              {/* 액센트 컬러 — 사이드바 활성, 토스트, 강조 등에 적용. 6개 색상.
+                  모바일 터치 영역 확보: 외곽 h-11 w-11 (44px) hit area + 내부 시각 dot h-7 w-7.
+                  데스크탑은 컴팩트(h-9 w-9). 시각/터치 분리는 D-day 토글과 동일 패턴. */}
               <div className="mt-3 pt-3 border-t flex items-center gap-2.5">
                 <span className="shrink-0 text-[11px] text-muted-foreground">강조 색</span>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1">
                   {ACCENT_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -402,19 +406,23 @@ function SettingsPageInner() {
                       onClick={() => applyAccent(opt.value)}
                       aria-label={opt.label}
                       title={opt.label}
-                      className={`relative flex h-6 w-6 items-center justify-center rounded-full transition-all tap-feedback ${
-                        accent === opt.value
-                          ? "ring-2 ring-offset-1 ring-offset-background"
-                          : "hover:scale-110"
-                      }`}
-                      style={{
-                        backgroundColor: opt.swatch,
-                        ...(accent === opt.value ? { ["--tw-ring-color" as never]: opt.swatch } : {}),
-                      }}
+                      className="flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full transition-all tap-feedback"
                     >
-                      {accent === opt.value && (
-                        <span className="text-white text-[9px] font-bold">✓</span>
-                      )}
+                      <span
+                        className={`relative flex h-7 w-7 md:h-6 md:w-6 items-center justify-center rounded-full transition-all ${
+                          accent === opt.value
+                            ? "ring-2 ring-offset-2 ring-offset-background"
+                            : ""
+                        }`}
+                        style={{
+                          backgroundColor: opt.swatch,
+                          ...(accent === opt.value ? { ["--tw-ring-color" as never]: opt.swatch } : {}),
+                        }}
+                      >
+                        {accent === opt.value && (
+                          <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                        )}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -456,7 +464,7 @@ function SettingsPageInner() {
                       type="button"
                       onClick={() => { setLocEditing(false); setLocQuery(""); setLocResults([]); }}
                       aria-label="취소"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent transition-colors"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border text-muted-foreground hover:bg-accent transition-colors"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -535,12 +543,12 @@ function SettingsPageInner() {
                   <DatePicker
                     value={draftDate}
                     onChange={setDraftDate}
-                    className="h-9 text-xs"
+                    className="h-11 md:h-9 text-xs"
                   />
                   <TimePicker
                     value={draftTime}
                     onChange={setDraftTime}
-                    className="h-9 text-xs"
+                    className="h-11 md:h-9 text-xs"
                   />
                 </div>
                 <div className="flex items-center justify-between gap-2">
@@ -552,7 +560,7 @@ function SettingsPageInner() {
                     size="sm"
                     onClick={applyDday}
                     disabled={!ddayApplyEnabled}
-                    className="h-8 shrink-0"
+                    className="h-11 md:h-8 px-4 shrink-0"
                   >
                     적용
                   </Button>
@@ -573,7 +581,7 @@ function SettingsPageInner() {
               <button
                 type="button"
                 onClick={() => setPwDialogOpen(true)}
-                className="flex items-center justify-between gap-2 rounded-md px-2 py-2.5 text-sm hover:bg-accent transition-colors"
+                className="flex items-center justify-between gap-2 rounded-md px-2 py-3 md:py-2.5 text-sm hover:bg-accent transition-colors"
               >
                 <span className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-muted-foreground" />
@@ -584,7 +592,7 @@ function SettingsPageInner() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="flex items-center justify-between gap-2 rounded-md px-2 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="flex items-center justify-between gap-2 rounded-md px-2 py-3 md:py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
               >
                 <span className="flex items-center gap-2">
                   <LogOut className="h-4 w-4" />
@@ -595,7 +603,7 @@ function SettingsPageInner() {
               <button
                 type="button"
                 onClick={() => setDeleteConfirmOpen(true)}
-                className="flex items-center justify-between gap-2 rounded-md px-2 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                className="flex items-center justify-between gap-2 rounded-md px-2 py-3 md:py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <span className="flex items-center gap-2">
                   <Trash2 className="h-4 w-4" />
@@ -684,7 +692,7 @@ function SettingsPageInner() {
               <button
                 onClick={refetchUsage}
                 disabled={usageLoading}
-                className="text-primary hover:underline disabled:opacity-50"
+                className="h-8 px-2 -ml-2 text-xs text-primary rounded-md hover:bg-primary/10 hover:underline disabled:opacity-50 transition-colors"
               >
                 새로고침
               </button>
@@ -790,13 +798,13 @@ function SettingsPageInner() {
               구간 소요시간은 수단별로 다른 API 를 호출합니다.
             </p>
             <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-[11px]">
-              <span className="font-medium">🚗 승용차</span>
+              <span className="inline-flex items-center gap-1.5 font-medium"><Car className="h-3.5 w-3.5" /> 승용차</span>
               <span className="text-muted-foreground">NCP Directions 5</span>
-              <span className="font-medium">🚶 도보</span>
+              <span className="inline-flex items-center gap-1.5 font-medium"><Footprints className="h-3.5 w-3.5" /> 도보</span>
               <span className="text-muted-foreground">Google Directions (walking)</span>
-              <span className="font-medium">🚌 버스</span>
+              <span className="inline-flex items-center gap-1.5 font-medium"><Bus className="h-3.5 w-3.5" /> 버스</span>
               <span className="text-muted-foreground">Google Directions (transit)</span>
-              <span className="font-medium">🚆 기차</span>
+              <span className="inline-flex items-center gap-1.5 font-medium"><TrainFront className="h-3.5 w-3.5" /> 기차</span>
               <span className="text-muted-foreground">KORAIL → 실패 시 Google rail 폴백</span>
             </div>
           </ApiSection>

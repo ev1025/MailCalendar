@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { parseYmd } from "@/lib/date-utils";
 import { AnimatePresence, motion } from "motion/react";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import { Trash2, Pencil } from "lucide-react";
 import {
   Dialog,
@@ -34,6 +35,7 @@ export default function TransactionList({
 }: TransactionListProps) {
   // 삭제 확인 다이얼로그 — 실수로 영구 삭제 방지.
   const [deletingTx, setDeletingTx] = useState<Expense | null>(null);
+  const motionOn = useMotionEnabled();
 
   // 고정비 출처 거래는 별도 분기 다이얼로그 사용. onEditFixed 가 주어졌고
   // 거래에 fixed_expense_id 가 있을 때만 분기 다이얼로그 표시.
@@ -64,11 +66,13 @@ export default function TransactionList({
             {grouped[date].map((tx) => (
               <motion.div
                 key={tx.id}
-                layout
-                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                layout={motionOn}
+                initial={motionOn ? { opacity: 0, height: 0, marginTop: 0 } : false}
                 animate={{ opacity: 1, height: "auto", marginTop: 0 }}
                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                transition={{ type: "spring", stiffness: 380, damping: 32, opacity: { duration: 0.18 } }}
+                transition={motionOn
+                  ? { type: "spring", stiffness: 380, damping: 32, opacity: { duration: 0.18 } }
+                  : { duration: 0 }}
                 role="button"
                 tabIndex={0}
                 onClick={() => onEdit(tx)}
@@ -127,10 +131,11 @@ export default function TransactionList({
                       e.stopPropagation();
                       setDeletingTx(tx);
                     }}
-                    className="inline-flex h-11 w-11 md:h-8 md:w-8 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent transition-colors"
+                    className="inline-flex h-11 w-11 md:h-8 md:w-8 shrink-0 items-center justify-center rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent transition-colors duration-200"
                     aria-label="거래 삭제"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    {/* h-11 모바일 hit area + 시각 아이콘은 4px (md+는 더 작은 3.5px). */}
+                    <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
                   </button>
                 </div>
               </motion.div>

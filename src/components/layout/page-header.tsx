@@ -54,7 +54,8 @@ export default function PageHeader({
             type="button"
             onClick={handleBack}
             aria-label="뒤로"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent -ml-1"
+            // 모바일 터치 권장 44px 확보 — 시각 아이콘은 그대로, hit area 만 확장.
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent -ml-2"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -72,11 +73,11 @@ export default function PageHeader({
               type="button"
               onClick={() => setNotiOpen(true)}
               aria-label="알림"
-              className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent"
             >
               <Bell className="h-[22px] w-[22px]" strokeWidth={1.6} />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
+                <span className="absolute top-2 right-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground ring-2 ring-background">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}

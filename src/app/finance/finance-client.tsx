@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import { toast } from "sonner";
 import { ShoppingBag, X, Check, Repeat, Filter, Receipt } from "lucide-react";
 import { PiggyBank } from "@phosphor-icons/react";
@@ -41,6 +42,7 @@ export default function FinanceClient() {
 function FinancePageInner() {
   const router = useRouter();
   const now = new Date();
+  const motionOn = useMotionEnabled();
 
   // 시작일/종료일 — 기본은 이번 달 1일~말일. URL 에 ?s=YYYY-MM-DD&e=YYYY-MM-DD 동기화.
   const { start: defaultStart, end: defaultEnd } = monthBounds(
@@ -398,11 +400,11 @@ function FinancePageInner() {
       <motion.div
         key={`${year}-${month}`}
         initial={{
-          x: slideDirRef.current > 0 ? 40 : slideDirRef.current < 0 ? -40 : 0,
-          opacity: 0,
+          x: motionOn ? (slideDirRef.current > 0 ? 40 : slideDirRef.current < 0 ? -40 : 0) : 0,
+          opacity: motionOn ? 0 : 1,
         }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: motionOn ? 0.48 : 0, ease: [0.22, 1, 0.36, 1] }}
         onAnimationComplete={() => { slideDirRef.current = 0; }}
         className="w-full md:max-w-5xl md:mx-auto"
       >
@@ -456,12 +458,13 @@ function FinancePageInner() {
               )}
             </div>
 
-            {/* 고정비 포함 체크박스 — 명시적 의미. Pin 아이콘 메타포 모호함 제거. */}
+            {/* 고정비 포함 체크박스 — 명시적 의미. Pin 아이콘 메타포 모호함 제거.
+                모바일 ≥44px hit area — h-11 + 음수 마진 패딩. 시각은 그대로 컴팩트. */}
             <button
               type="button"
               onClick={() => setIncludeFixed((v) => !v)}
               aria-pressed={includeFixed}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 h-7 text-xs hover:bg-accent/50 transition-colors"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 h-11 md:h-7 text-xs hover:bg-accent/50 transition-colors"
             >
               <span
                 className={`flex h-3.5 w-3.5 items-center justify-center rounded border-[1.5px] transition-colors ${

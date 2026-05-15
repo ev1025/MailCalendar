@@ -181,7 +181,7 @@ export default function FormPage({
                   variant="outline"
                   onClick={handleCancel}
                   disabled={saving}
-                  className="h-10 md:h-9"
+                  className="h-11 md:h-9"
                 >
                   {cancelLabel}
                 </Button>
@@ -189,7 +189,7 @@ export default function FormPage({
                   type="button"
                   onClick={() => { if (onSubmit) void onSubmit(); }}
                   disabled={saving || submitDisabled || !onSubmit}
-                  className="h-10 md:h-9"
+                  className="h-11 md:h-9"
                 >
                   {saving ? "저장 중…" : submitLabel}
                 </Button>

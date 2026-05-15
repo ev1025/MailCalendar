@@ -27,6 +27,7 @@ import WeatherHourlyDialog, { prefetchHourlyWeather } from "@/components/calenda
 import { useWeatherLocation } from "@/hooks/use-weather-location";
 import RepeatScopeDialog, { type RepeatScope } from "@/components/calendar/repeat-scope-dialog";
 import { useAppUsers, useCurrentUserId } from "@/lib/current-user";
+import { useMotionEnabled } from "@/hooks/use-safe-motion";
 import { getHolidayMap } from "@/lib/holidays";
 import { buildRepeatEvents } from "@/lib/calendar/build-repeat-events";
 import type { CalendarEvent } from "@/types";
@@ -65,6 +66,10 @@ function CalendarPageInner() {
   // 캘린더 가로 스와이프 좌표 — capture 단계에서 저장. 이전엔 currentTarget 에
   // 직접 dataset 으로 저장했는데 dnd-kit 셀 캡처와 충돌 가능. ref 가 안정적.
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
+  // DnD 활성 중인지 — CalendarView 의 DndContext 가 onDraggingChange 로 알려줌.
+  // 일정 드래그(길게 누름 + 가로 이동) 와 월 전환 swipe(가로 40px+ 이동) 조건이
+  // 동일해 capture 단계 touchend 에서 swipe 가 잘못 발화하던 문제 가드.
+  const dndActiveRef = useRef(false);
   // 월 전환 방향 — +1 = 다음달(왼쪽으로 밀려와 들어옴), -1 = 이전달(오른쪽에서 들어옴),
   // 0 = MonthPicker 직접 변경(슬라이드 없이 fade only).
   // AnimatePresence 없이 key 변경 + initial/animate 만으로 enter 애니메이션 → 레이아웃 안전.
@@ -82,6 +87,7 @@ function CalendarPageInner() {
 
   const { users } = useAppUsers();
   const currentUserId = useCurrentUserId();
+  const motionOn = useMotionEnabled();
   const { viewableUserIds } = useCalendarShares();
   // 첫 진입(localStorage 비어있음) 시 본인 + 수락된 공유 owner 모두 기본 ON →
   // 공유받은 사용자의 일정·아이콘이 즉시 노출됨.
@@ -265,7 +271,7 @@ function CalendarPageInner() {
                 onClick={() => setDdayOpen(true)}
                 aria-label="D-day"
                 title="D-day"
-                className="flex h-10 items-center px-3 rounded-full text-xs font-bold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="flex h-11 items-center px-3 rounded-full text-xs font-bold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
               >
                 D-day
               </button>
@@ -388,12 +394,18 @@ function CalendarPageInner() {
         // 가로 30px / 세로 30px 이내로 임계값 완화 + 단순 절댓값 비교.
         <motion.div
           key="view-cal"
-          initial={{ opacity: 0 }}
+          initial={{ opacity: motionOn ? 0 : 1 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.14 }}
+          exit={{ opacity: motionOn ? 0 : 1 }}
+          transition={{ duration: motionOn ? 0.14 : 0 }}
           className="calendar-md-height"
           onTouchStartCapture={(e) => {
+            // DnD 중이면 swipe 시작점 자체를 저장하지 않음 — 드래그 끝나며 발생하는
+            // capture touchend 가 swipe 로 오인되어 월이 넘어가던 버그 가드.
+            if (dndActiveRef.current) {
+              swipeRef.current = null;
+              return;
+            }
             const t = e.touches[0];
             swipeRef.current = { x: t.clientX, y: t.clientY };
           }}
@@ -401,6 +413,9 @@ function CalendarPageInner() {
             const start = swipeRef.current;
             swipeRef.current = null;
             if (!start) return;
+            // touchstart 이후 DnD 가 발동했으면 (200ms 길게 누름) 이 touchend 는
+            // DnD 종료 — swipe 처리하면 안 됨.
+            if (dndActiveRef.current) return;
             const t = e.changedTouches[0];
             const dx = t.clientX - start.x;
             const dy = t.clientY - start.y;
@@ -434,11 +449,11 @@ function CalendarPageInner() {
         <motion.div
           key={`${year}-${month}`}
           initial={{
-            x: slideDirRef.current > 0 ? 40 : slideDirRef.current < 0 ? -40 : 0,
-            opacity: 0,
+            x: motionOn ? (slideDirRef.current > 0 ? 40 : slideDirRef.current < 0 ? -40 : 0) : 0,
+            opacity: motionOn ? 0 : 1,
           }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: motionOn ? 0.48 : 0, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col flex-1 min-h-0"
           onAnimationComplete={() => {
             // 다음 mountcheck 이 MonthPicker 직접 변경일 수 있으니 리셋.
@@ -453,6 +468,7 @@ function CalendarPageInner() {
             onDateClick={handleDateClick}
             onEventMove={handleEventMove}
             onReorder={batchUpdateSortOrder}
+            onDraggingChange={(d) => { dndActiveRef.current = d; }}
           />
         </motion.div>
         </motion.div>
@@ -461,10 +477,10 @@ function CalendarPageInner() {
         // calendar-md-height(데스크톱 80vh) 동일 적용 — 모바일은 natural scroll.
         <motion.div
           key="view-db"
-          initial={{ opacity: 0 }}
+          initial={{ opacity: motionOn ? 0 : 1 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.14 }}
+          exit={{ opacity: motionOn ? 0 : 1 }}
+          transition={{ duration: motionOn ? 0.14 : 0 }}
           className="calendar-md-height"
         >
           <DatabaseView
